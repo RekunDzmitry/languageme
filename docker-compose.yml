@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: languageme
+      POSTGRES_USER: lm_user
+      POSTGRES_PASSWORD: lm_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lm_user -d languageme"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build: ./server
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://lm_user:lm_pass@postgres:5432/languageme
+      JWT_SECRET: dev-jwt-secret-change-in-prod
+      JWT_REFRESH_SECRET: dev-refresh-secret-change-in-prod
+      PORT: 3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - frontend_node_modules:/app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - API_URL=http://api:3000
+    command: sh -c "npm install && npx vite --host 0.0.0.0"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  frontend_node_modules:
