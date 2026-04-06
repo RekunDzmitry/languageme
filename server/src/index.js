@@ -14,6 +14,7 @@ import mnemonicsRoutes from './routes/mnemonics.js';
 import statsRoutes from './routes/stats.js';
 import migrateRoutes from './routes/migrate.js';
 import adminRoutes from './routes/admin.js';
+import exportRoutes from './routes/export.js';
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use('/api/mnemonics', mnemonicsRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/migrate', migrateRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/export', exportRoutes);
 
 // Health check
 app.get('/api/health', async (req, res) => {
