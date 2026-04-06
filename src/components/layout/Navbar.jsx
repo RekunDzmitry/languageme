@@ -1,12 +1,13 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useT } from '../../i18n'
 import { useAuth } from '../../stores/AuthContext'
+import UserMenu from './UserMenu'
 import LanguageSwitcher from './LanguageSwitcher'
 
 export default function Navbar() {
   const { t } = useT()
   const location = useLocation()
-  const { user, isAuthenticated, isLoading, logout } = useAuth()
+  const { isAuthenticated, isLoading } = useAuth()
 
   const links = [
     { to: '/', label: t('nav_home'), icon: '⌂' },
@@ -40,16 +41,8 @@ export default function Navbar() {
         <LanguageSwitcher />
         {!isLoading && (
           isAuthenticated ? (
-            <div className="flex items-center gap-2 ml-2">
-              <span className="text-sm text-text-muted truncate max-w-[120px]">
-                {user?.display_name || user?.email}
-              </span>
-              <button
-                onClick={logout}
-                className="text-sm text-text-muted hover:text-red-400 transition-colors"
-              >
-                {t('auth_logout')}
-              </button>
+            <div className="ml-2">
+              <UserMenu />
             </div>
           ) : (
             <Link
@@ -61,6 +54,11 @@ export default function Navbar() {
           )
         )}
       </div>
+      {!isLoading && isAuthenticated && (
+        <div className="md:hidden">
+          <UserMenu />
+        </div>
+      )}
     </nav>
   )
 }
