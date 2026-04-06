@@ -162,5 +162,11 @@
   "learn_mastery": "maîtrisé",
   "voice_model_loading": "Chargement du modèle de reconnaissance...",
   "voice_model_error": "Erreur de chargement du modèle",
-  "voice_play_recording": "Mon enregistrement"
+  "voice_play_recording": "Mon enregistrement",
+  "user_menu_export": "Exporter les données",
+  "user_menu_import": "Importer les données",
+  "import_success": "Importé : {cards} cartes, {themes} thèmes, {mnemonics} mnémoniques. Ignoré : {skipped} doublons.",
+  "import_error": "Erreur d'import : {message}",
+  "export_error": "Erreur d'export : {message}",
+  "import_file_error": "Impossible de lire le fichier"
 }

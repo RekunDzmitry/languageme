@@ -169,5 +169,11 @@
   "status_mastered": "Изучено",
   "train_start": "Начать тренировку",
   "training_out_of": "из",
-  "voice_play_recording": "Моя запись"
+  "voice_play_recording": "Моя запись",
+  "user_menu_export": "Экспорт данных",
+  "user_menu_import": "Импорт данных",
+  "import_success": "Импортировано: {cards} карточек, {themes} тем, {mnemonics} мнемоник. Пропущено: {skipped} дубликатов.",
+  "import_error": "Ошибка импорта: {message}",
+  "export_error": "Ошибка экспорта: {message}",
+  "import_file_error": "Не удалось прочитать файл"
 }
