@@ -50,21 +50,15 @@ export function UserProgressProvider({ children }) {
     return () => clearTimeout(saveTimer.current)
   }, [progress])
 
-  // Fetch from API when authenticated
-  useEffect(() => {
-    if (!isAuthenticated) return
-
-    let cancelled = false
+  const fetchProgress = useCallback(() => {
     setIsProgressLoading(true)
 
-    Promise.all([
+    return Promise.all([
       api.get('/api/stats').catch(() => null),
       api.get('/api/progress/themes').catch(() => null),
       api.get('/api/mnemonics').catch(() => null),
       api.get('/api/study/cards').catch(() => null),
     ]).then(([statsData, themesData, mnemonicsData, cardsData]) => {
-      if (cancelled) return
-
       setProgress(prev => {
         const next = { ...prev }
 
@@ -113,11 +107,15 @@ export function UserProgressProvider({ children }) {
         return next
       })
     }).finally(() => {
-      if (!cancelled) setIsProgressLoading(false)
+      setIsProgressLoading(false)
     })
+  }, [])
 
-    return () => { cancelled = true }
-  }, [isAuthenticated])
+  // Fetch from API when authenticated
+  useEffect(() => {
+    if (!isAuthenticated) return
+    fetchProgress()
+  }, [isAuthenticated, fetchProgress])
 
   const showNotification = useCallback((msg, type = 'info') => {
     setNotification({ msg, type })
@@ -251,6 +249,13 @@ export function UserProgressProvider({ children }) {
     }))
   }, [])
 
+  const importConjugationCards = useCallback((cards) => {
+    setProgress(prev => ({
+      ...prev,
+      conjugationCards: { ...prev.conjugationCards, ...cards },
+    }))
+  }, [])
+
   return (
     <UserProgressContext.Provider value={{
       cards: progress.srsCards,
@@ -269,6 +274,8 @@ export function UserProgressProvider({ children }) {
       resetCard,
       updateCard,
       incrementStreak,
+      importConjugationCards,
+      refreshProgress: fetchProgress,
     }}>
       {children}
     </UserProgressContext.Provider>

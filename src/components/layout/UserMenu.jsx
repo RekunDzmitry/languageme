@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { useT } from '../../i18n'
 import { useAuth } from '../../stores/AuthContext'
+import { useProgress } from '../../stores/UserProgressContext'
 import { api } from '../../api/client'
 
 export default function UserMenu() {
   const { t } = useT()
   const { user, logout } = useAuth()
+  const { conjugationCards, refreshProgress, importConjugationCards } = useProgress()
   const [open, setOpen] = useState(false)
   const [toast, setToast] = useState(null)
   const menuRef = useRef(null)
@@ -39,7 +41,12 @@ export default function UserMenu() {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) throw new Error(`${res.status}`)
-      const blob = await res.blob()
+      // Inject conjugation cards (client-only data) into the export
+      const exportData = await res.json()
+      if (conjugationCards && Object.keys(conjugationCards).length > 0) {
+        exportData.conjugationCards = conjugationCards
+      }
+      const blob = new Blob([JSON.stringify(exportData)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -78,6 +85,13 @@ export default function UserMenu() {
       }
 
       const result = await api.post('/api/import', data)
+      await refreshProgress()
+
+      // Restore conjugation cards (client-only data) from backup
+      if (data.conjugationCards && typeof data.conjugationCards === 'object') {
+        importConjugationCards(data.conjugationCards)
+      }
+
       const totalSkipped = result.skipped.srsCards + result.skipped.themeProgress + result.skipped.mnemonics
       setToast({
         type: 'success',
