@@ -40,7 +40,7 @@ router.post('/themes/:themeId', authenticate, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// Check unlock status
+// Check unlock status for a single theme
 router.get('/themes/:themeId/unlock', authenticate, async (req, res, next) => {
   try {
     const { rows: [theme] } = await pool.query(
@@ -66,6 +66,45 @@ router.get('/themes/:themeId/unlock', authenticate, async (req, res, next) => {
     }
 
     res.json({ unlocked: true });
+  } catch (err) { next(err); }
+});
+
+// Get unlock status for all themes at once
+router.get('/themes/unlock-status', authenticate, async (req, res, next) => {
+  try {
+    // Get all themes with their unlock requirements
+    const { rows: themes } = await pool.query(
+      'SELECT id, unlock_theme_id, unlock_min_score FROM theme ORDER BY "order"'
+    );
+
+    // Get user's progress on previous themes
+    const { rows: progressRows } = await pool.query(
+      'SELECT theme_id, best_score, completed FROM theme_progress WHERE user_id = $1',
+      [req.user.sub]
+    );
+
+    const progressMap = {};
+    progressRows.forEach(r => { progressMap[r.theme_id] = r; });
+
+    // Compute unlock status for each theme
+    const result = {};
+    for (const theme of themes) {
+      if (!theme.unlock_theme_id) {
+        result[theme.id] = { unlocked: true };
+        continue;
+      }
+      const prev = progressMap[theme.unlock_theme_id];
+      if (prev && prev.completed && prev.best_score >= theme.unlock_min_score) {
+        result[theme.id] = { unlocked: true };
+      } else {
+        result[theme.id] = {
+          unlocked: false,
+          reason: `Complete ${theme.unlock_theme_id} with score >= ${theme.unlock_min_score}%`,
+        };
+      }
+    }
+
+    res.json(result);
   } catch (err) { next(err); }
 });
 

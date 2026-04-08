@@ -3,17 +3,22 @@ import { useT } from '../../i18n'
 import { speak } from '../../utils/audio'
 import { PRONOUNS } from '../../utils/conjugation'
 import { THEME01_RU_CONJUGATIONS } from '../../data/courses/fr/themes/theme01-conjugations-ru'
+import { THEME02_RU_CONJUGATIONS } from '../../data/courses/fr/themes/theme02-conjugations-ru'
 import { VOCAB } from '../../data/courses/fr/vocab'
 import { hints as ruHints } from '../../data/courses/fr/hints/ru'
+import { aiApi } from '../../api/client'
 import SpeakerButton from '../common/SpeakerButton'
+import AIChatButton from '../ai/AIChatButton'
 
 const vocabByTarget = Object.fromEntries(VOCAB.map(w => [w.target, w]))
 
-export default function ConjugationExercise({ item, onResult, userMnemonics = {}, onSaveMnemonic }) {
+export default function ConjugationExercise({ item, formType = 'aff', onResult, userMnemonics = {}, onSaveMnemonic }) {
   const { t } = useT()
   const [revealed, setRevealed] = useState(false)
 
-  const ruForms = THEME01_RU_CONJUGATIONS[item.verb.infinitive]
+  // Use negative conjugations for theme02, affirmative for theme01
+  const ruConjugations = formType === 'neg' ? THEME02_RU_CONJUGATIONS : THEME01_RU_CONJUGATIONS
+  const ruForms = ruConjugations[item.verb.infinitive]
   const ruConjugated = ruForms ? ruForms[item.pronounIdx] : ''
   const pronoun = PRONOUNS[item.pronounIdx]
   const prompt = `${pronoun.ru.charAt(0).toUpperCase() + pronoun.ru.slice(1)} ${ruConjugated}`
@@ -27,11 +32,35 @@ export default function ConjugationExercise({ item, onResult, userMnemonics = {}
 
   const [editing, setEditing] = useState(false)
   const [editText, setEditText] = useState('')
+  const [aiNotes, setAiNotes] = useState([])
+  const [loadingNotes, setLoadingNotes] = useState(false)
 
   useEffect(() => {
     setRevealed(false)
     setEditing(false)
+    setAiNotes([])
   }, [item.key])
+
+  // Load AI notes for this exercise
+  useEffect(() => {
+    if (revealed && item.key) {
+      loadAiNotes()
+    }
+  }, [revealed, item.key])
+
+  async function loadAiNotes() {
+    setLoadingNotes(true)
+    try {
+      const notes = await aiApi.getNotes(item.key)
+      if (notes && notes.length > 0) {
+        setAiNotes(notes)
+      }
+    } catch (err) {
+      console.log('No AI notes found for this exercise')
+    } finally {
+      setLoadingNotes(false)
+    }
+  }
 
   function handleReveal() {
     setRevealed(true)
@@ -40,9 +69,19 @@ export default function ConjugationExercise({ item, onResult, userMnemonics = {}
 
   return (
     <div className="flex flex-col items-center gap-5">
-      {/* Badge */}
-      <div className="self-end bg-surface border border-border rounded-lg px-3 py-1 text-xs font-semibold text-accent">
-        {t('ru_to_fr')}
+      {/* Badge + AI Button */}
+      <div className="flex items-center justify-between w-full max-w-sm">
+        <div className="bg-surface border border-border rounded-lg px-3 py-1 text-xs font-semibold text-accent">
+          {t('ru_to_fr')}
+        </div>
+        <AIChatButton 
+          exerciseKey={item.key} 
+          exerciseType="conjugation" 
+          verb={item.verb}
+          prompt={prompt}
+          answer={fullAnswer}
+          onNoteSaved={loadAiNotes}
+        />
       </div>
 
       {/* Prompt */}
@@ -64,6 +103,38 @@ export default function ConjugationExercise({ item, onResult, userMnemonics = {}
             <span className="text-white text-2xl font-bold">{fullAnswer}</span>
             <SpeakerButton text={fullAnswer} size="sm" />
           </div>
+
+          {/* AI Notes section */}
+          {(aiNotes.length > 0 || loadingNotes) && (
+            <div className="w-full max-w-sm mt-1">
+              {loadingNotes ? (
+                <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-xl p-3 px-4">
+                  <div className="text-[11px] text-cyan-400 font-bold uppercase tracking-wide mb-1">AI Заметки</div>
+                  <div className="text-sm text-text-muted italic">Загрузка...</div>
+                </div>
+              ) : (
+                aiNotes.map(note => {
+                  let noteContent = note.content
+                  try {
+                    const parsed = JSON.parse(note.content)
+                    noteContent = parsed.summary || parsed.messages?.[parsed.messages?.length - 1]?.content || note.content
+                  } catch {}
+                  return (
+                    <div 
+                      key={note.id}
+                      className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-xl p-3 px-4"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[11px] text-cyan-400 font-bold uppercase tracking-wide">AI Заметка</span>
+                        <span className="text-[10px] text-white/30">💬</span>
+                      </div>
+                      <div className="text-sm text-text-muted leading-relaxed">{noteContent}</div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          )}
 
           {/* Mnemonic section */}
           {(hint || vocabId) && (

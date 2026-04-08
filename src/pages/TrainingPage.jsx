@@ -8,6 +8,13 @@ import { conjCardKey, PRONOUNS } from '../utils/conjugation'
 
 const PRONOUN_LABELS = PRONOUNS.map(p => p.fr)
 
+// Themes using negative forms (ne...pas)
+const NEGATIVE_THEMES = ['theme02']
+
+function getFormType(themeId) {
+  return NEGATIVE_THEMES.includes(themeId) ? 'neg' : 'aff'
+}
+
 function formatDueShort(ts) {
   const diff = ts - Date.now()
   const mins = Math.floor(diff / 60000)
@@ -18,7 +25,7 @@ function formatDueShort(ts) {
   return `${days}д`
 }
 
-function VerbGrid({ theme, conjugationCards, t }) {
+function VerbGrid({ theme, conjugationCards, t, formType }) {
   const verbs = theme.verbList || []
 
   // Group verbs by their group field
@@ -43,7 +50,7 @@ function VerbGrid({ theme, conjugationCards, t }) {
               <tr key={verb.infinitive} className="border-t border-white/[0.05]">
                 <td className="py-1.5 px-2 text-white font-medium">{verb.infinitive}</td>
                 {PRONOUN_LABELS.map((_, pi) => {
-                  const key = conjCardKey(verb, pi)
+                  const key = conjCardKey(verb, pi, formType)
                   const card = conjugationCards[key]
                   let color = 'bg-white/[0.06]' // gray — not started
                   let title = t('status_new')
@@ -135,11 +142,12 @@ export default function TrainingPage() {
       <div className="flex flex-col gap-3">
         {themes.map((theme) => {
           const hasVerbs = theme.verbList?.length > 0
+          const formType = getFormType(theme.id)
           const themeMastery = hasVerbs
-            ? getThemeConjugationMastery(conjugationCards, theme.verbList)
+            ? getThemeConjugationMastery(conjugationCards, theme.verbList, formType)
             : null
           const percent = themeMastery ? themeMastery.percent : 0
-          const dueCount = hasVerbs ? getConjugationDueCount(conjugationCards, theme.verbList) : 0
+          const dueCount = hasVerbs ? getConjugationDueCount(conjugationCards, theme.verbList, formType) : 0
           const isExpanded = expandedThemeId === theme.id
 
           return (
@@ -194,7 +202,7 @@ export default function TrainingPage() {
 
               {isExpanded && hasVerbs && (
                 <div className="mt-3 border-t border-white/[0.08] pt-3">
-                  <VerbGrid theme={theme} conjugationCards={conjugationCards} t={t} />
+                  <VerbGrid theme={theme} conjugationCards={conjugationCards} t={t} formType={formType} />
                   <div className="mt-4 flex justify-center">
                     <button
                       onClick={() => navigate(`/learn/${theme.id}`)}

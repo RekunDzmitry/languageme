@@ -9,7 +9,7 @@ const theme01 = {
   description: 'Learn personal pronouns and regular 1st group (-er) verbs in present tense',
   descriptionRu: 'Личные местоимения и правильные глаголы 1-й группы на -er в настоящем времени',
   unlockCondition: null,
-  vocabIds: ['fr_008', 'fr_016', 'fr_037', 'fr_044', 'fr_001', 'fr_003', 'fr_081', 'fr_082', 'fr_083', 'fr_084', 'fr_085', 'fr_086', 'fr_087', 'fr_088', 'fr_089', 'fr_090', 'fr_091', 'fr_092', 'fr_093', 'fr_094', 'fr_095', 'fr_096', 'fr_097', 'fr_098', 'fr_099', 'fr_100', 'fr_101', 'fr_102', 'fr_103', 'fr_104', 'fr_105', 'fr_106', 'fr_107', 'fr_108', 'fr_109', 'fr_110', 'fr_111', 'fr_112', 'fr_113', 'fr_114', 'fr_115', 'fr_116', 'fr_117', 'fr_118', 'fr_119', 'fr_120', 'fr_121', 'fr_122', 'fr_123', 'fr_124', 'fr_125', 'fr_126', 'fr_127', 'fr_128', 'fr_129', 'fr_130', 'fr_131', 'fr_132', 'fr_133', 'fr_134', 'fr_135', 'fr_136', 'fr_137', 'fr_138', 'fr_139', 'fr_140', 'fr_141', 'fr_142', 'fr_143', 'fr_144', 'fr_145', 'fr_146', 'fr_147', 'fr_148', 'fr_149', 'fr_150', 'fr_151', 'fr_152', 'fr_153', 'fr_154', 'fr_155', 'fr_156', 'fr_157', 'fr_158', 'fr_159', 'fr_160', 'fr_161', 'fr_162', 'fr_163', 'fr_164', 'fr_165', 'fr_166', 'fr_167', 'fr_168', 'fr_169', 'fr_170', 'fr_171', 'fr_172', 'fr_173', 'fr_174', 'fr_175', 'fr_176', 'fr_177', 'fr_178', 'fr_179', 'fr_180', 'fr_181', 'fr_182', 'fr_183', 'fr_184', 'fr_185', 'fr_186', 'fr_187', 'fr_188', 'fr_189', 'fr_190', 'fr_191', 'fr_192', 'fr_193', 'fr_194', 'fr_195', 'fr_196', 'fr_197', 'fr_198', 'fr_199', 'fr_200', 'fr_201', 'fr_202', 'fr_203', 'fr_204', 'fr_205', 'fr_206', 'fr_207', 'fr_208', 'fr_209', 'fr_210', 'fr_211', 'fr_212', 'fr_213', 'fr_214', 'fr_215', 'fr_216', 'fr_217', 'fr_218', 'fr_219', 'fr_220', 'fr_221', 'fr_222', 'fr_223', 'fr_224', 'fr_225', 'fr_226', 'fr_227', 'fr_228', 'fr_229', 'fr_230', 'fr_231', 'fr_232', 'fr_233', 'fr_234', 'fr_235', 'fr_236', 'fr_237', 'fr_238', 'fr_239', 'fr_240', 'fr_241', 'fr_242', 'fr_243', 'fr_244', 'fr_245', 'fr_246', 'fr_247', 'fr_248', 'fr_249', 'fr_250', 'fr_251', 'fr_252', 'fr_253', 'fr_254', 'fr_255', 'fr_256', 'fr_257', 'fr_258', 'fr_259', 'fr_260', 'fr_261', 'fr_262', 'fr_263', 'fr_264', 'fr_265', 'fr_266', 'fr_267', 'fr_268', 'fr_269', 'fr_270', 'fr_271', 'fr_272', 'fr_273', 'fr_274', 'fr_275', 'fr_276', 'fr_277', 'fr_278', 'fr_279', 'fr_280', 'fr_281', 'fr_282', 'fr_283', 'fr_284', 'fr_285', 'fr_286', 'fr_287', 'fr_288', 'fr_289', 'fr_290', 'fr_291', 'fr_292', 'fr_293', 'fr_294', 'fr_295', 'fr_296', 'fr_297', 'fr_298', 'fr_299', 'fr_300', 'fr_301', 'fr_302', 'fr_303', 'fr_304', 'fr_305'],
+  vocabIds: ['fr_008', 'fr_016', 'fr_037', 'fr_044', 'fr_001', 'fr_003', 'fr_081', 'fr_082', 'fr_083', 'fr_084', 'fr_085', 'fr_086', 'fr_087', 'fr_088', 'fr_089', 'fr_090', 'fr_091', 'fr_092', 'fr_093', 'fr_094', 'fr_095', 'fr_096', 'fr_097', 'fr_098', 'fr_099', 'fr_100', 'fr_101', 'fr_102', 'fr_103', 'fr_104', 'fr_105', 'fr_106', 'fr_107', 'fr_108', 'fr_109', 'fr_110', 'fr_111', 'fr_112', 'fr_113', 'fr_114', 'fr_115', 'fr_116', 'fr_117', 'fr_118', 'fr_119', 'fr_120', 'fr_121', 'fr_122', 'fr_123', 'fr_124', 'fr_125', 'fr_126', 'fr_127', 'fr_128', 'fr_129', 'fr_130', 'fr_131', 'fr_132', 'fr_133', 'fr_134', 'fr_135', 'fr_136', 'fr_137', 'fr_138', 'fr_139', 'fr_140', 'fr_141', 'fr_142', 'fr_143', 'fr_144', 'fr_145', 'fr_146', 'fr_147', 'fr_148', 'fr_149', 'fr_150', 'fr_151', 'fr_152', 'fr_153', 'fr_154', 'fr_155', 'fr_156', 'fr_157', 'fr_158', 'fr_159', 'fr_160', 'fr_161', 'fr_162', 'fr_163', 'fr_164', 'fr_165', 'fr_166', 'fr_167', 'fr_168', 'fr_169', 'fr_170', 'fr_171', 'fr_172', 'fr_173', 'fr_174', 'fr_175', 'fr_176', 'fr_177', 'fr_178', 'fr_179', 'fr_180', 'fr_181', 'fr_182', 'fr_183', 'fr_184', 'fr_185', 'fr_186', 'fr_187', 'fr_188', 'fr_189', 'fr_190', 'fr_191', 'fr_192', 'fr_193', 'fr_194', 'fr_195', 'fr_196', 'fr_197', 'fr_198', 'fr_199', 'fr_200', 'fr_201', 'fr_202', 'fr_203', 'fr_204', 'fr_205', 'fr_206', 'fr_207', 'fr_208', 'fr_209', 'fr_210', 'fr_211', 'fr_212', 'fr_213', 'fr_214', 'fr_215', 'fr_216', 'fr_217', 'fr_218', 'fr_219', 'fr_220', 'fr_221', 'fr_222', 'fr_223', 'fr_224', 'fr_225', 'fr_226', 'fr_227', 'fr_228', 'fr_229', 'fr_230', 'fr_231', 'fr_232', 'fr_233', 'fr_234', 'fr_235', 'fr_236', 'fr_237', 'fr_238', 'fr_239', 'fr_240', 'fr_241', 'fr_242', 'fr_243', 'fr_244', 'fr_245', 'fr_246', 'fr_247', 'fr_248', 'fr_249', 'fr_250', 'fr_251', 'fr_252', 'fr_253', 'fr_254', 'fr_255', 'fr_256', 'fr_257', 'fr_258', 'fr_259', 'fr_260', 'fr_261', 'fr_262', 'fr_263', 'fr_264', 'fr_265', 'fr_266', 'fr_267', 'fr_268', 'fr_269', 'fr_270', 'fr_271', 'fr_272', 'fr_273', 'fr_274', 'fr_275', 'fr_276', 'fr_277', 'fr_278', 'fr_279', 'fr_280', 'fr_281', 'fr_282', 'fr_283', 'fr_284', 'fr_285', 'fr_286', 'fr_287', 'fr_288', 'fr_289', 'fr_290', 'fr_291', 'fr_292', 'fr_293', 'fr_294', 'fr_295', 'fr_296', 'fr_297', 'fr_298', 'fr_299', 'fr_300', 'fr_301', 'fr_302', 'fr_303', 'fr_304', 'fr_305', 'fr_309', 'fr_310', 'fr_311', 'fr_312', 'fr_313', 'fr_314', 'fr_315', 'fr_316', 'fr_317', 'fr_318', 'fr_319', 'fr_320', 'fr_321', 'fr_322', 'fr_323', 'fr_324', 'fr_325', 'fr_326', 'fr_327', 'fr_328', 'fr_329', 'fr_330', 'fr_331', 'fr_332', 'fr_333', 'fr_334', 'fr_335', 'fr_336', 'fr_337', 'fr_338', 'fr_339', 'fr_340', 'fr_341', 'fr_342', 'fr_343', 'fr_344', 'fr_345', 'fr_346', 'fr_347', 'fr_348', 'fr_349', 'fr_350', 'fr_351', 'fr_352', 'fr_353', 'fr_354', 'fr_355', 'fr_356', 'fr_357', 'fr_358', 'fr_359', 'fr_360', 'fr_361', 'fr_362', 'fr_363', 'fr_364', 'fr_365', 'fr_366', 'fr_367', 'fr_368', 'fr_369', 'fr_370', 'fr_371', 'fr_372', 'fr_373', 'fr_374', 'fr_375', 'fr_376', 'fr_377', 'fr_378', 'fr_379', 'fr_380', 'fr_381', 'fr_382', 'fr_383', 'fr_384', 'fr_385', 'fr_386', 'fr_387', 'fr_388', 'fr_389', 'fr_390', 'fr_391', 'fr_392'],
   sections: [
     {
       type: 'grammar',
@@ -47,6 +47,61 @@ const theme01 = {
             { fr: 'Ils mangent', ru: 'Они едят' },
           ]
         }
+      ],
+      tables: []
+    },
+    {
+      type: 'grammar',
+      notes: [
+        {
+          title: 'Глаголы 1-й группы с изменением основы',
+          text: 'Многие глаголы 1-й группы (-er) изменяют основу в формах с «немым» окончанием (je, tu, il, ils). Основа не меняется в формах nous и vous.\n\nВыделяют несколько типов изменений:',
+          examples: []
+        },
+        {
+          title: 'e → è (acheter, lever, mener…)',
+          text: 'Безударное «e» в предпоследнем слоге превращается в «è» перед немым окончанием.',
+          examples: [
+            { fr: "j'achète, tu achètes, il achète", ru: 'но: nous achetons, vous achetez' },
+            { fr: 'je lève, tu lèves, il lève', ru: 'но: nous levons, vous levez' },
+            { fr: 'je mène, tu mènes, il mène', ru: 'но: nous menons, vous menez' },
+          ]
+        },
+        {
+          title: 'é → è (préférer, espérer, répéter…)',
+          text: 'Закрытое «é» в последнем слоге основы переходит в «è» перед немым окончанием.',
+          examples: [
+            { fr: 'je préfère, tu préfères, il préfère', ru: 'но: nous préférons, vous préférez' },
+            { fr: "j'espère, tu espères, il espère", ru: 'но: nous espérons, vous espérez' },
+            { fr: 'je répète, tu répètes, il répète', ru: 'но: nous répétons, vous répétez' },
+          ]
+        },
+        {
+          title: 'Удвоение согласной (appeler, jeter…)',
+          text: 'Некоторые глаголы на -eler и -eter удваивают l или t перед немым окончанием вместо добавления accent grave.',
+          examples: [
+            { fr: "j'appelle, tu appelles, il appelle", ru: 'но: nous appelons, vous appelez' },
+            { fr: 'je jette, tu jettes, il jette', ru: 'но: nous jetons, vous jetez' },
+            { fr: "j'épelle, tu épelles, il épelle", ru: 'но: nous épelons, vous épelez' },
+          ]
+        },
+        {
+          title: '-yer → -ie (envoyer, payer, nettoyer…)',
+          text: 'Глаголы на -yer меняют «y» на «i» перед немым окончанием. Для глаголов на -ayer допустимы обе формы.',
+          examples: [
+            { fr: "j'envoie, tu envoies, il envoie", ru: 'но: nous envoyons, vous envoyez' },
+            { fr: 'je paie / je paye', ru: 'оба варианта допустимы' },
+            { fr: 'je nettoie, tu nettoies, il nettoie', ru: 'но: nous nettoyons, vous nettoyez' },
+          ]
+        },
+        {
+          title: '-cer → -çons, -ger → -geons',
+          text: 'Глаголы на -cer и -ger меняют написание только в форме nous, чтобы сохранить произношение [s] и [ʒ] перед «o».',
+          examples: [
+            { fr: 'nous commençons, nous lançons', ru: 'c → ç перед -ons' },
+            { fr: 'nous mangeons, nous changeons', ru: '-ge- перед -ons' },
+          ]
+        },
       ],
       tables: []
     },
@@ -110,6 +165,104 @@ const theme01 = {
     { infinitive: 'accepter', ru: 'принимать', group: 'Социальные' },
     { infinitive: 'refuser', ru: 'отказывать', group: 'Социальные' },
     { infinitive: 'habiter', ru: 'жить, проживать', group: 'Социальные' },
+
+    // ── Глаголы с изменением основы (e→è) ──
+    { infinitive: 'achever', ru: 'завершать', group: 'e→è: основа' },
+    { infinitive: 'amener', ru: 'приводить', group: 'e→è: основа' },
+    { infinitive: 'emmener', ru: 'уводить, увозить', group: 'e→è: основа' },
+    { infinitive: 'enlever', ru: 'снимать, убирать', group: 'e→è: основа' },
+    { infinitive: 'lever', ru: 'поднимать', group: 'e→è: основа' },
+    { infinitive: 'relever', ru: 'поднимать, отмечать', group: 'e→è: основа' },
+    { infinitive: 'élever', ru: 'воспитывать, поднимать', group: 'e→è: основа' },
+    { infinitive: 'mener', ru: 'вести', group: 'e→è: основа' },
+    { infinitive: 'promener', ru: 'гулять, выгуливать', group: 'e→è: основа' },
+    { infinitive: 'peser', ru: 'взвешивать', group: 'e→è: основа' },
+    { infinitive: 'geler', ru: 'замерзать', group: 'e→è: основа' },
+
+    // ── Глаголы с изменением основы (é→è) ──
+    { infinitive: 'céder', ru: 'уступать', group: 'é→è: основа' },
+    { infinitive: 'compléter', ru: 'дополнять', group: 'é→è: основа' },
+    { infinitive: 'considérer', ru: 'рассматривать', group: 'é→è: основа' },
+    { infinitive: 'espérer', ru: 'надеяться', group: 'é→è: основа' },
+    { infinitive: 'exagérer', ru: 'преувеличивать', group: 'é→è: основа' },
+    { infinitive: 'gérer', ru: 'управлять', group: 'é→è: основа' },
+    { infinitive: 'inquiéter', ru: 'беспокоить', group: 'é→è: основа' },
+    { infinitive: 'pénétrer', ru: 'проникать', group: 'é→è: основа' },
+    { infinitive: 'posséder', ru: 'владеть', group: 'é→è: основа' },
+    { infinitive: 'préférer', ru: 'предпочитать', group: 'é→è: основа' },
+    { infinitive: 'répéter', ru: 'повторять', group: 'é→è: основа' },
+    { infinitive: 'suggérer', ru: 'предлагать', group: 'é→è: основа' },
+
+    // ── Удвоение согласной (-eter → -ette, -eler → -elle) ──
+    { infinitive: 'jeter', ru: 'бросать', group: 'Удвоение: -tt-/-ll-' },
+    { infinitive: 'rejeter', ru: 'отвергать', group: 'Удвоение: -tt-/-ll-' },
+    { infinitive: 'appeler', ru: 'звать, звонить', group: 'Удвоение: -tt-/-ll-' },
+    { infinitive: 'rappeler', ru: 'перезванивать, напоминать', group: 'Удвоение: -tt-/-ll-' },
+    { infinitive: 'épeler', ru: 'произносить по буквам', group: 'Удвоение: -tt-/-ll-' },
+    { infinitive: 'renouveler', ru: 'обновлять', group: 'Удвоение: -tt-/-ll-' },
+
+    // ── Глаголы на -yer (y→i) ──
+    { infinitive: 'balayer', ru: 'подметать', group: '-yer → -ie' },
+    { infinitive: 'effrayer', ru: 'пугать', group: '-yer → -ie' },
+    { infinitive: 'égayer', ru: 'веселить', group: '-yer → -ie' },
+    { infinitive: 'employer', ru: 'использовать, нанимать', group: '-yer → -ie' },
+    { infinitive: 'ennuyer', ru: 'скучать, надоедать', group: '-yer → -ie' },
+    { infinitive: 'envoyer', ru: 'отправлять', group: '-yer → -ie' },
+    { infinitive: 'essuyer', ru: 'вытирать', group: '-yer → -ie' },
+    { infinitive: 'nettoyer', ru: 'чистить', group: '-yer → -ie' },
+    { infinitive: 'payer', ru: 'платить', group: '-yer → -ie' },
+    { infinitive: 'renvoyer', ru: 'отсылать, увольнять', group: '-yer → -ie' },
+    { infinitive: 'tutoyer', ru: 'обращаться на «ты»', group: '-yer → -ie' },
+    { infinitive: 'vouvoyer', ru: 'обращаться на «вы»', group: '-yer → -ie' },
+
+    // ── Глаголы на -cer (c→ç перед -ons) ──
+    { infinitive: 'agacer', ru: 'раздражать', group: '-cer → -çons' },
+    { infinitive: 'annoncer', ru: 'объявлять', group: '-cer → -çons' },
+    { infinitive: 'avancer', ru: 'продвигаться', group: '-cer → -çons' },
+    { infinitive: 'balancer', ru: 'раскачивать', group: '-cer → -çons' },
+    { infinitive: 'dénoncer', ru: 'доносить, осуждать', group: '-cer → -çons' },
+    { infinitive: 'divorcer', ru: 'разводиться', group: '-cer → -çons' },
+    { infinitive: 'effacer', ru: 'стирать', group: '-cer → -çons' },
+    { infinitive: 'forcer', ru: 'заставлять', group: '-cer → -çons' },
+    { infinitive: 'lancer', ru: 'бросать, запускать', group: '-cer → -çons' },
+    { infinitive: 'menacer', ru: 'угрожать', group: '-cer → -çons' },
+    { infinitive: 'placer', ru: 'размещать', group: '-cer → -çons' },
+    { infinitive: 'prononcer', ru: 'произносить', group: '-cer → -çons' },
+    { infinitive: 'remplacer', ru: 'заменять', group: '-cer → -çons' },
+    { infinitive: 'renoncer', ru: 'отказываться', group: '-cer → -çons' },
+    { infinitive: 'sucer', ru: 'сосать', group: '-cer → -çons' },
+    { infinitive: 'tracer', ru: 'чертить', group: '-cer → -çons' },
+
+    // ── Глаголы на -ger (ge перед -ons) ──
+    { infinitive: 'aménager', ru: 'обустраивать', group: '-ger → -geons' },
+    { infinitive: 'arranger', ru: 'устраивать', group: '-ger → -geons' },
+    { infinitive: 'bouger', ru: 'двигаться', group: '-ger → -geons' },
+    { infinitive: 'changer', ru: 'менять', group: '-ger → -geons' },
+    { infinitive: 'charger', ru: 'заряжать, загружать', group: '-ger → -geons' },
+    { infinitive: 'corriger', ru: 'исправлять', group: '-ger → -geons' },
+    { infinitive: 'décourager', ru: 'обескураживать', group: '-ger → -geons' },
+    { infinitive: 'dégager', ru: 'освобождать', group: '-ger → -geons' },
+    { infinitive: 'déménager', ru: 'переезжать', group: '-ger → -geons' },
+    { infinitive: 'déranger', ru: 'беспокоить', group: '-ger → -geons' },
+    { infinitive: 'diriger', ru: 'руководить', group: '-ger → -geons' },
+    { infinitive: 'encourager', ru: 'поощрять', group: '-ger → -geons' },
+    { infinitive: 'engager', ru: 'нанимать, начинать', group: '-ger → -geons' },
+    { infinitive: 'exiger', ru: 'требовать', group: '-ger → -geons' },
+    { infinitive: 'interroger', ru: 'допрашивать', group: '-ger → -geons' },
+    { infinitive: 'juger', ru: 'судить', group: '-ger → -geons' },
+    { infinitive: 'loger', ru: 'размещать, проживать', group: '-ger → -geons' },
+    { infinitive: 'mélanger', ru: 'смешивать', group: '-ger → -geons' },
+    { infinitive: 'obliger', ru: 'обязывать', group: '-ger → -geons' },
+    { infinitive: 'partager', ru: 'делиться', group: '-ger → -geons' },
+    { infinitive: 'plonger', ru: 'нырять', group: '-ger → -geons' },
+    { infinitive: 'ranger', ru: 'убирать, наводить порядок', group: '-ger → -geons' },
+    { infinitive: 'rédiger', ru: 'составлять, редактировать', group: '-ger → -geons' },
+    { infinitive: 'songer', ru: 'мечтать, размышлять', group: '-ger → -geons' },
+    { infinitive: 'venger', ru: 'мстить', group: '-ger → -geons' },
+
+    // ── Прочие ──
+    { infinitive: 'créer', ru: 'создавать', group: 'Прочие' },
+    { infinitive: 'neiger', ru: 'идти (о снеге)', group: 'Прочие' },
   ]
 }
 
@@ -148,6 +301,166 @@ const theme02 = {
       ],
       tables: []
     },
+  ],
+  // Same verbs as theme01, but in NEGATIVE form (ne...pas)
+  // These are tracked separately with formType='neg'
+  verbList: [
+    // Общение и речь
+    { infinitive: 'parler', ru: 'не говорить', group: 'Общение и речь' },
+    { infinitive: 'demander', ru: 'не спрашивать', group: 'Общение и речь' },
+    { infinitive: 'raconter', ru: 'не рассказывать', group: 'Общение и речь' },
+    { infinitive: 'expliquer', ru: 'не объяснять', group: 'Общение и речь' },
+    { infinitive: 'crier', ru: 'не кричать', group: 'Общение и речь' },
+    { infinitive: 'chanter', ru: 'не петь', group: 'Общение и речь' },
+    // Чувства и эмоции
+    { infinitive: 'aimer', ru: 'не любить', group: 'Чувства и эмоции' },
+    { infinitive: 'adorer', ru: 'не обожать', group: 'Чувства и эмоции' },
+    { infinitive: 'détester', ru: 'не ненавидеть', group: 'Чувства и эмоции' },
+    { infinitive: 'pleurer', ru: 'не плакать', group: 'Чувства и эмоции' },
+    { infinitive: 'penser', ru: 'не думать', group: 'Чувства и эмоции' },
+    // Еда и быт
+    { infinitive: 'manger', ru: 'не есть, кушать', group: 'Еда и быт' },
+    { infinitive: 'cuisiner', ru: 'не готовить', group: 'Еда и быт' },
+    { infinitive: 'préparer', ru: 'не готовить', group: 'Еда и быт' },
+    { infinitive: 'couper', ru: 'не резать', group: 'Еда и быт' },
+    { infinitive: 'laver', ru: 'не мыть', group: 'Еда и быт' },
+    { infinitive: 'acheter', ru: 'не покупать', group: 'Еда и быт' },
+    // Движение
+    { infinitive: 'marcher', ru: 'не ходить', group: 'Движение' },
+    { infinitive: 'arriver', ru: 'не приходить', group: 'Движение' },
+    { infinitive: 'entrer', ru: 'не входить', group: 'Движение' },
+    { infinitive: 'monter', ru: 'не подниматься', group: 'Движение' },
+    { infinitive: 'tomber', ru: 'не падать', group: 'Движение' },
+    { infinitive: 'passer', ru: 'не проходить', group: 'Движение' },
+    { infinitive: 'nager', ru: 'не плавать', group: 'Движение' },
+    { infinitive: 'voler', ru: 'не летать', group: 'Движение' },
+    { infinitive: 'danser', ru: 'не танцевать', group: 'Движение' },
+    { infinitive: 'voyager', ru: 'не путешествовать', group: 'Движение' },
+    // Работа и учёба
+    { infinitive: 'travailler', ru: 'не работать', group: 'Работа и учёба' },
+    { infinitive: 'étudier', ru: 'не изучать', group: 'Работа и учёба' },
+    { infinitive: 'chercher', ru: 'не искать', group: 'Работа и учёба' },
+    { infinitive: 'trouver', ru: 'не находить', group: 'Работа и учёба' },
+    { infinitive: 'compter', ru: 'не считать', group: 'Работа и учёба' },
+    { infinitive: 'gagner', ru: 'не выигрывать', group: 'Работа и учёба' },
+    { infinitive: 'essayer', ru: 'не пробовать', group: 'Работа и учёба' },
+    // Восприятие
+    { infinitive: 'regarder', ru: 'не смотреть', group: 'Восприятие' },
+    { infinitive: 'écouter', ru: 'не слушать', group: 'Восприятие' },
+    { infinitive: 'montrer', ru: 'не показывать', group: 'Восприятие' },
+    { infinitive: 'dessiner', ru: 'не рисовать', group: 'Восприятие' },
+    // Действия и взаимодействие
+    { infinitive: 'donner', ru: 'не давать', group: 'Действия' },
+    { infinitive: 'porter', ru: 'не носить', group: 'Действия' },
+    { infinitive: 'jouer', ru: 'не играть', group: 'Действия' },
+    { infinitive: 'fermer', ru: 'не закрывать', group: 'Действия' },
+    { infinitive: 'commencer', ru: 'не начинать', group: 'Действия' },
+    { infinitive: 'terminer', ru: 'не заканчивать', group: 'Действия' },
+    { infinitive: 'rester', ru: 'не оставаться', group: 'Действия' },
+    // Социальные
+    { infinitive: 'inviter', ru: 'не приглашать', group: 'Социальные' },
+    { infinitive: 'présenter', ru: 'не представлять', group: 'Социальные' },
+    { infinitive: 'accepter', ru: 'не принимать', group: 'Социальные' },
+    { infinitive: 'refuser', ru: 'не отказывать', group: 'Социальные' },
+    { infinitive: 'habiter', ru: 'не жить, проживать', group: 'Социальные' },
+
+    // ── Глаголы с изменением основы (e→è) ──
+    { infinitive: 'achever', ru: 'не завершать', group: 'e→è: основа' },
+    { infinitive: 'amener', ru: 'не приводить', group: 'e→è: основа' },
+    { infinitive: 'emmener', ru: 'не уводить, увозить', group: 'e→è: основа' },
+    { infinitive: 'enlever', ru: 'не снимать, убирать', group: 'e→è: основа' },
+    { infinitive: 'lever', ru: 'не поднимать', group: 'e→è: основа' },
+    { infinitive: 'relever', ru: 'не поднимать, отмечать', group: 'e→è: основа' },
+    { infinitive: 'élever', ru: 'не воспитывать, поднимать', group: 'e→è: основа' },
+    { infinitive: 'mener', ru: 'не вести', group: 'e→è: основа' },
+    { infinitive: 'promener', ru: 'не гулять, выгуливать', group: 'e→è: основа' },
+    { infinitive: 'peser', ru: 'не взвешивать', group: 'e→è: основа' },
+    { infinitive: 'geler', ru: 'не замерзать', group: 'e→è: основа' },
+
+    // ── Глаголы с изменением основы (é→è) ──
+    { infinitive: 'céder', ru: 'не уступать', group: 'é→è: основа' },
+    { infinitive: 'compléter', ru: 'не дополнять', group: 'é→è: основа' },
+    { infinitive: 'considérer', ru: 'не рассматривать', group: 'é→è: основа' },
+    { infinitive: 'espérer', ru: 'не надеяться', group: 'é→è: основа' },
+    { infinitive: 'exagérer', ru: 'не преувеличивать', group: 'é→è: основа' },
+    { infinitive: 'gérer', ru: 'не управлять', group: 'é→è: основа' },
+    { infinitive: 'inquiéter', ru: 'не беспокоить', group: 'é→è: основа' },
+    { infinitive: 'pénétrer', ru: 'не проникать', group: 'é→è: основа' },
+    { infinitive: 'posséder', ru: 'не владеть', group: 'é→è: основа' },
+    { infinitive: 'préférer', ru: 'не предпочитать', group: 'é→è: основа' },
+    { infinitive: 'répéter', ru: 'не повторять', group: 'é→è: основа' },
+    { infinitive: 'suggérer', ru: 'не предлагать', group: 'é→è: основа' },
+
+    // ── Удвоение согласной (-eter → -ette, -eler → -elle) ──
+    { infinitive: 'jeter', ru: 'не бросать', group: 'Удвоение: -tt-/-ll-' },
+    { infinitive: 'rejeter', ru: 'не отвергать', group: 'Удвоение: -tt-/-ll-' },
+    { infinitive: 'appeler', ru: 'не звать, звонить', group: 'Удвоение: -tt-/-ll-' },
+    { infinitive: 'rappeler', ru: 'не перезванивать, напоминать', group: 'Удвоение: -tt-/-ll-' },
+    { infinitive: 'épeler', ru: 'не произносить по буквам', group: 'Удвоение: -tt-/-ll-' },
+    { infinitive: 'renouveler', ru: 'не обновлять', group: 'Удвоение: -tt-/-ll-' },
+
+    // ── Глаголы на -yer (y→i) ──
+    { infinitive: 'balayer', ru: 'не подметать', group: '-yer → -ie' },
+    { infinitive: 'effrayer', ru: 'не пугать', group: '-yer → -ie' },
+    { infinitive: 'égayer', ru: 'не веселить', group: '-yer → -ie' },
+    { infinitive: 'employer', ru: 'не использовать, нанимать', group: '-yer → -ie' },
+    { infinitive: 'ennuyer', ru: 'не скучать, надоедать', group: '-yer → -ie' },
+    { infinitive: 'envoyer', ru: 'не отправлять', group: '-yer → -ie' },
+    { infinitive: 'essuyer', ru: 'не вытирать', group: '-yer → -ie' },
+    { infinitive: 'nettoyer', ru: 'не чистить', group: '-yer → -ie' },
+    { infinitive: 'payer', ru: 'не платить', group: '-yer → -ie' },
+    { infinitive: 'renvoyer', ru: 'не отсылать, увольнять', group: '-yer → -ie' },
+    { infinitive: 'tutoyer', ru: 'не обращаться на «ты»', group: '-yer → -ie' },
+    { infinitive: 'vouvoyer', ru: 'не обращаться на «вы»', group: '-yer → -ie' },
+
+    // ── Глаголы на -cer (c→ç перед -ons) ──
+    { infinitive: 'agacer', ru: 'не раздражать', group: '-cer → -çons' },
+    { infinitive: 'annoncer', ru: 'не объявлять', group: '-cer → -çons' },
+    { infinitive: 'avancer', ru: 'не продвигаться', group: '-cer → -çons' },
+    { infinitive: 'balancer', ru: 'не раскачивать', group: '-cer → -çons' },
+    { infinitive: 'dénoncer', ru: 'не доносить, осуждать', group: '-cer → -çons' },
+    { infinitive: 'divorcer', ru: 'не разводиться', group: '-cer → -çons' },
+    { infinitive: 'effacer', ru: 'не стирать', group: '-cer → -çons' },
+    { infinitive: 'forcer', ru: 'не заставлять', group: '-cer → -çons' },
+    { infinitive: 'lancer', ru: 'не бросать, запускать', group: '-cer → -çons' },
+    { infinitive: 'menacer', ru: 'не угрожать', group: '-cer → -çons' },
+    { infinitive: 'placer', ru: 'не размещать', group: '-cer → -çons' },
+    { infinitive: 'prononcer', ru: 'не произносить', group: '-cer → -çons' },
+    { infinitive: 'remplacer', ru: 'не заменять', group: '-cer → -çons' },
+    { infinitive: 'renoncer', ru: 'не отказываться', group: '-cer → -çons' },
+    { infinitive: 'sucer', ru: 'не сосать', group: '-cer → -çons' },
+    { infinitive: 'tracer', ru: 'не чертить', group: '-cer → -çons' },
+
+    // ── Глаголы на -ger (ge перед -ons) ──
+    { infinitive: 'aménager', ru: 'не обустраивать', group: '-ger → -geons' },
+    { infinitive: 'arranger', ru: 'не устраивать', group: '-ger → -geons' },
+    { infinitive: 'bouger', ru: 'не двигаться', group: '-ger → -geons' },
+    { infinitive: 'changer', ru: 'не менять', group: '-ger → -geons' },
+    { infinitive: 'charger', ru: 'не заряжать, загружать', group: '-ger → -geons' },
+    { infinitive: 'corriger', ru: 'не исправлять', group: '-ger → -geons' },
+    { infinitive: 'décourager', ru: 'не обескураживать', group: '-ger → -geons' },
+    { infinitive: 'dégager', ru: 'не освобождать', group: '-ger → -geons' },
+    { infinitive: 'déménager', ru: 'не переезжать', group: '-ger → -geons' },
+    { infinitive: 'déranger', ru: 'не беспокоить', group: '-ger → -geons' },
+    { infinitive: 'diriger', ru: 'не руководить', group: '-ger → -geons' },
+    { infinitive: 'encourager', ru: 'не поощрять', group: '-ger → -geons' },
+    { infinitive: 'engager', ru: 'не нанимать, начинать', group: '-ger → -geons' },
+    { infinitive: 'exiger', ru: 'не требовать', group: '-ger → -geons' },
+    { infinitive: 'interroger', ru: 'не допрашивать', group: '-ger → -geons' },
+    { infinitive: 'juger', ru: 'не судить', group: '-ger → -geons' },
+    { infinitive: 'loger', ru: 'не размещать, проживать', group: '-ger → -geons' },
+    { infinitive: 'mélanger', ru: 'не смешивать', group: '-ger → -geons' },
+    { infinitive: 'obliger', ru: 'не обязывать', group: '-ger → -geons' },
+    { infinitive: 'partager', ru: 'не делиться', group: '-ger → -geons' },
+    { infinitive: 'plonger', ru: 'не нырять', group: '-ger → -geons' },
+    { infinitive: 'ranger', ru: 'не убирать, наводить порядок', group: '-ger → -geons' },
+    { infinitive: 'rédiger', ru: 'не составлять, редактировать', group: '-ger → -geons' },
+    { infinitive: 'songer', ru: 'не мечтать, размышлять', group: '-ger → -geons' },
+    { infinitive: 'venger', ru: 'не мстить', group: '-ger → -geons' },
+
+    // ── Прочие ──
+    { infinitive: 'créer', ru: 'не создавать', group: 'Прочие' },
+    { infinitive: 'neiger', ru: 'не идти (о снеге)', group: 'Прочие' },
   ]
 }
 

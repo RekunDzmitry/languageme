@@ -52,7 +52,7 @@ Key backend files:
 
 **Reference data:** `vocab`, `vocab_translation` (PK: vocab_id+lang), `vocab_hint` (PK: vocab_id+lang), `theme`, `theme_vocab` (many-to-many), `theme_section` (JSONB content), `theme_verb`
 
-**User data:** `user` (UUID PK, email+bcrypt auth), `refresh_token`, `srs_card` (PK: user_id+vocab_id), `theme_progress` (PK: user_id+theme_id), `user_mnemonic`, `review` (BIGSERIAL, every review), `user_daily_stat` (PK: user_id+study_date)
+**User data:** `user` (UUID PK, email+bcrypt auth), `refresh_token`, `srs_card` (PK: user_id+vocab_id), `theme_progress` (PK: user_id+theme_id), `user_mnemonic`, `review` (BIGSERIAL, every review), `user_daily_stat` (PK: user_id+study_date), `ai_conversation`, `ai_message`, `ai_note`
 
 ### API Endpoints
 
@@ -63,12 +63,22 @@ GET /api/vocab[/:id]                           Vocab (public, paginated)
 GET /api/themes[/:id]                          Themes (public, full sections)
 GET /api/study/due|new                         Due/unseen SRS cards (auth)
 POST /api/study/review                         Review card + SM-2 update (auth)
+GET /api/study/conjugation                     Fetch all conjugation cards (auth)
+POST /api/study/conjugation/review             Review conjugation card + SM-2 (auth)
 GET|POST /api/progress/themes[/:themeId]       Theme progress (auth)
 GET /api/progress/themes/:themeId/unlock       Unlock check (auth)
 GET|PUT|DELETE /api/mnemonics[/:vocabId]       User mnemonics (auth)
 GET /api/stats[/history]                       Streak, counts, daily chart (auth)
 POST /api/migrate/import                       One-time localStorage import (auth)
 GET /api/admin/users|analytics                 Admin endpoints (admin)
+
+# AI Assistant (chat + notes)
+POST /api/ai/chat                              Send message to AI (auth)
+GET  /api/ai/conversations/:exerciseKey        Get conversation history (auth)
+GET  /api/ai/conversations                     Get all recent conversations (auth)
+GET  /api/ai/notes                             Get all notes (auth)
+POST /api/ai/notes                             Save a structured note (auth)
+DELETE /api/ai/notes/:id                       Delete a note (auth)
 ```
 
 ### Three Language Dimensions
@@ -80,16 +90,32 @@ The app separates three distinct language concerns:
 
 ### State Management
 
+**PostgreSQL is the source of truth.** All user progress (SRS cards, theme progress, stats) lives in PostgreSQL, not localStorage. The API endpoints under `/api/progress/` and `/api/study/` handle all progress data.
+
 Two React Contexts wrap the app (provider order in `main.jsx`):
 - **`I18nProvider`** — UI language selection, `t(key, params)` translation function
 - **`SettingsContext`** — `nativeLang`, `targetLang`, `uiLang`
-- **`UserProgressContext`** — SRS cards, theme progress, user mnemonics, stats. Currently localStorage-backed (debounced auto-save via `storage.js`, keys prefixed `lm_`). To be replaced with API-backed version.
+- **`UserProgressContext`** — Fetches and caches progress from API when authenticated. Falls back to local `isThemeUnlocked()` when not authenticated.
 
 Hooks: `useT()` for i18n, `useProgress()` for progress/SRS.
 
 ### SM-2 Spaced Repetition
 
 `src/utils/sm2.js` — Maps 4-button ratings (Again=0, Hard=1, Good=2, Easy=3) to SM-2 quality scale. Card fields: `{ease, interval, reps, due, lastReviewed}`. A word is considered "mastered" when `reps >= 3`.
+
+### Conjugation Card Keys
+
+Conjugation cards are keyed by `(verb infinitive, tense, formType, pronounIndex)`:
+```
+conj:parler:pr:aff:0    # affirmative: "je" + "parle"
+conj:parler:pr:neg:0    # negative: "je" + "ne parle pas"
+```
+
+Conjugation progress stored in `conjugation_card` table (PostgreSQL), not `srs_card`.
+
+**Negative form themes:** `theme02` (negative forms with ne...pas). Set `formType='neg'` when calculating mastery or rendering the verb grid for these themes.
+
+**Important:** The same verb in different themes is conceptually different. "Parler" in theme 1 (affirmative) and "parler" in theme 2 (negative forms) have separate progress tracking because they teach different grammatical concepts.
 
 ### Theme System
 
@@ -133,3 +159,13 @@ Tailwind v4 with custom theme tokens in `src/index.css` under `@theme` (colors: 
 - `program.md` in project root contains the 30-step curriculum plan (in Russian)
 - `french_learning_app.jsx` is the original prototype (preserved for reference)
 - Backend env vars: `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `PORT` (see `server/.env.example`)
+
+### AI Assistant
+
+An AI helper that allows users to chat about vocabulary and conjugation exercises.
+
+**Backend:** `server/src/routes/ai.js` with OpenAI-compatible API
+**Frontend:** `src/components/ai/AIChatButton.jsx`, `AIChatModal.jsx`
+**Config:** Set `AI_API_KEY` environment variable (requires restart)
+
+**Use case:** User clicks "AI" button on a conjugation exercise, asks questions about the word (meaning, context, examples), and can save the conversation as a structured note.

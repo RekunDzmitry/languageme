@@ -122,4 +122,89 @@ router.post('/review', authenticate,
   }
 );
 
+// === Conjugation Cards ===
+
+// Get all conjugation cards for user
+router.get('/conjugation', authenticate, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT card_key, ease, interval_days, reps, due, last_reviewed 
+       FROM conjugation_card WHERE user_id = $1`,
+      [req.user.sub]
+    );
+    // Map to frontend key format
+    const cards = {};
+    rows.forEach(row => {
+      cards[row.card_key] = {
+        ease: row.ease,
+        interval: row.interval_days,
+        reps: row.reps,
+        due: new Date(row.due).getTime(),
+        lastReviewed: row.last_reviewed ? new Date(row.last_reviewed).getTime() : null,
+      };
+    });
+    res.json(cards);
+  } catch (err) { next(err); }
+});
+
+// Review a conjugation card
+router.post('/conjugation/review', authenticate,
+  validate({
+    cardKey: { required: true },
+    quality: { required: true, type: 'number', min: 0, max: 3 },
+  }),
+  async (req, res, next) => {
+    const client = await pool.connect();
+    try {
+      const { cardKey, quality } = req.body;
+      const userId = req.user.sub;
+
+      await client.query('BEGIN');
+
+      // Get or create card
+      let { rows: [card] } = await client.query(
+        'SELECT * FROM conjugation_card WHERE user_id = $1 AND card_key = $2',
+        [userId, cardKey]
+      );
+
+      if (!card) {
+        const { rows: [newCard] } = await client.query(
+          'INSERT INTO conjugation_card (user_id, card_key) VALUES ($1, $2) RETURNING *',
+          [userId, cardKey]
+        );
+        card = newCard;
+      }
+
+      // SM-2 update
+      const updated = sm2(card, quality);
+
+      await client.query(
+        `UPDATE conjugation_card 
+         SET ease = $1, interval_days = $2, reps = $3, due = $4, last_reviewed = $5, updated_at = NOW()
+         WHERE user_id = $6 AND card_key = $7`,
+        [updated.ease, updated.interval_days, updated.reps, updated.due, updated.last_reviewed, userId, cardKey]
+      );
+
+      // Upsert daily stat
+      const isCorrect = quality >= 2 ? 1 : 0;
+      await client.query(
+        `INSERT INTO user_daily_stat (user_id, study_date, reviews_count, correct_count)
+         VALUES ($1, CURRENT_DATE, 1, $2)
+         ON CONFLICT (user_id, study_date)
+         DO UPDATE SET reviews_count = user_daily_stat.reviews_count + 1, correct_count = user_daily_stat.correct_count + $2`,
+        [userId, isCorrect]
+      );
+
+      await client.query('COMMIT');
+
+      res.json({ ...card, ...updated });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      next(err);
+    } finally {
+      client.release();
+    }
+  }
+);
+
 export default router;

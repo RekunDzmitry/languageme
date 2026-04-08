@@ -24,6 +24,9 @@ services:
       JWT_SECRET: dev-jwt-secret-change-in-prod
       JWT_REFRESH_SECRET: dev-refresh-secret-change-in-prod
       PORT: 3000
+      OPENCODE_API_KEY: ${OPENCODE_API_KEY}
+    volumes:
+      - ${HOME}/.pi/agent:/root/.pi/agent:ro
     depends_on:
       postgres:
         condition: service_healthy

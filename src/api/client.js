@@ -97,3 +97,30 @@ api.post = (endpoint, body) => api(endpoint, { method: 'POST', body })
 api.patch = (endpoint, body) => api(endpoint, { method: 'PATCH', body })
 api.put = (endpoint, body) => api(endpoint, { method: 'PUT', body })
 api.delete = (endpoint) => api(endpoint, { method: 'DELETE' })
+
+// AI Assistant API
+export const aiApi = {
+  // Send a chat message
+  chat: (message, exerciseKey, exerciseType = 'conjugation', exerciseContext = null) =>
+    api.post('/api/ai/chat', { message, exerciseKey, exerciseType, exerciseContext }),
+
+  // Get conversation history for an exercise
+  getConversation: (exerciseKey) =>
+    api.get(`/api/ai/conversations/${encodeURIComponent(exerciseKey)}`),
+
+  // Get all recent conversations
+  getConversations: (limit = 10) =>
+    api.get(`/api/ai/conversations?limit=${limit}`),
+
+  // Get notes
+  getNotes: (exerciseKey) =>
+    api.get(`/api/ai/notes${exerciseKey ? `?exerciseKey=${encodeURIComponent(exerciseKey)}` : ''}`),
+
+  // Save a note
+  saveNote: (exerciseKey, content, title, exerciseType = 'conjugation') =>
+    api.post('/api/ai/notes', { exerciseKey, content, exerciseType, title }),
+
+  // Delete a note
+  deleteNote: (noteId) =>
+    api.delete(`/api/ai/notes/${noteId}`),
+}

@@ -168,5 +168,16 @@
   "import_success": "Importé : {cards} cartes, {themes} thèmes, {mnemonics} mnémoniques. Ignoré : {skipped} doublons.",
   "import_error": "Erreur d'import : {message}",
   "export_error": "Erreur d'export : {message}",
-  "import_file_error": "Impossible de lire le fichier"
+  "import_file_error": "Impossible de lire le fichier",
+  "ask_ai_helper": "Demander à l'assistant IA",
+  "ai_helper": "Assistant IA",
+  "ai_welcome": "Bonjour ! Je vais vous aider à comprendre ce mot ou cette conjugaison.",
+  "ai_example_question": "Par exemple : « Comment traduire {verb} ? Dans quelles situations l'utiliser ? »",
+  "ai_placeholder": "Posez une question sur le mot ou la conjugaison...",
+  "ai_save_as_note": "Enregistrer la conversation comme note",
+  "ai_saving": "Enregistrement...",
+  "ai_error": "Erreur IA. Veuillez réessayer.",
+  "ai_save_error": "Impossible d'enregistrer la note",
+  "note_for": "Note pour",
+  "about_word": "À propos du mot"
 }

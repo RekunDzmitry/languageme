@@ -16,7 +16,7 @@ function shuffle(arr) {
   return a
 }
 
-export default function ConjugationSession({ themeId = null }) {
+export default function ConjugationSession({ themeId = null, formType = 'aff' }) {
   const { conjugationCards, rateConjugation, userMnemonics, saveMnemonic } = useProgress()
   const { t } = useT()
   const navigate = useNavigate()
@@ -52,13 +52,13 @@ export default function ConjugationSession({ themeId = null }) {
   }, [themeId])
 
   const dueCount = useMemo(
-    () => getConjugationDueCount(conjugationCards, verbList),
-    [conjugationCards, verbList]
+    () => getConjugationDueCount(conjugationCards, verbList, formType),
+    [conjugationCards, verbList, formType]
   )
 
   const mastery = useMemo(
-    () => getThemeConjugationMastery(conjugationCards, verbList),
-    [conjugationCards, verbList]
+    () => getThemeConjugationMastery(conjugationCards, verbList, formType),
+    [conjugationCards, verbList, formType]
   )
 
   const seenKeysRef = useRef(new Set())
@@ -72,12 +72,12 @@ export default function ConjugationSession({ themeId = null }) {
   const [allWordsExhausted, setAllWordsExhausted] = useState(false)
 
   const handleStart = useCallback(() => {
-    const initial = buildSessionQueue(conjugationCards, verbList)
+    const initial = buildSessionQueue(conjugationCards, verbList, formType)
     const q = themeId ? initial : shuffle(initial)
     q.forEach(item => seenKeysRef.current.add(item.key))
     setQueue(q)
     setStarted(true)
-  }, [conjugationCards, verbList, themeId])
+  }, [conjugationCards, verbList, themeId, formType])
 
   const current = queue[0] || null
   const totalInSession = done + queue.length
@@ -97,7 +97,7 @@ export default function ConjugationSession({ themeId = null }) {
     setDone(d => d + 1)
 
     if (remaining.length === 0) {
-      const nextBatch = buildSessionQueue(conjCardsRef.current, verbList)
+      const nextBatch = buildSessionQueue(conjCardsRef.current, verbList, formType)
         .filter(item => !seenKeysRef.current.has(item.key))
         .slice(0, 12)
       nextBatch.forEach(item => seenKeysRef.current.add(item.key))
@@ -202,7 +202,7 @@ export default function ConjugationSession({ themeId = null }) {
         </button>
       </div>
 
-      <ConjugationExercise item={current} onResult={handleResult} userMnemonics={userMnemonics} onSaveMnemonic={saveMnemonic} />
+      <ConjugationExercise item={current} formType={formType} onResult={handleResult} userMnemonics={userMnemonics} onSaveMnemonic={saveMnemonic} />
     </div>
   )
 }

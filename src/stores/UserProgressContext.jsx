@@ -16,19 +16,22 @@ function initCards() {
 
 const defaultProgress = {
   srsCards: null,
-  conjugationCards: {},
+  conjugationCards: {},  // Fetched from PostgreSQL via API when authenticated
   themeProgress: {},
   userMnemonics: {},
   stats: { streak: 0, totalReviewed: 0, lastStudyDate: null, reviewHistory: [] },
+  themeUnlockStatus: {}, // { themeId: { unlocked: bool, reason?: string } }
 }
 
 export function UserProgressProvider({ children }) {
   const { isAuthenticated } = useAuth()
   const [progress, setProgress] = useState(() => {
+    // For unauthenticated users, fall back to localStorage
     const saved = storage.getProgress()
     return {
       ...defaultProgress,
       srsCards: initCards(),
+      // conjugationCards from localStorage only for unauthenticated users
       conjugationCards: saved?.conjugationCards || {},
       themeProgress: saved?.themeProgress || {},
       userMnemonics: saved?.userMnemonics || {},
@@ -40,15 +43,17 @@ export function UserProgressProvider({ children }) {
   const [notification, setNotification] = useState(null)
   const saveTimer = useRef(null)
 
-  // Debounced save to localStorage (never save srsCards — DB is source of truth)
+  // Debounced save to localStorage (only for unauthenticated users — DB is source of truth)
   useEffect(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => {
-      const { srsCards, ...rest } = progress
-      storage.saveProgress(rest)
-    }, 500)
-    return () => clearTimeout(saveTimer.current)
-  }, [progress])
+    if (!isAuthenticated) {
+      if (saveTimer.current) clearTimeout(saveTimer.current)
+      saveTimer.current = setTimeout(() => {
+        const { srsCards, ...rest } = progress
+        storage.saveProgress(rest)
+      }, 500)
+      return () => clearTimeout(saveTimer.current)
+    }
+  }, [progress, isAuthenticated])
 
   const fetchProgress = useCallback(() => {
     setIsProgressLoading(true)
@@ -58,7 +63,9 @@ export function UserProgressProvider({ children }) {
       api.get('/api/progress/themes').catch(() => null),
       api.get('/api/mnemonics').catch(() => null),
       api.get('/api/study/cards').catch(() => null),
-    ]).then(([statsData, themesData, mnemonicsData, cardsData]) => {
+      api.get('/api/study/conjugation').catch(() => null),  // Fetch from PostgreSQL
+      api.get('/api/progress/themes/unlock-status').catch(() => null),
+    ]).then(([statsData, themesData, mnemonicsData, cardsData, conjCardsData, unlockData]) => {
       setProgress(prev => {
         const next = { ...prev }
 
@@ -102,6 +109,15 @@ export function UserProgressProvider({ children }) {
             }
           })
           next.srsCards = cards
+        }
+
+        if (unlockData && typeof unlockData === 'object') {
+          next.themeUnlockStatus = unlockData
+        }
+
+        // conjugationCards from PostgreSQL (source of truth for authenticated users)
+        if (conjCardsData && typeof conjCardsData === 'object') {
+          next.conjugationCards = conjCardsData
         }
 
         return next
@@ -177,7 +193,13 @@ export function UserProgressProvider({ children }) {
         },
       }
     })
-  }, [])
+
+    if (isAuthenticated) {
+      api.post('/api/study/conjugation/review', { cardKey, quality }).catch(err => {
+        console.error('Conjugation review sync failed:', err)
+      })
+    }
+  }, [isAuthenticated])
 
   const updateThemeProgress = useCallback((themeId, data) => {
     setProgress(prev => ({
@@ -263,6 +285,7 @@ export function UserProgressProvider({ children }) {
       themeProgress: progress.themeProgress,
       userMnemonics: progress.userMnemonics,
       stats: progress.stats,
+      themeUnlockStatus: progress.themeUnlockStatus,
       isProgressLoading,
       notification,
       showNotification,

@@ -1,5 +1,8 @@
+// localStorage utilities — used as fallback for unauthenticated users.
+// For authenticated users, PostgreSQL is the source of truth (see UserProgressContext).
+
 const PREFIX = 'lm_'
-const CURRENT_VERSION = 4
+const CURRENT_VERSION = 5
 
 export const storage = {
   get(key) {
@@ -65,6 +68,22 @@ export const storage = {
         data.conjugationCards = migrated
       }
       data.version = 4
+    }
+    // v4 -> v5: add formType to conjugation keys (conj:X:pr:N -> conj:X:pr:aff:N)
+    if (data.version < 5) {
+      if (data.conjugationCards) {
+        const migrated = {}
+        for (const [key, card] of Object.entries(data.conjugationCards)) {
+          const match = key.match(/^conj:(.+):pr:(\d+)$/)
+          if (match) {
+            migrated[`conj:${match[1]}:pr:aff:${match[2]}`] = card
+          } else {
+            migrated[key] = card
+          }
+        }
+        data.conjugationCards = migrated
+      }
+      data.version = 5
     }
     this.saveProgress(data)
     return data

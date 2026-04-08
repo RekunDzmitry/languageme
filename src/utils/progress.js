@@ -14,8 +14,17 @@ export function getNewCards(cards, limit = 5) {
     .slice(0, limit)
 }
 
-export function isThemeUnlocked(/* theme, themeProgress */) {
-  return true
+export function isThemeUnlocked(theme, themeProgress) {
+  // Theme 1 is always unlocked
+  if (theme.id === 'theme01') return true
+  // Extract previous theme number
+  const match = theme.id.match(/^theme(\d+)$/)
+  if (!match) return true
+  const num = parseInt(match[1], 10)
+  if (num <= 1) return true
+  const prevId = `theme${String(num - 1).padStart(2, '0')}`
+  const prev = themeProgress[prevId]
+  return prev && prev.bestScore >= 60
 }
 
 export function getThemeMastery(theme, cards) {
@@ -24,14 +33,14 @@ export function getThemeMastery(theme, cards) {
   return Math.round((mastered / theme.vocabIds.length) * 100)
 }
 
-export function getThemeConjugationMastery(conjugationCards, verbList) {
+export function getThemeConjugationMastery(conjugationCards, verbList, formType = 'aff') {
   if (!verbList || verbList.length === 0) return { learned: 0, mastered: 0, total: 0, percent: 0 }
   const total = verbList.length * 6
   let learned = 0
   let mastered = 0
   for (const verb of verbList) {
     for (let pi = 0; pi < 6; pi++) {
-      const card = conjugationCards[conjCardKey(verb, pi)]
+      const card = conjugationCards[conjCardKey(verb, pi, formType)]
       if (card && card.reps > 0) learned++
       if (card && card.reps >= 3) mastered++
     }
@@ -39,12 +48,12 @@ export function getThemeConjugationMastery(conjugationCards, verbList) {
   return { learned, mastered, total, percent: Math.round((mastered / total) * 100) }
 }
 
-export function getConjugationDueCount(conjugationCards, verbList) {
+export function getConjugationDueCount(conjugationCards, verbList, formType = 'aff') {
   if (!verbList) return 0
   let count = 0
   for (const verb of verbList) {
     for (let pi = 0; pi < 6; pi++) {
-      const card = conjugationCards[conjCardKey(verb, pi)]
+      const card = conjugationCards[conjCardKey(verb, pi, formType)]
       if (card && card.reps > 0 && card.due <= Date.now()) count++
     }
   }

@@ -1,12 +1,14 @@
 import { useNavigate } from 'react-router-dom'
 import { useT } from '../i18n'
 import { useProgress } from '../stores/UserProgressContext'
+import { useAuth } from '../stores/AuthContext'
 import { themes as allThemes } from '../data/courses/fr/themes/theme01-pronouns-present'
 import { isThemeUnlocked } from '../utils/progress'
 
 export default function ThemesListPage() {
   const { t } = useT()
-  const { themeProgress } = useProgress()
+  const { isAuthenticated } = useAuth()
+  const { themeProgress, themeUnlockStatus } = useProgress()
   const navigate = useNavigate()
 
   return (
@@ -14,7 +16,9 @@ export default function ThemesListPage() {
       <h2 className="text-2xl font-extrabold mb-5">{t('themes_title')}</h2>
       <div className="space-y-3">
         {allThemes.map((theme, i) => {
-          const unlocked = isThemeUnlocked(theme, themeProgress)
+          const unlocked = isAuthenticated
+            ? (themeUnlockStatus[theme.id]?.unlocked ?? false)
+            : isThemeUnlocked(theme, themeProgress)
           const progress = themeProgress[theme.id]
           const completed = !!progress?.completedAt
           const started = !!progress?.started
