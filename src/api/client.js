@@ -120,6 +120,10 @@ export const aiApi = {
   saveNote: (exerciseKey, content, title, exerciseType = 'conjugation') =>
     api.post('/api/ai/notes', { exerciseKey, content, exerciseType, title }),
 
+  // Update a note
+  updateNote: (noteId, content, title = null) =>
+    api.put(`/api/ai/notes/${noteId}`, { content, title }),
+
   // Delete a note
   deleteNote: (noteId) =>
     api.delete(`/api/ai/notes/${noteId}`),

@@ -265,6 +265,36 @@ router.post('/notes', requireAuth, async (req, res) => {
   }
 });
 
+// Update a note
+router.put('/notes/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, content } = req.body;
+    const userId = req.user.sub;
+
+    if (!content) {
+      return res.status(400).json({ error: 'content is required' });
+    }
+
+    const result = await pool.query(
+      `UPDATE ai_note 
+       SET title = COALESCE($1, title), content = $2, updated_at = NOW()
+       WHERE id = $3 AND user_id = $4
+       RETURNING id, exercise_key, exercise_type, title, content, created_at, updated_at`,
+      [title, content, id, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Note not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating note:', err);
+    res.status(500).json({ error: 'Failed to update note' });
+  }
+});
+
 // Delete a note
 router.delete('/notes/:id', requireAuth, async (req, res) => {
   try {

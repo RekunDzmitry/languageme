@@ -34,6 +34,9 @@ export default function ConjugationExercise({ item, formType = 'aff', onResult, 
   const [editText, setEditText] = useState('')
   const [aiNotes, setAiNotes] = useState([])
   const [loadingNotes, setLoadingNotes] = useState(false)
+  const [editingNoteId, setEditingNoteId] = useState(null)
+  const [editingNoteText, setEditingNoteText] = useState('')
+  const [editingNoteTitle, setEditingNoteTitle] = useState('')
 
   useEffect(() => {
     setRevealed(false)
@@ -59,6 +62,37 @@ export default function ConjugationExercise({ item, formType = 'aff', onResult, 
       console.log('No AI notes found for this exercise')
     } finally {
       setLoadingNotes(false)
+    }
+  }
+
+  function startEditingNote(note) {
+    let content = note.content
+    try {
+      const parsed = JSON.parse(note.content)
+      content = parsed.summary || parsed.messages?.[parsed.messages?.length - 1]?.content || note.content
+    } catch {}
+    setEditingNoteId(note.id)
+    setEditingNoteText(content)
+    setEditingNoteTitle(note.title || '')
+  }
+
+  async function saveNoteEdit(noteId) {
+    try {
+      await aiApi.updateNote(noteId, editingNoteText, editingNoteTitle)
+      setEditingNoteId(null)
+      loadAiNotes()
+    } catch (err) {
+      console.error('Failed to update note:', err)
+    }
+  }
+
+  async function deleteNote(noteId) {
+    if (!confirm('Удалить эту заметку?')) return
+    try {
+      await aiApi.deleteNote(noteId)
+      setAiNotes(prev => prev.filter(n => n.id !== noteId))
+    } catch (err) {
+      console.error('Failed to delete note:', err)
     }
   }
 
@@ -106,7 +140,7 @@ export default function ConjugationExercise({ item, formType = 'aff', onResult, 
 
           {/* AI Notes section */}
           {(aiNotes.length > 0 || loadingNotes) && (
-            <div className="w-full max-w-sm mt-1">
+            <div className="w-full max-w-sm mt-1 space-y-2">
               {loadingNotes ? (
                 <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-xl p-3 px-4">
                   <div className="text-[11px] text-cyan-400 font-bold uppercase tracking-wide mb-1">AI Заметки</div>
@@ -119,6 +153,9 @@ export default function ConjugationExercise({ item, formType = 'aff', onResult, 
                     const parsed = JSON.parse(note.content)
                     noteContent = parsed.summary || parsed.messages?.[parsed.messages?.length - 1]?.content || note.content
                   } catch {}
+                  
+                  const isEditing = editingNoteId === note.id
+                  
                   return (
                     <div 
                       key={note.id}
@@ -126,9 +163,55 @@ export default function ConjugationExercise({ item, formType = 'aff', onResult, 
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-[11px] text-cyan-400 font-bold uppercase tracking-wide">AI Заметка</span>
-                        <span className="text-[10px] text-white/30">💬</span>
+                        {!isEditing ? (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => startEditingNote(note)}
+                              className="text-[10px] text-white/40 hover:text-cyan-400 transition-colors"
+                              title="Редактировать"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => deleteNote(note.id)}
+                              className="text-[10px] text-white/40 hover:text-red-400 transition-colors"
+                              title="Удалить"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-cyan-400">редактирование...</span>
+                        )}
                       </div>
-                      <div className="text-sm text-text-muted leading-relaxed">{noteContent}</div>
+                      
+                      {isEditing ? (
+                        <div className="space-y-2">
+                          <textarea
+                            value={editingNoteText}
+                            onChange={(e) => setEditingNoteText(e.target.value)}
+                            rows={3}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-sm text-white resize-none focus:outline-none focus:border-cyan-500/50"
+                            placeholder="Текст заметки..."
+                          />
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              onClick={() => setEditingNoteId(null)}
+                              className="px-3 py-1 text-xs text-text-muted hover:text-white transition-colors"
+                            >
+                              Отмена
+                            </button>
+                            <button
+                              onClick={() => saveNoteEdit(note.id)}
+                              className="px-3 py-1 text-xs font-bold text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 rounded-lg hover:bg-cyan-500/20 transition-colors"
+                            >
+                              Сохранить
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-text-muted leading-relaxed whitespace-pre-wrap">{noteContent}</div>
+                      )}
                     </div>
                   )
                 })
