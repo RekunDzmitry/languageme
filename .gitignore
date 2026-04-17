@@ -8,3 +8,7 @@ Thumbs.db
 .serena/
 .vite/
 docs/
+test-results/
+reports/
+playwright-report/
+tests/screenshots/
