@@ -7,6 +7,7 @@ import { getThemes, getThemeTitle } from '../data/courses'
 import { getThemeConjugationMastery, getConjugationDueCount } from '../utils/progress'
 import { conjCardKey, PRONOUNS } from '../utils/conjugation'
 import AIChatModal from '../components/ai/AIChatModal'
+import ExerciseSection from '../components/themes/ExerciseSection'
 
 // Polish pronouns for targetLang 'pl'
 const PL_PRONOUNS = [
@@ -136,6 +137,7 @@ export default function TrainingPage() {
   const [expandedThemeId, setExpandedThemeId] = useState(null)
   const [aiChatVerb, setAiChatVerb] = useState(null)
 
+  const isPolish = targetLang === 'pl'
   const themesWithVerbs = useMemo(() => themes.filter(th => th.verbList?.length > 0), [])
 
   // Get pronoun labels based on target language
@@ -163,23 +165,29 @@ export default function TrainingPage() {
     <div className="max-w-4xl mx-auto px-5 py-6">
       <h1 className="text-2xl font-extrabold text-white mb-2">{t('training_title')}</h1>
 
-      {/* Overall progress */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between text-sm text-text-muted mb-1.5">
-          <span>{t('theme_progress')}</span>
-          <span>{overallMastery}%</span>
+      {/* Overall progress — conjugation mastery applies only to French */}
+      {!isPolish && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between text-sm text-text-muted mb-1.5">
+            <span>{t('theme_progress')}</span>
+            <span>{overallMastery}%</span>
+          </div>
+          <div className="bg-white/[0.08] rounded-md h-2.5 overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-purple-400 to-indigo-400 rounded-md transition-width"
+              style={{ width: `${overallMastery}%` }}
+            />
+          </div>
         </div>
-        <div className="bg-white/[0.08] rounded-md h-2.5 overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-purple-400 to-indigo-400 rounded-md transition-width"
-            style={{ width: `${overallMastery}%` }}
-          />
-        </div>
-      </div>
+      )}
 
       <div className="flex flex-col gap-3">
         {themes.map((theme) => {
           const hasVerbs = theme.verbList?.length > 0
+          const exerciseSection = theme.sections?.find(s => s.type === 'exercises')
+          const hasExercises = exerciseSection?.exercises?.length > 0
+          // Polish themes are unlocked via exercises; French themes stay gated on verbs
+          const isInteractive = hasVerbs || (isPolish && hasExercises)
           const formType = getFormType(theme.id)
           const themeMastery = hasVerbs
             ? getThemeConjugationMastery(conjugationCards, theme.verbList, formType)
@@ -192,14 +200,14 @@ export default function TrainingPage() {
             <div
               key={theme.id}
               className={`w-full text-left bg-surface border border-border rounded-xl p-4 transition-colors ${
-                hasVerbs ? '' : 'opacity-50'
+                isInteractive ? '' : 'opacity-50'
               }`}
             >
               <div
                 onClick={() => {
-                  if (hasVerbs) setExpandedThemeId(isExpanded ? null : theme.id)
+                  if (isInteractive) setExpandedThemeId(isExpanded ? null : theme.id)
                 }}
-                className={hasVerbs ? 'cursor-pointer' : 'cursor-default'}
+                className={isInteractive ? 'cursor-pointer' : 'cursor-default'}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
@@ -207,21 +215,23 @@ export default function TrainingPage() {
                     <span className="font-bold text-white text-sm">{getThemeTitle(theme, targetLang)}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    {!hasVerbs && <span className="text-text-muted text-sm">{t('locked')}</span>}
+                    {!isInteractive && <span className="text-text-muted text-sm">{t('locked')}</span>}
                     {hasVerbs && <span className="text-text-muted text-sm">{percent}%</span>}
-                    {hasVerbs && (
+                    {isInteractive && (
                       <span className="text-text-muted text-xs">
                         {isExpanded ? '▲' : '▼'}
                       </span>
                     )}
                   </div>
                 </div>
-                <div className="bg-white/[0.08] rounded-md h-1.5 overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-purple-400 to-indigo-400 rounded-md transition-width"
-                    style={{ width: `${percent}%` }}
-                  />
-                </div>
+                {hasVerbs && (
+                  <div className="bg-white/[0.08] rounded-md h-1.5 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-purple-400 to-indigo-400 rounded-md transition-width"
+                      style={{ width: `${percent}%` }}
+                    />
+                  </div>
+                )}
                 {hasVerbs && themeMastery && (
                   <div className="flex items-center gap-3 text-xs text-text-muted mt-1.5">
                     <span>{themeMastery.mastered} {t('mastered').toLowerCase()}</span>
@@ -249,6 +259,12 @@ export default function TrainingPage() {
                       {t('train_start')}
                     </button>
                   </div>
+                </div>
+              )}
+
+              {isExpanded && !hasVerbs && hasExercises && (
+                <div className="mt-3 border-t border-white/[0.08] pt-3">
+                  <ExerciseSection section={exerciseSection} themeId={theme.id} />
                 </div>
               )}
             </div>
