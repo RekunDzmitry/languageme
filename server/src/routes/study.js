@@ -6,12 +6,14 @@ import { sm2 } from '../services/sm2.js';
 
 const router = Router();
 
-// All user's SRS cards
+// All user's SRS cards (optionally filtered by target language)
 router.get('/cards', authenticate, async (req, res, next) => {
   try {
+    const target = req.query.target || 'fr';
+    // Filter by vocab_id prefix (fr_xxx, pl_xxx)
     const { rows } = await pool.query(
-      'SELECT vocab_id, ease, interval_days, reps, due, last_reviewed FROM srs_card WHERE user_id = $1',
-      [req.user.sub]
+      'SELECT vocab_id, ease, interval_days, reps, due, last_reviewed FROM srs_card WHERE user_id = $1 AND vocab_id LIKE $2',
+      [req.user.sub, `${target}_%`]
     );
     res.json(rows);
   } catch (err) { next(err); }

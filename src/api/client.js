@@ -61,6 +61,7 @@ export async function api(endpoint, options = {}) {
     ...rest,
     headers,
     body: body && typeof body === 'object' ? JSON.stringify(body) : body,
+    cache: 'no-cache',
   })
 
   if (res.status === 401 && token) {

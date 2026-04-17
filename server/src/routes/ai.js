@@ -72,7 +72,7 @@ async function chatWithAI(messages) {
       model: MODEL_NAME,
       messages: messages,
       max_tokens: 2000,
-      temperature: 0.7,
+      // Note: kimi-k2.5 model only accepts temperature: 1
     }),
   });
 
