@@ -12,3 +12,6 @@ test-results/
 reports/
 playwright-report/
 tests/screenshots/
+.pi/
+pi-annotate-*.tgz
+tests/pi-agent-verify.spec.js
