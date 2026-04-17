@@ -1,26 +1,27 @@
 import { useEffect } from 'react'
 import { useT } from '../../i18n'
-import { hints as ruHints } from '../../data/courses/fr/hints/ru'
-import { EXAMPLES } from '../../data/courses/fr/examples'
+import { getHintsByLang } from '../../data/courses'
+import { useSettings } from '../../stores/SettingsContext'
 import SpeakerButton from '../common/SpeakerButton'
 import { speak } from '../../utils/audio'
 
-function DictSection({ word, t }) {
+function DictSection({ word, t, nativeLang }) {
+  const nativeTranslation = word.translations?.[nativeLang]
   const enTranslation = word.translations?.en
   return (
     <div className="bg-white/5 rounded-xl p-3 px-4 w-full box-border mt-3">
       <div className="text-[11px] text-blue-400 font-bold uppercase tracking-wide mb-2">{t('dictionary')}</div>
       <div className="space-y-1.5">
-        {word.ipa && (
+        {nativeTranslation && (
           <div className="flex items-center gap-2">
-            <span className="text-white/30 text-xs font-mono">IPA</span>
-            <span className="text-sm text-white/60 font-mono">{word.ipa}</span>
+            <span className="text-white/30 text-xs uppercase">{nativeLang}</span>
+            <span className="text-sm text-white/60">{nativeTranslation}</span>
           </div>
         )}
         {enTranslation && (
           <div className="flex items-center gap-2">
             <span className="text-white/30 text-xs">EN</span>
-            <span className="text-sm text-white/60">{enTranslation}</span>
+            <span className="text-sm text-white/40">{enTranslation}</span>
           </div>
         )}
         {word.gender && (
@@ -50,7 +51,7 @@ function MnemonicSection({ hint, t }) {
   )
 }
 
-function ExampleSection({ examples, t }) {
+function ExampleSection({ examples, t, nativeLang }) {
   if (!examples || examples.length === 0) return null
   return (
     <div className="bg-white/5 rounded-xl p-3 px-4 w-full box-border mt-3">
@@ -62,7 +63,7 @@ function ExampleSection({ examples, t }) {
               <span className="text-sm text-white/80 italic leading-relaxed">{ex.fr}</span>
               <SpeakerButton text={ex.fr} size="sm" />
             </div>
-            <div className="text-xs text-white/40 leading-relaxed">{ex.ru}</div>
+            <div className="text-xs text-white/40 leading-relaxed">{ex[nativeLang] || ex.ru || ex.pl || ''}</div>
           </div>
         ))}
       </div>
@@ -72,8 +73,11 @@ function ExampleSection({ examples, t }) {
 
 export default function Flashcard({ word, flipped, onFlip, userMnemonic, autoPlay }) {
   const { t } = useT()
-  const hint = userMnemonic || ruHints[word.id] || ''
-  const translation = word.translations?.ru || word.translations?.en || ''
+  const { settings } = useSettings()
+  const nativeLang = settings.nativeLang
+  const hints = getHintsByLang(nativeLang)
+  const hint = userMnemonic || hints[word.id] || ''
+  const translation = word.translations?.[nativeLang] || word.translations?.ru || word.translations?.en || ''
   const examples = EXAMPLES[word.id] || []
 
   useEffect(() => {
@@ -105,8 +109,8 @@ export default function Flashcard({ word, flipped, onFlip, userMnemonic, autoPla
             <div className="text-xl text-white/40 italic">{word.target}</div>
             <SpeakerButton text={word.target} size="sm" />
           </div>
-          <DictSection word={word} t={t} />
-          <ExampleSection examples={examples} t={t} />
+          <DictSection word={word} t={t} nativeLang={nativeLang} />
+          <ExampleSection examples={examples} t={t} nativeLang={nativeLang} />
           <MnemonicSection hint={hint} t={t} />
         </div>
       </div>

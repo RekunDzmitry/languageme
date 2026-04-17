@@ -1,10 +1,8 @@
 import { useState, useMemo } from 'react'
 import { useT } from '../i18n'
 import { useProgress } from '../stores/UserProgressContext'
-import { VOCAB } from '../data/courses/fr/vocab'
-import { themes } from '../data/courses/fr/themes/theme01-pronouns-present'
-import { EXAMPLES } from '../data/courses/fr/examples'
-import { hints } from '../data/courses/fr/hints/ru'
+import { useSettings } from '../stores/SettingsContext'
+import { getVocab, getHintsByLang, getThemes, getThemeTitle } from '../data/courses'
 import { getCardStatus, formatDueDate, STATUS_COLORS } from '../utils/cardStatus'
 import SpeakerButton from '../components/common/SpeakerButton'
 
@@ -13,6 +11,11 @@ const SORT_OPTIONS = ['due', 'word', 'ease', 'reps']
 
 export default function CardsPage() {
   const { t } = useT()
+  const { settings } = useSettings()
+  const targetLang = settings.targetLang
+  const hints = getHintsByLang(settings.nativeLang)
+  const VOCAB = getVocab(targetLang)
+  const themes = getThemes(targetLang)
   const { cards, userMnemonics, resetCard, updateCard } = useProgress()
   const [expandedId, setExpandedId] = useState(null)
 
@@ -145,7 +148,7 @@ export default function CardsPage() {
           >
             <option value="all">{t('all_themes')}</option>
             {themes.map(th => (
-              <option key={th.id} value={th.id}>{th.titleRu || th.title}</option>
+              <option key={th.id} value={th.id}>{getThemeTitle(th, targetLang)}</option>
             ))}
           </select>
 
@@ -191,7 +194,7 @@ export default function CardsPage() {
                   {item.ipa && <span className="text-text-muted text-xs ml-2">{item.ipa}</span>}
                   <span className="text-text-muted text-xs ml-1">{expandedId === item.id ? '▾' : '▸'}</span>
                 </div>
-                <span className="text-text-muted text-sm">{item.translations?.ru}</span>
+                <span className="text-text-muted text-sm">{item.translations?.ru || item.translations?.en}</span>
                 <span className={`px-2 py-0.5 rounded-full text-xs border ${STATUS_COLORS[item.status]}`}>
                   {t(`cards_filter_${item.status}`)}
                 </span>
@@ -226,7 +229,7 @@ export default function CardsPage() {
                     {t(`cards_filter_${item.status}`)}
                   </span>
                 </div>
-                <div className="text-text-muted text-sm">{item.translations?.ru}</div>
+                <div className="text-text-muted text-sm">{item.translations?.[nativeLang] || item.translations?.ru}</div>
                 <div className="flex items-center justify-between text-xs text-text-muted">
                   <span>{t('cards_reps')}: {item.card.reps}</span>
                   <span>{t('cards_ease')}: {item.card.ease.toFixed(1)}</span>

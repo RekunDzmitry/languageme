@@ -84,9 +84,30 @@ DELETE /api/ai/notes/:id                       Delete a note (auth)
 ### Three Language Dimensions
 
 The app separates three distinct language concerns:
-1. **UI language** — `src/i18n/locales/{ru,fr}.json` with `useT()` hook for buttons/headings
-2. **Target language** — `src/data/courses/fr/` (vocabulary, themes, grammar being taught)
-3. **Native-language hints** — `src/data/courses/fr/hints/ru.js` (Russian-speaker mnemonics)
+1. **UI language** — `src/i18n/locales/{ru,pl,fr}.json` with `useT()` hook for buttons/headings
+2. **Target language** — `src/data/courses/fr/` (French vocabulary, themes, grammar being taught)
+3. **Native-language content** — `src/data/courses/fr/` (Russian) and `src/data/courses/fr-pl/` (Polish)
+
+**Course Structure:**
+```
+src/data/courses/
+├── fr/              # French for Russian speakers (default)
+│   ├── vocab.js     # Vocabulary with ru translations
+│   ├── themes/      # Theme content in Russian
+│   ├── conjugations/# Conjugation tables in Russian
+│   └── hints/       # Mnemonics in Russian
+└── fr-pl/           # French for Polish speakers (new)
+    ├── vocab.js     # Vocabulary with pl translations
+    ├── themes/      # Theme content in Polish
+    ├── conjugations/# Conjugation tables in Polish
+    └── hints/       # Mnemonics in Polish
+```
+
+**Content selection:**
+- Components read `settings.nativeLang` to select correct content
+- `word.translations?.[nativeLang]` for vocabulary translations
+- `getHints(nativeLang)` for mnemonics
+- Course-specific conjugation data based on native language
 
 ### State Management
 

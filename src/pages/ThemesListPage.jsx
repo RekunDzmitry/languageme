@@ -2,11 +2,15 @@ import { useNavigate } from 'react-router-dom'
 import { useT } from '../i18n'
 import { useProgress } from '../stores/UserProgressContext'
 import { useAuth } from '../stores/AuthContext'
-import { themes as allThemes } from '../data/courses/fr/themes/theme01-pronouns-present'
+import { useSettings } from '../stores/SettingsContext'
+import { getThemes, getThemeTitle } from '../data/courses'
 import { isThemeUnlocked } from '../utils/progress'
 
 export default function ThemesListPage() {
   const { t } = useT()
+  const { settings } = useSettings()
+  const targetLang = settings.targetLang
+  const allThemes = getThemes(targetLang)
   const { isAuthenticated } = useAuth()
   const { themeProgress, themeUnlockStatus } = useProgress()
   const navigate = useNavigate()
@@ -36,7 +40,7 @@ export default function ThemesListPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="font-bold text-white text-sm truncate">{theme.titleRu || theme.title}</span>
+                  <span className="font-bold text-white text-sm truncate">{getThemeTitle(theme, targetLang)}</span>
                 </div>
                 <div className="text-xs text-text-muted truncate">{theme.descriptionRu || theme.description}</div>
               </div>

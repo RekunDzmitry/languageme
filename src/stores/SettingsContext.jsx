@@ -2,6 +2,24 @@ import { createContext, useContext, useState, useCallback } from 'react'
 
 const SettingsContext = createContext()
 
+// Native language (what the learner already knows) - Russian only
+export const NATIVE_LANGUAGES = {
+  ru: { name: 'Русский', flag: '🇷🇺' },
+}
+
+// Target languages (what the learner is studying)
+export const TARGET_LANGUAGES = {
+  fr: { name: 'Français', flag: '🇫🇷' },
+  pl: { name: 'Polski', flag: '🇵🇱' },
+}
+
+// UI languages (interface display)
+export const UI_LANGUAGES = {
+  ru: { name: 'Русский', flag: '🇷🇺' },
+  pl: { name: 'Polski', flag: '🇵🇱' },
+  fr: { name: 'Français', flag: '🇫🇷' },
+}
+
 export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState(() => {
     const saved = localStorage.getItem('lm_settings')

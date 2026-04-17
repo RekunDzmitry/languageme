@@ -2,11 +2,21 @@ import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useT } from '../i18n'
 import { useProgress } from '../stores/UserProgressContext'
-import { themes } from '../data/courses/fr/themes/theme01-pronouns-present'
+import { useSettings } from '../stores/SettingsContext'
+import { getThemes, getThemeTitle } from '../data/courses'
 import { getThemeConjugationMastery, getConjugationDueCount } from '../utils/progress'
 import { conjCardKey, PRONOUNS } from '../utils/conjugation'
+import AIChatModal from '../components/ai/AIChatModal'
 
-const PRONOUN_LABELS = PRONOUNS.map(p => p.fr)
+// Polish pronouns for targetLang 'pl'
+const PL_PRONOUNS = [
+  { pl: 'ja', translation: 'я' },
+  { pl: 'ty', translation: 'ты' },
+  { pl: 'on/ona/ono', translation: 'он/она/оно' },
+  { pl: 'my', translation: 'мы' },
+  { pl: 'wy', translation: 'вы' },
+  { pl: 'oni/one', translation: 'они' },
+]
 
 // Themes using negative forms (ne...pas)
 const NEGATIVE_THEMES = ['theme02']
@@ -25,7 +35,7 @@ function formatDueShort(ts) {
   return `${days}д`
 }
 
-function VerbGrid({ theme, conjugationCards, t, formType }) {
+function VerbGrid({ theme, conjugationCards, t, formType, onAiChat, pronounLabels }) {
   const verbs = theme.verbList || []
 
   // Group verbs by their group field
@@ -40,16 +50,17 @@ function VerbGrid({ theme, conjugationCards, t, formType }) {
         <thead>
           <tr>
             <th className="text-left text-text-muted font-medium py-1 px-2">{t('learn_verbs')}</th>
-            {PRONOUN_LABELS.map(p => (
+            {pronounLabels.map(p => (
               <th key={p} className="text-center text-text-muted font-medium py-1 px-1.5 min-w-[36px]">{p}</th>
             ))}
+            <th className="w-8"></th>
           </tr>
         </thead>
         <tbody>
           {sortedVerbs.map((verb) => (
               <tr key={verb.infinitive} className="border-t border-white/[0.05]">
                 <td className="py-1.5 px-2 text-white font-medium">{verb.infinitive}</td>
-                {PRONOUN_LABELS.map((_, pi) => {
+                {pronounLabels.map((_, pi) => {
                   const key = conjCardKey(verb, pi, formType)
                   const card = conjugationCards[key]
                   let color = 'bg-white/[0.06]' // gray — not started
@@ -88,6 +99,17 @@ function VerbGrid({ theme, conjugationCards, t, formType }) {
                     </td>
                   )
                 })}
+                <td className="py-1.5 px-1.5">
+                  <button
+                    onClick={() => onAiChat(verb)}
+                    className="w-6 h-6 flex items-center justify-center text-accent hover:bg-accent/20 rounded transition-colors"
+                    title="Chat with AI about this verb"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                    </svg>
+                  </button>
+                </td>
               </tr>
           ))}
         </tbody>
@@ -106,11 +128,23 @@ function VerbGrid({ theme, conjugationCards, t, formType }) {
 
 export default function TrainingPage() {
   const { conjugationCards } = useProgress()
+  const { settings } = useSettings()
+  const targetLang = settings.targetLang
+  const themes = getThemes(targetLang)
   const { t } = useT()
   const navigate = useNavigate()
   const [expandedThemeId, setExpandedThemeId] = useState(null)
+  const [aiChatVerb, setAiChatVerb] = useState(null)
 
   const themesWithVerbs = useMemo(() => themes.filter(th => th.verbList?.length > 0), [])
+
+  // Get pronoun labels based on target language
+  const pronounLabels = useMemo(() => {
+    if (targetLang === 'pl') {
+      return PL_PRONOUNS.map(p => p.pl)
+    }
+    return PRONOUNS.map(p => p.fr)
+  }, [targetLang])
 
   const overallMastery = useMemo(() => {
     if (themesWithVerbs.length === 0) return 0
@@ -120,6 +154,10 @@ export default function TrainingPage() {
     }
     return getThemeConjugationMastery(conjugationCards, allVerbs).percent
   }, [conjugationCards, themesWithVerbs])
+
+  function handleAiChat(verb) {
+    setAiChatVerb(verb)
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-5 py-6">
@@ -166,7 +204,7 @@ export default function TrainingPage() {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
                     <span className="text-text-muted text-sm font-mono">{theme.order}.</span>
-                    <span className="font-bold text-white text-sm">{theme.titleRu}</span>
+                    <span className="font-bold text-white text-sm">{getThemeTitle(theme, targetLang)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     {!hasVerbs && <span className="text-text-muted text-sm">{t('locked')}</span>}
@@ -202,7 +240,7 @@ export default function TrainingPage() {
 
               {isExpanded && hasVerbs && (
                 <div className="mt-3 border-t border-white/[0.08] pt-3">
-                  <VerbGrid theme={theme} conjugationCards={conjugationCards} t={t} formType={formType} />
+                  <VerbGrid theme={theme} conjugationCards={conjugationCards} t={t} formType={formType} onAiChat={handleAiChat} pronounLabels={pronounLabels} />
                   <div className="mt-4 flex justify-center">
                     <button
                       onClick={() => navigate(`/learn/${theme.id}`)}
@@ -217,6 +255,19 @@ export default function TrainingPage() {
           )
         })}
       </div>
+
+      {/* AI Chat Modal for verb notes */}
+      {aiChatVerb && (
+        <AIChatModal
+          exerciseKey={`verb:${aiChatVerb.infinitive}`}
+          exerciseType="verb"
+          verb={aiChatVerb}
+          prompt={aiChatVerb.infinitive}
+          answer={null}
+          onClose={() => setAiChatVerb(null)}
+          onNoteSaved={null}
+        />
+      )}
     </div>
   )
 }

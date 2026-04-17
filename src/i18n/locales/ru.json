@@ -186,5 +186,9 @@
   "ai_error": "Ошибка ИИ. Попробуйте снова.",
   "ai_save_error": "Не удалось сохранить заметку",
   "note_for": "Заметка для",
-  "about_word": "О слове"
+  "about_word": "О слове",
+  "lang_native_hint": "Язык подсказок",
+  "lang_native_hint_pl": "Język podpowiedzi",
+  "lang_ui": "Интерфейс",
+  "lang_ui_pl": "Interfejs"
 }

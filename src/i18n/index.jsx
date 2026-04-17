@@ -1,8 +1,9 @@
 import { createContext, useContext, useState, useCallback } from 'react'
 import ru from './locales/ru.json'
+import pl from './locales/pl.json'
 import fr from './locales/fr.json'
 
-const locales = { ru, fr }
+const locales = { ru, pl, fr }
 const I18nContext = createContext()
 
 export function I18nProvider({ children }) {

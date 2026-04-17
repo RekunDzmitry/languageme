@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { useT } from '../../i18n'
-import { hints as ruHints } from '../../data/courses/fr/hints/ru'
+import { getHintsByLang } from '../../data/courses'
+import { useSettings } from '../../stores/SettingsContext'
 import { EXAMPLES } from '../../data/courses/fr/examples'
 import SpeakerButton from '../common/SpeakerButton'
 
 export default function VocabCard({ word, card, userMnemonic, onSaveMnemonic, onClearMnemonic }) {
   const { t } = useT()
+  const { settings } = useSettings()
+  const hints = getHintsByLang(settings.nativeLang)
   const [expanded, setExpanded] = useState(false)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
@@ -13,8 +16,8 @@ export default function VocabCard({ word, card, userMnemonic, onSaveMnemonic, on
   const mastered = card?.reps >= 3
   const inProgress = card?.reps > 0 && card?.reps < 3
   const status = mastered ? '✅' : inProgress ? '🔄' : '🆕'
-  const translation = word.translations?.ru || word.translations?.en || ''
-  const builtinHint = ruHints[word.id] || ''
+  const translation = word.translations?.[settings.nativeLang] || word.translations?.ru || word.translations?.en || ''
+  const builtinHint = hints[word.id] || ''
   const hint = userMnemonic || builtinHint
   const examples = EXAMPLES[word.id] || []
 

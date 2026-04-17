@@ -2,11 +2,15 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useT } from '../i18n'
 import { useProgress } from '../stores/UserProgressContext'
-import { themes } from '../data/courses/fr/themes/theme01-pronouns-present'
+import { useSettings } from '../stores/SettingsContext'
+import { getThemes } from '../data/courses'
 import { getConjugationDueCount } from '../utils/progress'
 
 export default function DashboardPage() {
   const { conjugationCards } = useProgress()
+  const { settings } = useSettings()
+  const targetLang = settings.targetLang
+  const themes = getThemes(targetLang)
   const { t } = useT()
   const navigate = useNavigate()
 

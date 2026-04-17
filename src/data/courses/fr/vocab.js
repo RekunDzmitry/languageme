@@ -1,4 +1,8 @@
 import { LEXICON } from './lexicon.js'
+import { themes as frTheme01 } from './themes/theme01-pronouns-present.js'
+
+// Create theme map for quick lookup
+const themeMap = new Map(frTheme01.map(t => [t.id, t]))
 
 const _VOCAB = [
 
@@ -456,4 +460,6 @@ export const VOCAB = _VOCAB.map(w => {
   return lex ? { ...w, synonyms: lex.synonyms, usage: lex.usage, semantics: lex.semantics } : w
 })
 
-export const THEMES = [...new Set(VOCAB.map(w => w.theme))]
+// French theme definitions with verbList for Training page
+// Use imported theme data which includes verbList
+export const THEMES = frTheme01

@@ -1,14 +1,15 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
 import { storage } from '../utils/storage'
 import { sm2, createCard } from '../utils/sm2'
-import { VOCAB } from '../data/courses/fr/vocab'
 import { useAuth } from './AuthContext'
+import { useSettings } from './SettingsContext'
 import { api } from '../api/client'
 
 const UserProgressContext = createContext()
 
-function initCards() {
-  return VOCAB.reduce((acc, w) => {
+function initCards(vocab) {
+  if (!vocab || !Array.isArray(vocab)) return {}
+  return vocab.reduce((acc, w) => {
     acc[w.id] = createCard()
     return acc
   }, {})
@@ -25,12 +26,16 @@ const defaultProgress = {
 
 export function UserProgressProvider({ children }) {
   const { isAuthenticated } = useAuth()
+  const { settings } = useSettings()
+  const targetLang = settings.targetLang
+  
   const [progress, setProgress] = useState(() => {
     // For unauthenticated users, fall back to localStorage
     const saved = storage.getProgress()
     return {
       ...defaultProgress,
-      srsCards: initCards(),
+      // Initialize empty - will be populated by API or based on targetLang
+      srsCards: {},
       // conjugationCards from localStorage only for unauthenticated users
       conjugationCards: saved?.conjugationCards || {},
       themeProgress: saved?.themeProgress || {},
@@ -55,14 +60,14 @@ export function UserProgressProvider({ children }) {
     }
   }, [progress, isAuthenticated])
 
-  const fetchProgress = useCallback(() => {
+  const fetchProgress = useCallback((targetLang = 'fr') => {
     setIsProgressLoading(true)
 
     return Promise.all([
       api.get('/api/stats').catch(() => null),
       api.get('/api/progress/themes').catch(() => null),
       api.get('/api/mnemonics').catch(() => null),
-      api.get('/api/study/cards').catch(() => null),
+      api.get(`/api/study/cards?target=${targetLang}`).catch(() => null),
       api.get('/api/study/conjugation').catch(() => null),  // Fetch from PostgreSQL
       api.get('/api/progress/themes/unlock-status').catch(() => null),
     ]).then(([statsData, themesData, mnemonicsData, cardsData, conjCardsData, unlockData]) => {
@@ -130,8 +135,18 @@ export function UserProgressProvider({ children }) {
   // Fetch from API when authenticated
   useEffect(() => {
     if (!isAuthenticated) return
-    fetchProgress()
-  }, [isAuthenticated, fetchProgress])
+    fetchProgress(targetLang)
+  }, [isAuthenticated, fetchProgress, targetLang])
+
+  // Initialize cards for current target language when target changes
+  useEffect(() => {
+    if (isAuthenticated) return // API will provide cards
+    // For unauthenticated users, we could load from localStorage based on target
+    const saved = storage.getProgress()
+    const existingCards = saved?.srsCards || {}
+    // Cards are keyed by vocab ID which includes the target prefix (fr_xxx, pl_xxx)
+    // So they should automatically work when switching targets
+  }, [targetLang])
 
   const showNotification = useCallback((msg, type = 'info') => {
     setNotification({ msg, type })

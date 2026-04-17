@@ -2,12 +2,16 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useT } from '../i18n'
 import { useProgress } from '../stores/UserProgressContext'
-import { themes as allThemes } from '../data/courses/fr/themes/theme01-pronouns-present'
+import { useSettings } from '../stores/SettingsContext'
+import { getThemes, getThemeTitle } from '../data/courses'
 import ThemeView from '../components/themes/ThemeView'
 
 export default function ThemePage() {
   const { id } = useParams()
   const { t } = useT()
+  const { settings } = useSettings()
+  const targetLang = settings.targetLang
+  const allThemes = getThemes(targetLang)
   const { updateThemeProgress } = useProgress()
   const navigate = useNavigate()
 
@@ -39,7 +43,7 @@ export default function ThemePage() {
       <div className="flex items-center gap-3 mb-5">
         <button onClick={() => navigate('/themes')} className="text-text-muted hover:text-text-primary bg-transparent border-none cursor-pointer text-lg">←</button>
         <div>
-          <h2 className="text-xl font-extrabold text-white">{theme.titleRu || theme.title}</h2>
+          <h2 className="text-xl font-extrabold text-white">{getThemeTitle(theme, targetLang)}</h2>
           <p className="text-sm text-text-muted">{theme.descriptionRu || theme.description}</p>
         </div>
       </div>

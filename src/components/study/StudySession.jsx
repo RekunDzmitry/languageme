@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { useProgress } from '../../stores/UserProgressContext'
 import { useSettings } from '../../stores/SettingsContext'
 import { useT } from '../../i18n'
-import { VOCAB } from '../../data/courses/fr/vocab'
+import { getVocab } from '../../data/courses'
 // getDueCards/getNewCards replaced by inline getStudyableCards
 import { stopSpeaking } from '../../utils/audio'
 import Flashcard from './Flashcard'
@@ -22,6 +22,8 @@ export default function StudySession({ themeVocab = null }) {
   const { cards, rateCard, userMnemonics, showNotification, incrementStreak } = useProgress()
   const { settings } = useSettings()
   const { t } = useT()
+  const targetLang = settings.targetLang
+  const VOCAB = getVocab(targetLang)
   const seenIdsRef = useRef(new Set())
   const cardsRef = useRef(cards)
   useEffect(() => { cardsRef.current = cards }, [cards])
