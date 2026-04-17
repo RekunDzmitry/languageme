@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useT } from '../../i18n'
 import { speak } from '../../utils/audio'
+import { useSpeechLang } from '../../hooks/useSpeechLang'
 import { PRONOUNS } from '../../utils/conjugation'
 import { THEME01_RU_CONJUGATIONS } from '../../data/courses/fr/themes/theme01-conjugations-ru'
 import { THEME02_RU_CONJUGATIONS } from '../../data/courses/fr/themes/theme02-conjugations-ru'
@@ -16,6 +17,7 @@ const vocabByTarget = Object.fromEntries(VOCAB.map(w => [w.target, w]))
 export default function ConjugationExercise({ item, formType = 'aff', onResult, userMnemonics = {}, onSaveMnemonic }) {
   const { t } = useT()
   const { settings } = useSettings()
+  const speechLang = useSpeechLang()
   const hints = getHintsByLang(settings.nativeLang)
   const [revealed, setRevealed] = useState(false)
 
@@ -101,7 +103,7 @@ export default function ConjugationExercise({ item, formType = 'aff', onResult, 
 
   function handleReveal() {
     setRevealed(true)
-    speak(fullAnswer)
+    speak(fullAnswer, speechLang)
   }
 
   return (

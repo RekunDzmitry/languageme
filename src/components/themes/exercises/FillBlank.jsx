@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react'
 import { useT } from '../../../i18n'
 import { speak } from '../../../utils/audio'
+import { useSpeechLang } from '../../../hooks/useSpeechLang'
 import SpeakerButton from '../../common/SpeakerButton'
 
 export default function FillBlank({ exercise, onAnswer }) {
   const { t } = useT()
+  const speechLang = useSpeechLang()
   const [revealed, setRevealed] = useState(false)
 
   const fullSentence = exercise.sentence.replace('___', exercise.answer)
 
   function handleReveal() {
     setRevealed(true)
-    speak(fullSentence)
+    speak(fullSentence, speechLang)
   }
 
   return (

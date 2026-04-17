@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react'
 import { useT } from '../../../i18n'
 import { speak } from '../../../utils/audio'
+import { useSpeechLang } from '../../../hooks/useSpeechLang'
 import SpeakerButton from '../../common/SpeakerButton'
 
 export default function Translation({ exercise, onAnswer }) {
   const { t } = useT()
+  const speechLang = useSpeechLang()
   const [revealed, setRevealed] = useState(false)
 
   function handleReveal() {
     setRevealed(true)
-    speak(exercise.answer)
+    speak(exercise.answer, speechLang)
   }
 
   return (

@@ -6,6 +6,7 @@ import MultipleChoice from './exercises/MultipleChoice'
 import Conjugation from './exercises/Conjugation'
 import Translation from './exercises/Translation'
 import Matching from './exercises/Matching'
+import WriteAnswer from './exercises/WriteAnswer'
 
 const EXERCISE_COMPONENTS = {
   fill_blank: FillBlank,
@@ -13,6 +14,7 @@ const EXERCISE_COMPONENTS = {
   conjugation: Conjugation,
   translation: Translation,
   matching: Matching,
+  write_answer: WriteAnswer,
 }
 
 export default function ExerciseSection({ section, themeId }) {

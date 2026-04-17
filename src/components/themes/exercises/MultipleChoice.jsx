@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useT } from '../../../i18n'
 import { speak } from '../../../utils/audio'
+import { useSpeechLang } from '../../../hooks/useSpeechLang'
 import SpeakerButton from '../../common/SpeakerButton'
 
 export default function MultipleChoice({ exercise, onAnswer }) {
   const { t } = useT()
+  const speechLang = useSpeechLang()
   const [result, setResult] = useState(null)
   const [selectedIdx, setSelectedIdx] = useState(null)
 
@@ -19,8 +21,8 @@ export default function MultipleChoice({ exercise, onAnswer }) {
   }
 
   useEffect(() => {
-    if (result !== null) speak(correctAnswer)
-  }, [result]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (result !== null) speak(correctAnswer, speechLang)
+  }, [result, correctAnswer, speechLang])
 
   return (
     <div className="bg-surface border border-border rounded-xl p-5">

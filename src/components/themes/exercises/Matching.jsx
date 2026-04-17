@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react'
 import { useT } from '../../../i18n'
 import { speak } from '../../../utils/audio'
+import { useSpeechLang } from '../../../hooks/useSpeechLang'
 
 export default function Matching({ exercise, onAnswer }) {
   const { t } = useT()
+  const speechLang = useSpeechLang()
   const pairs = exercise.pairs || []
 
   const [selectedLeft, setSelectedLeft] = useState(null)
@@ -18,7 +20,7 @@ export default function Matching({ exercise, onAnswer }) {
     if (matched.includes(idx)) return
     setSelectedLeft(idx)
     setWrong(null)
-    speak(pairs[idx].left)
+    speak(pairs[idx].left, speechLang)
   }
 
   const handleRightClick = (rightItem) => {

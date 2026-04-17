@@ -1,8 +1,10 @@
 import { useT } from '../../i18n'
 import { speak, isSpeechAvailable } from '../../utils/audio'
+import { useSpeechLang } from '../../hooks/useSpeechLang'
 
-export default function SpeakerButton({ text, lang = 'fr-FR', size = 'sm', className = '' }) {
+export default function SpeakerButton({ text, lang, size = 'sm', className = '' }) {
   const { t } = useT()
+  const speechLang = useSpeechLang(lang)
 
   if (!isSpeechAvailable()) return null
 
@@ -10,7 +12,7 @@ export default function SpeakerButton({ text, lang = 'fr-FR', size = 'sm', class
 
   return (
     <button
-      onClick={(e) => { e.stopPropagation(); speak(text, lang) }}
+      onClick={(e) => { e.stopPropagation(); speak(text, speechLang) }}
       aria-label={t('audio_play')}
       className={`inline-flex items-center justify-center ${dim} rounded-full bg-transparent text-text-muted hover:text-accent cursor-pointer border-none transition-colors ${className}`}
     >

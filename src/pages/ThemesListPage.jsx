@@ -20,8 +20,10 @@ export default function ThemesListPage() {
       <h2 className="text-2xl font-extrabold mb-5">{t('themes_title')}</h2>
       <div className="space-y-3">
         {allThemes.map((theme, i) => {
+          // For authenticated users, use API unlock status if available, otherwise check locally
+          const apiUnlockStatus = themeUnlockStatus?.[theme.id]?.unlocked
           const unlocked = isAuthenticated
-            ? (themeUnlockStatus[theme.id]?.unlocked ?? false)
+            ? (apiUnlockStatus ?? isThemeUnlocked(theme, themeProgress))
             : isThemeUnlocked(theme, themeProgress)
           const progress = themeProgress[theme.id]
           const completed = !!progress?.completedAt

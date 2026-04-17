@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useT } from '../../i18n'
 import { getHintsByLang } from '../../data/courses'
 import { useSettings } from '../../stores/SettingsContext'
+import { useSpeechLang } from '../../hooks/useSpeechLang'
 import SpeakerButton from '../common/SpeakerButton'
 import { speak } from '../../utils/audio'
 
@@ -74,6 +75,7 @@ function ExampleSection({ examples, t, nativeLang }) {
 export default function Flashcard({ word, flipped, onFlip, userMnemonic, autoPlay }) {
   const { t } = useT()
   const { settings } = useSettings()
+  const speechLang = useSpeechLang()
   const nativeLang = settings.nativeLang
   const hints = getHintsByLang(nativeLang)
   const hint = userMnemonic || hints[word.id] || ''
@@ -81,8 +83,8 @@ export default function Flashcard({ word, flipped, onFlip, userMnemonic, autoPla
   const examples = EXAMPLES[word.id] || []
 
   useEffect(() => {
-    if (autoPlay) speak(word.target)
-  }, [word, autoPlay])
+    if (autoPlay) speak(word.target, speechLang)
+  }, [word, autoPlay, speechLang])
 
   return (
     <div className="perspective cursor-pointer select-none" onClick={() => !flipped && onFlip()}>
