@@ -553,6 +553,32 @@ const _VOCAB = [
   { id: "pl_489", target: "przejście gry", ipa: "/pʂɛjˈɕt͡ɕɛ ˈɡrɨ/", gender: "n", freq: 529, theme: "media", themeIds: ["pl_theme18"], translations: { ru: "прохождение игры" } },
   { id: "pl_490", target: "konsola", ipa: "/kɔnˈsɔla/", gender: "f", freq: 530, theme: "media", themeIds: ["pl_theme18"], translations: { ru: "консоль" } },
   { id: "pl_491", target: "sprzęt", ipa: "/ˈspʂɛnt/", gender: "m", freq: 531, theme: "media", themeIds: ["pl_theme18"], translations: { ru: "оборудование, техника" } },
+
+  // Lekcja 3: czasowniki na -m i formy grzecznościowe
+  { id: "pl_492", target: "rozumieć", ipa: "/rɔˈzumjɛt͡ɕ/", gender: null, freq: 532, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "понимать", en: "to understand" } },
+  { id: "pl_493", target: "rozumiem", ipa: "/rɔˈzumjɛm/", gender: null, freq: 533, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "я понимаю", en: "I understand" } },
+  { id: "pl_494", target: "rozumiesz", ipa: "/rɔˈzumjɛʂ/", gender: null, freq: 534, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "ты понимаешь", en: "you understand" } },
+  { id: "pl_495", target: "szukać", ipa: "/ˈʂukat͡ɕ/", gender: null, freq: 535, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "искать", en: "to search" } },
+  { id: "pl_496", target: "szukam", ipa: "/ˈʂukam/", gender: null, freq: 536, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "я ищу", en: "I search" } },
+  { id: "pl_497", target: "mieszkać", ipa: "/ˈmjɛʂkat͡ɕ/", gender: null, freq: 537, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "жить, проживать", en: "to live" } },
+  { id: "pl_498", target: "mieszkam w Polsce", ipa: "/ˈmjɛʂkam f ˈpɔlst͡sɛ/", gender: null, freq: 538, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "я живу в Польше", en: "I live in Poland" } },
+  { id: "pl_499", target: "czytać", ipa: "/ˈt͡ʂɨtat͡ɕ/", gender: null, freq: 539, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "читать", en: "to read" } },
+  { id: "pl_500", target: "czytam książkę", ipa: "/ˈt͡ʂɨtam ˈkɕɔ̃ʂkɛ/", gender: null, freq: 540, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "я читаю книгу", en: "I am reading a book" } },
+  { id: "pl_501", target: "kochać", ipa: "/ˈkɔxat͡ɕ/", gender: null, freq: 541, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "любить", en: "to love" } },
+  { id: "pl_502", target: "kocham cię", ipa: "/ˈkɔxam t͡ɕɛ/", gender: null, freq: 542, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "я тебя люблю", en: "I love you" } },
+  { id: "pl_503", target: "grać", ipa: "/ɡrat͡ɕ/", gender: null, freq: 543, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "играть", en: "to play" } },
+  { id: "pl_504", target: "śpiewać", ipa: "/ˈɕpjɛvat͡ɕ/", gender: null, freq: 544, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "петь", en: "to sing" } },
+  { id: "pl_505", target: "czekać na", ipa: "/ˈt͡ʂɛkat͡ɕ na/", gender: null, freq: 545, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "ждать кого-то/что-то", en: "to wait for" } },
+  { id: "pl_506", target: "Czekam na Annę.", ipa: "/ˈt͡ʂɛkam na ˈannɛ/", gender: null, freq: 546, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "Я жду Анну.", en: "I am waiting for Anna." } },
+  { id: "pl_507", target: "czy", ipa: "/t͡ʂɨ/", gender: null, freq: 547, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "ли; вопросительная частица", en: "question particle" } },
+  { id: "pl_508", target: "Czy przyjdziesz na moje urodziny?", ipa: "/t͡ʂɨ pʂɨjˈd͡ʑɛʂ na ˈmɔjɛ urɔˈd͡ʑinɨ/", gender: null, freq: 548, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "Ты придёшь ко мне на день рождения?", en: "Will you come to my birthday?" } },
+  { id: "pl_509", target: "Pan", ipa: "/pan/", gender: "m", freq: 549, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "господин; Вы (к мужчине)", en: "sir; formal you to a man" } },
+  { id: "pl_510", target: "Pani", ipa: "/ˈpaɲi/", gender: "f", freq: 550, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "госпожа; Вы (к женщине)", en: "madam; formal you to a woman" } },
+  { id: "pl_511", target: "Czy Pan mówi po polsku?", ipa: "/t͡ʂɨ pan ˈmuvi pɔ ˈpɔlsku/", gender: null, freq: 551, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "Вы говорите по-польски? (к мужчине)", en: "Do you speak Polish, sir?" } },
+  { id: "pl_512", target: "Czy Pani mieszka tutaj?", ipa: "/t͡ʂɨ ˈpaɲi ˈmjɛʂka ˈtutaj/", gender: null, freq: 552, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "Вы живёте здесь? (к женщине)", en: "Do you live here, madam?" } },
+  { id: "pl_513", target: "Państwo", ipa: "/ˈpaɲstfɔ/", gender: null, freq: 553, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "дамы и господа; Вы (к группе)", en: "ladies and gentlemen; formal you plural" } },
+  { id: "pl_514", target: "Panie Profesorze!", ipa: "/ˈpaɲɛ prɔfɛˈsɔʐɛ/", gender: null, freq: 554, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "Господин профессор!", en: "Professor!" } },
+  { id: "pl_515", target: "Widzę. Słyszysz? Idę.", ipa: "/ˈvid͡zɛ ˈswɨʂɨʂ ˈidɛ/", gender: null, freq: 555, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "Я вижу. Ты слышишь? Я иду.", en: "I see. Do you hear? I am going." } },
 ]
 
 export const VOCAB = _VOCAB
