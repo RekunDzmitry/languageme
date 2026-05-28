@@ -20,17 +20,33 @@ if (typeof window !== 'undefined' && window.speechSynthesis) {
   }
 }
 
-export function speak(text, lang = 'fr-FR') {
-  if (typeof window === 'undefined' || !window.speechSynthesis) return
-  const trimmed = typeof text === 'string' ? text.trim() : ''
-  if (!trimmed) return
-  window.speechSynthesis.cancel()
-  const utterance = new SpeechSynthesisUtterance(trimmed)
+function enqueue(text, lang) {
+  const utterance = new SpeechSynthesisUtterance(text)
   utterance.lang = lang
   utterance.rate = 0.85
   const voice = findVoice(lang)
   if (voice) utterance.voice = voice
   window.speechSynthesis.speak(utterance)
+}
+
+export function speak(text, lang = 'fr-FR') {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return
+  const trimmed = typeof text === 'string' ? text.trim() : ''
+  if (!trimmed) return
+  const synth = window.speechSynthesis
+  // Voices may not be loaded on first call; force load and retry once.
+  if (synth.getVoices().length === 0) {
+    synth.getVoices()
+    setTimeout(() => speak(text, lang), 120)
+    return
+  }
+  if (synth.speaking || synth.pending) {
+    synth.cancel()
+    // Chrome bug: cancel() immediately followed by speak() can silently drop the new utterance.
+    setTimeout(() => enqueue(trimmed, lang), 100)
+  } else {
+    enqueue(trimmed, lang)
+  }
 }
 
 export function stopSpeaking() {

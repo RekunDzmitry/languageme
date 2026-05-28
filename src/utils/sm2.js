@@ -1,7 +1,9 @@
 export function sm2(card, quality) {
   // quality: 0=Again, 1=Hard, 2=Good, 3=Easy
   let { ease, interval, reps } = card;
-  const q = [0, 2, 4, 5][quality]; // map to SM-2 scale
+  // Map to SM-2 scale. Hard maps to 3 (passing) so reps advance — matches
+  // Anki semantics where Again is the only fail grade.
+  const q = [0, 3, 4, 5][quality];
 
   if (q < 3) {
     reps = 0;

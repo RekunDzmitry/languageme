@@ -52,7 +52,8 @@ router.get('/new', authenticate, async (req, res, next) => {
       `SELECT v.*, json_agg(json_build_object('lang', vt.lang, 'text', vt.text)) AS translations
        FROM vocab v
        LEFT JOIN vocab_translation vt ON vt.vocab_id = v.id
-       WHERE v.id NOT IN (SELECT vocab_id FROM srs_card WHERE user_id = $1)
+       WHERE v.source = 'seed'
+         AND v.id NOT IN (SELECT vocab_id FROM srs_card WHERE user_id = $1)
        GROUP BY v.id ORDER BY v.freq LIMIT $2`,
       [req.user.sub, limit]
     );
@@ -100,6 +101,107 @@ router.post('/review', authenticate,
       await client.query(
         'INSERT INTO review (user_id, vocab_id, quality) VALUES ($1, $2, $3)',
         [userId, vocabId, quality]
+      );
+
+      // Upsert daily stat
+      const isCorrect = quality >= 2 ? 1 : 0;
+      await client.query(
+        `INSERT INTO user_daily_stat (user_id, study_date, reviews_count, correct_count)
+         VALUES ($1, CURRENT_DATE, 1, $2)
+         ON CONFLICT (user_id, study_date)
+         DO UPDATE SET reviews_count = user_daily_stat.reviews_count + 1, correct_count = user_daily_stat.correct_count + $2`,
+        [userId, isCorrect]
+      );
+
+      await client.query('COMMIT');
+
+      res.json({ ...card, ...updated });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      next(err);
+    } finally {
+      client.release();
+    }
+  }
+);
+
+// User-authored write_answer drills (created from email corrections)
+router.get('/write-exercises', authenticate, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, theme_id, prompt, answer, hint, created_at
+       FROM user_write_exercise
+       WHERE user_id = $1
+       ORDER BY theme_id, created_at`,
+      [req.user.sub]
+    );
+    res.json(rows);
+  } catch (err) { next(err); }
+});
+
+// === Exercise Cards (Polish Spelling) ===
+
+// Get all exercise cards for user
+router.get('/exercises', authenticate, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT exercise_key, theme_id, ease, interval_days, reps, due, last_reviewed 
+       FROM exercise_card WHERE user_id = $1`,
+      [req.user.sub]
+    );
+    // Map to frontend key format
+    const cards = {};
+    rows.forEach(row => {
+      cards[row.exercise_key] = {
+        themeId: row.theme_id,
+        ease: row.ease,
+        interval: row.interval_days,
+        reps: row.reps,
+        due: new Date(row.due).getTime(),
+        lastReviewed: row.last_reviewed ? new Date(row.last_reviewed).getTime() : null,
+      };
+    });
+    res.json(cards);
+  } catch (err) { next(err); }
+});
+
+// Review an exercise card
+router.post('/exercises/review', authenticate,
+  validate({
+    exerciseKey: { required: true },
+    themeId: { required: true },
+    quality: { required: true, type: 'number', min: 0, max: 3 },
+  }),
+  async (req, res, next) => {
+    const client = await pool.connect();
+    try {
+      const { exerciseKey, themeId, quality } = req.body;
+      const userId = req.user.sub;
+
+      await client.query('BEGIN');
+
+      // Get or create card
+      let { rows: [card] } = await client.query(
+        'SELECT * FROM exercise_card WHERE user_id = $1 AND exercise_key = $2',
+        [userId, exerciseKey]
+      );
+
+      if (!card) {
+        const { rows: [newCard] } = await client.query(
+          'INSERT INTO exercise_card (user_id, exercise_key, theme_id) VALUES ($1, $2, $3) RETURNING *',
+          [userId, exerciseKey, themeId]
+        );
+        card = newCard;
+      }
+
+      // SM-2 update
+      const updated = sm2(card, quality);
+
+      await client.query(
+        `UPDATE exercise_card 
+         SET ease = $1, interval_days = $2, reps = $3, due = $4, last_reviewed = $5
+         WHERE user_id = $6 AND exercise_key = $7`,
+        [updated.ease, updated.interval_days, updated.reps, updated.due, updated.last_reviewed, userId, exerciseKey]
       );
 
       // Upsert daily stat

@@ -62,6 +62,23 @@ export default function DashboardPage() {
           <span className="text-text-muted text-lg">→</span>
         </div>
       </button>
+
+      {/* Quick link to Email Writing */}
+      <button
+        onClick={() => navigate('/email')}
+        className="w-full bg-surface border border-border rounded-xl p-4 hover:bg-surface-hover transition-colors cursor-pointer text-left mt-3"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📧</span>
+            <div>
+              <div className="font-bold text-white">{t('email_title')}</div>
+              <div className="text-xs text-text-muted">{t('email_subtitle')}</div>
+            </div>
+          </div>
+          <span className="text-text-muted text-lg">→</span>
+        </div>
+      </button>
     </div>
   )
 }

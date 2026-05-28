@@ -20,3 +20,15 @@ export function adminOnly(req, res, next) {
   }
   next();
 }
+
+export function optionallyAuthenticate(req, res, next) {
+  const header = req.headers.authorization;
+  if (header?.startsWith('Bearer ')) {
+    try {
+      req.user = jwt.verify(header.slice(7), config.jwtSecret);
+    } catch {
+      // Token invalid — continue without auth
+    }
+  }
+  next();
+}

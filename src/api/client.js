@@ -99,6 +99,25 @@ api.patch = (endpoint, body) => api(endpoint, { method: 'PATCH', body })
 api.put = (endpoint, body) => api(endpoint, { method: 'PUT', body })
 api.delete = (endpoint) => api(endpoint, { method: 'DELETE' })
 
+// Themes API
+export const themesApi = {
+  // List all themes (all languages); caller filters by lang
+  list: () => api.get('/api/themes'),
+}
+
+// Exercise Cards API (Polish Spelling)
+export const exerciseApi = {
+  // Get all exercise cards for user
+  getCards: () => api.get('/api/study/exercises'),
+
+  // Review an exercise card
+  review: (exerciseKey, themeId, quality) =>
+    api.post('/api/study/exercises/review', { exerciseKey, themeId, quality }),
+
+  // User-authored write_answer drills (created from email corrections)
+  getUserExercises: () => api.get('/api/study/write-exercises'),
+}
+
 // AI Assistant API
 export const aiApi = {
   // Send a chat message
@@ -128,4 +147,57 @@ export const aiApi = {
   // Delete a note
   deleteNote: (noteId) =>
     api.delete(`/api/ai/notes/${noteId}`),
+}
+
+// Exercise Notes API (user-authored notes on WriteAnswer exercises)
+export const exerciseNoteApi = {
+  // Get notes, optionally filtered by theme
+  getByTheme: (themeId) =>
+    api.get(`/api/exercise-notes${themeId ? `?themeId=${encodeURIComponent(themeId)}` : ''}`),
+
+  // Upsert a note for an exercise
+  save: (exerciseKey, themeId, content) =>
+    api.put(`/api/exercise-notes/${encodeURIComponent(exerciseKey)}`, { themeId, content }),
+
+  // Delete a note
+  delete: (exerciseKey) =>
+    api.delete(`/api/exercise-notes/${encodeURIComponent(exerciseKey)}`),
+}
+
+// Email Writing API
+export const emailApi = {
+  // Evaluate user's email (TELC format)
+  evaluate: (userText, taskDescription, targetLang = 'pl', nativeLang = 'ru', points, register, etiquetteHint) =>
+    api.post('/api/email/evaluate', { userText, taskDescription, targetLang, nativeLang, points, register, etiquetteHint }),
+
+  // Save evaluation attempt to history
+  saveAttempt: (themeId, exerciseIdx, userText, score, aiEvaluation) =>
+    api.post('/api/email/save-attempt', { themeId, exerciseIdx, userText, score, aiEvaluation }),
+
+  // Turn a correction into a write_answer drill (optionally attached to a theme)
+  addExercise: (attemptId, targetWord, translation, hint = null, themeId = null) =>
+    api.post('/api/email/add-exercise', { attemptId, targetWord, translation, hint, themeId }),
+
+  // Get user's email writing history
+  getHistory: (limit = 10) =>
+    api.get(`/api/email/history?limit=${limit}`),
+
+  // Get words user has added from emails
+  getAddedWords: () =>
+    api.get('/api/email/added-words'),
+}
+
+// Vocabulary Notes API (user-authored notes on vocabulary words)
+export const vocabNoteApi = {
+  // Get notes, optionally filtered by vocab
+  getByVocab: (vocabId) =>
+    api.get(`/api/vocab-notes${vocabId ? `?vocabId=${encodeURIComponent(vocabId)}` : ''}`),
+
+  // Upsert a note for a vocab word
+  save: (vocabId, content) =>
+    api.put(`/api/vocab-notes/${encodeURIComponent(vocabId)}`, { content }),
+
+  // Delete a note
+  delete: (vocabId) =>
+    api.delete(`/api/vocab-notes/${encodeURIComponent(vocabId)}`),
 }

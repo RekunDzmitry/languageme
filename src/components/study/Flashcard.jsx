@@ -6,116 +6,115 @@ import { useSpeechLang } from '../../hooks/useSpeechLang'
 import SpeakerButton from '../common/SpeakerButton'
 import { speak } from '../../utils/audio'
 
-function DictSection({ word, t, nativeLang }) {
-  const nativeTranslation = word.translations?.[nativeLang]
-  const enTranslation = word.translations?.en
-  return (
-    <div className="bg-white/5 rounded-xl p-3 px-4 w-full box-border mt-3">
-      <div className="text-[11px] text-blue-400 font-bold uppercase tracking-wide mb-2">{t('dictionary')}</div>
-      <div className="space-y-1.5">
-        {nativeTranslation && (
-          <div className="flex items-center gap-2">
-            <span className="text-white/30 text-xs uppercase">{nativeLang}</span>
-            <span className="text-sm text-white/60">{nativeTranslation}</span>
-          </div>
-        )}
-        {enTranslation && (
-          <div className="flex items-center gap-2">
-            <span className="text-white/30 text-xs">EN</span>
-            <span className="text-sm text-white/40">{enTranslation}</span>
-          </div>
-        )}
-        {word.gender && (
-          <div className="flex items-center gap-2">
-            <span className="text-white/30 text-xs">⚥</span>
-            <span className="text-sm text-accent">{word.gender === 'm' ? t('masculine') : t('feminine')}</span>
-          </div>
-        )}
-        {word.freq && (
-          <div className="flex items-center gap-2">
-            <span className="text-white/30 text-xs">#</span>
-            <span className="text-sm text-white/40">{t('freq_top', { n: word.freq })}</span>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function MnemonicSection({ hint, t }) {
-  if (!hint) return null
-  return (
-    <div className="bg-gradient-to-r from-accent/10 to-purple-500/10 border border-accent/20 rounded-xl p-3 px-4 w-full box-border mt-3">
-      <div className="text-[11px] text-accent font-bold uppercase tracking-wide mb-1.5">{t('memory_hook')}</div>
-      <div className="text-sm text-text-muted leading-relaxed">{hint}</div>
-    </div>
-  )
-}
-
-function ExampleSection({ examples, t, nativeLang }) {
-  if (!examples || examples.length === 0) return null
-  return (
-    <div className="bg-white/5 rounded-xl p-3 px-4 w-full box-border mt-3">
-      <div className="text-[11px] text-emerald-400 font-bold uppercase tracking-wide mb-2">{t('example_usage')}</div>
-      <div className="space-y-2">
-        {examples.map((ex, i) => (
-          <div key={i} className="space-y-0.5">
-            <div className="flex items-start gap-1.5">
-              <span className="text-sm text-white/80 italic leading-relaxed">{ex.fr}</span>
-              <SpeakerButton text={ex.fr} size="sm" />
-            </div>
-            <div className="text-xs text-white/40 leading-relaxed">{ex[nativeLang] || ex.ru || ex.pl || ''}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-export default function Flashcard({ word, flipped, onFlip, userMnemonic, autoPlay }) {
+export default function Flashcard({ word, flipped, onFlip, userMnemonic, vocabNote, onNoteClick, onRate }) {
   const { t } = useT()
   const { settings } = useSettings()
   const speechLang = useSpeechLang()
   const nativeLang = settings.nativeLang
+  const targetLang = settings.targetLang
   const hints = getHintsByLang(nativeLang)
   const hint = userMnemonic || hints[word.id] || ''
-  const translation = word.translations?.[nativeLang] || word.translations?.ru || word.translations?.en || ''
-  const examples = EXAMPLES[word.id] || []
+  const translation =
+    word.translations?.[nativeLang] || word.translations?.ru || word.translations?.en || ''
 
   useEffect(() => {
-    if (autoPlay) speak(word.target, speechLang)
-  }, [word, autoPlay, speechLang])
+    if (flipped) speak(word.target, speechLang)
+  }, [word, flipped, speechLang])
+
+  function handleReveal() {
+    if (!flipped) onFlip()
+  }
 
   return (
-    <div className="perspective cursor-pointer select-none" onClick={() => !flipped && onFlip()}>
-      <div className={`relative min-h-[300px] preserve-3d transition-transform-500 ${flipped ? 'rotate-y-180' : ''}`}>
-        {/* Front */}
-        <div className="backface-hidden absolute w-full min-h-[300px] bg-gradient-to-br from-surface to-[#1a1a2e] border border-purple-400/20 rounded-2xl px-7 py-7 flex flex-col items-center justify-center box-border">
-          <div className="text-[11px] text-text-muted font-semibold uppercase tracking-wider mb-4">{word.theme}</div>
-          <div className="flex items-center gap-2">
-            <div className="text-4xl md:text-5xl font-extrabold text-white text-center tracking-tight">{word.target}</div>
-            <SpeakerButton text={word.target} size="md" />
-          </div>
-          {word.gender && (
-            <div className="text-sm text-accent font-semibold mt-2">
-              {word.gender === 'm' ? t('masculine') : t('feminine')}
-            </div>
-          )}
-          <div className="text-sm text-text-muted mt-1.5 font-mono">{word.ipa}</div>
-          <div className="text-xs text-white/25 mt-6 italic">{t('study_tap_reveal')}</div>
-        </div>
-        {/* Back */}
-        <div className="backface-hidden absolute w-full min-h-[300px] bg-gradient-to-br from-[#0f1a2e] to-[#1a1a2e] border border-blue-400/25 rounded-2xl px-7 py-7 flex flex-col items-center justify-center rotate-y-180 box-border">
-          <div className="text-3xl font-extrabold text-blue-400 text-center mb-1">{translation}</div>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="text-xl text-white/40 italic">{word.target}</div>
-            <SpeakerButton text={word.target} size="sm" />
-          </div>
-          <DictSection word={word} t={t} nativeLang={nativeLang} />
-          <ExampleSection examples={examples} t={t} nativeLang={nativeLang} />
-          <MnemonicSection hint={hint} t={t} />
+    <div className="flex flex-col items-center gap-5">
+      {/* Badge */}
+      <div className="flex items-center justify-between w-full max-w-sm">
+        <div className="bg-surface border border-border rounded-lg px-3 py-1 text-xs font-semibold text-accent">
+          {nativeLang.toUpperCase()} → {targetLang.toUpperCase()}
         </div>
       </div>
+
+      {/* Prompt — native language */}
+      <div className="text-center">
+        <div className="text-3xl font-extrabold text-white mb-2">{translation}</div>
+      </div>
+
+      {!flipped ? (
+        <button
+          onClick={handleReveal}
+          className="w-full max-w-sm py-3 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 transition-opacity"
+        >
+          {t('study_tap_reveal')}
+        </button>
+      ) : (
+        <div className="flex flex-col items-center gap-3 animate-fade-in">
+          <div className="text-text-muted text-sm">{t('correct_answer')}:</div>
+          <div className="flex items-center gap-2">
+            <span className="text-white text-2xl font-bold">{word.target}</span>
+            <SpeakerButton text={word.target} size="sm" />
+          </div>
+
+          {hint && (
+            <div className="w-full max-w-sm mt-1 bg-gradient-to-r from-accent/10 to-purple-500/10 border border-accent/20 rounded-xl p-3 px-4">
+              <div className="text-[11px] text-accent font-bold uppercase tracking-wide mb-1">
+                {t('memory_hook')}
+              </div>
+              <div className="text-sm text-text-muted leading-relaxed">{hint}</div>
+            </div>
+          )}
+
+          {/* Vocab note */}
+          <div className="flex items-start gap-2 w-full max-w-sm">
+            <button
+              onClick={onNoteClick}
+              className={`mt-1 shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm transition-colors
+                ${vocabNote
+                  ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
+                  : 'bg-white/10 text-text-muted hover:bg-white/15 hover:text-white'
+                }`}
+              title={t('vocab_note', 'Заметка к слову')}
+            >
+              📝
+            </button>
+            {vocabNote && (
+              <div className="flex-1 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 px-4">
+                <div className="text-[11px] text-amber-400 font-bold uppercase tracking-wide mb-1">
+                  {t('vocab_note', 'Заметка')}
+                </div>
+                <div className="text-sm text-text-muted leading-relaxed whitespace-pre-wrap">{vocabNote.content}</div>
+              </div>
+            )}
+          </div>
+
+          <div className="text-sm text-text-muted mt-2">{t('study_how_well')}</div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => onRate(3)}
+              className="px-8 py-3 rounded-xl font-bold text-green-400 border border-green-400/40 hover:bg-green-400/10 transition-colors"
+            >
+              {t('rating_easy')}
+            </button>
+            <button
+              onClick={() => onRate(2)}
+              className="px-8 py-3 rounded-xl font-bold text-blue-400 border border-blue-400/40 hover:bg-blue-400/10 transition-colors"
+            >
+              {t('rating_good')}
+            </button>
+            <button
+              onClick={() => onRate(1)}
+              className="px-8 py-3 rounded-xl font-bold text-orange-400 border border-orange-400/40 hover:bg-orange-400/10 transition-colors"
+            >
+              {t('rating_hard')}
+            </button>
+            <button
+              onClick={() => onRate(0)}
+              className="px-8 py-3 rounded-xl font-bold text-red-400 border border-red-400/40 hover:bg-red-400/10 transition-colors"
+            >
+              {t('rating_again')}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

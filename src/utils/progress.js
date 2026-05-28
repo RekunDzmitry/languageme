@@ -15,6 +15,8 @@ export function getNewCards(cards, limit = 5) {
 }
 
 export function isThemeUnlocked(theme, themeProgress) {
+  // Themes with unlockCondition: null are always unlocked
+  if (theme.unlockCondition === null) return true
   // Theme 1 is always unlocked
   if (theme.id === 'theme01') return true
   // Extract previous theme number
@@ -56,6 +58,53 @@ export function getConjugationDueCount(conjugationCards, verbList, formType = 'a
       const card = conjugationCards[conjCardKey(verb, pi, formType)]
       if (card && card.reps > 0 && card.due <= Date.now()) count++
     }
+  }
+  return count
+}
+
+// Exercise card mastery for Polish spelling themes
+export function getExerciseMastery(exerciseCards, themeId, exerciseCount) {
+  if (!exerciseCount || exerciseCount === 0) return { learned: 0, mastered: 0, total: 0, percent: 0 }
+  let learned = 0
+  let mastered = 0
+  for (let i = 0; i < exerciseCount; i++) {
+    const card = exerciseCards[`${themeId}:${i}`]
+    if (card && card.reps > 0) learned++
+    if (card && card.reps >= 3) mastered++
+  }
+  return { learned, mastered, total: exerciseCount, percent: Math.round((mastered / exerciseCount) * 100) }
+}
+
+// Count of due exercise cards
+export function getExerciseDueCountByTheme(exerciseCards, themeId, exerciseCount) {
+  if (!exerciseCount) return 0
+  let count = 0
+  for (let i = 0; i < exerciseCount; i++) {
+    const card = exerciseCards[`${themeId}:${i}`]
+    if (card && card.reps > 0 && card.due <= Date.now()) count++
+  }
+  return count
+}
+
+// Vocab SRS mastery for vocabIds-based themes (Polish work/edu)
+export function getVocabMastery(cards, vocabIds) {
+  if (!vocabIds || vocabIds.length === 0) return { learned: 0, mastered: 0, total: 0, percent: 0 }
+  let learned = 0
+  let mastered = 0
+  for (const id of vocabIds) {
+    const card = cards[id]
+    if (card && card.reps > 0) learned++
+    if (card && card.reps >= 3) mastered++
+  }
+  return { learned, mastered, total: vocabIds.length, percent: Math.round((mastered / vocabIds.length) * 100) }
+}
+
+export function getVocabDueCount(cards, vocabIds) {
+  if (!vocabIds) return 0
+  let count = 0
+  for (const id of vocabIds) {
+    const card = cards[id]
+    if (card && card.reps > 0 && card.due <= Date.now()) count++
   }
   return count
 }

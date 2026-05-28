@@ -17,7 +17,7 @@ export default function ThemesListPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-5 py-6">
-      <h2 className="text-2xl font-extrabold mb-5">{t('themes_title')}</h2>
+      <h2 className="text-2xl font-extrabold mb-5">{t(`themes_title_${targetLang}`)}</h2>
       <div className="space-y-3">
         {allThemes.map((theme, i) => {
           // For authenticated users, use API unlock status if available, otherwise check locally

@@ -74,7 +74,7 @@ router.get('/themes/unlock-status', authenticate, async (req, res, next) => {
   try {
     // Get all themes with their unlock requirements
     const { rows: themes } = await pool.query(
-      'SELECT id, unlock_theme_id, unlock_min_score FROM theme ORDER BY "order"'
+      'SELECT id, lang, unlock_theme_id, unlock_min_score FROM theme ORDER BY lang, "order"'
     );
 
     // Get user's progress on previous themes

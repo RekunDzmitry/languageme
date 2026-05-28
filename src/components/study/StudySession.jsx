@@ -6,7 +6,7 @@ import { getVocab } from '../../data/courses'
 // getDueCards/getNewCards replaced by inline getStudyableCards
 import { stopSpeaking } from '../../utils/audio'
 import Flashcard from './Flashcard'
-import RatingButtons from './RatingButtons'
+import VocabNoteModal from '../themes/exercises/VocabNoteModal'
 
 const BATCH_SIZE = 10
 
@@ -19,7 +19,7 @@ function getStudyableCards(pool, cards, excludeIds) {
 }
 
 export default function StudySession({ themeVocab = null }) {
-  const { cards, rateCard, userMnemonics, showNotification, incrementStreak } = useProgress()
+  const { cards, rateCard, userMnemonics, vocabNotes, saveVocabNote, clearVocabNote, showNotification, incrementStreak } = useProgress()
   const { settings } = useSettings()
   const { t } = useT()
   const targetLang = settings.targetLang
@@ -38,6 +38,7 @@ export default function StudySession({ themeVocab = null }) {
   const [sessionStats, setSessionStats] = useState({ correct: 0, total: 0 })
   const [sessionComplete, setSessionComplete] = useState(false)
   const [allWordsExhausted, setAllWordsExhausted] = useState(false)
+  const [vocabNoteModal, setVocabNoteModal] = useState(null) // { vocabId, word }
   const currentWordRef = useRef(null)
 
   useEffect(() => { currentWordRef.current = queue[0] || null })
@@ -126,10 +127,22 @@ export default function StudySession({ themeVocab = null }) {
         flipped={flipped}
         onFlip={() => setFlipped(true)}
         userMnemonic={userMnemonics[currentWord.id]}
-        autoPlay={settings.autoPlayAudio}
+        vocabNote={vocabNotes?.[currentWord.id]}
+        onNoteClick={() => setVocabNoteModal({ vocabId: currentWord.id, word: currentWord })}
+        onRate={handleRate}
       />
 
-      {flipped && <RatingButtons onRate={handleRate} />}
+      {/* Vocab note modal */}
+      {vocabNoteModal && (
+        <VocabNoteModal
+          vocabId={vocabNoteModal.vocabId}
+          vocabNote={vocabNotes?.[vocabNoteModal.vocabId]}
+          wordPrompt={vocabNoteModal.word?.translations?.ru || vocabNoteModal.word?.target || vocabNoteModal.vocabId}
+          onSave={saveVocabNote}
+          onDelete={clearVocabNote}
+          onClose={() => setVocabNoteModal(null)}
+        />
+      )}
     </div>
   )
 }

@@ -5,10 +5,12 @@ import App from './App'
 import DashboardPage from './pages/DashboardPage'
 import ThemesListPage from './pages/ThemesListPage'
 import ThemePage from './pages/ThemePage'
+import StudyPage from './pages/StudyPage'
 import LearnPage from './pages/LearnPage'
 import CardsPage from './pages/CardsPage'
 import TrainingPage from './pages/TrainingPage'
 import AuthPage from './pages/AuthPage'
+import EmailPage from './pages/EmailPage'
 import { I18nProvider } from './i18n'
 import { SettingsProvider } from './stores/SettingsContext'
 import { AuthProvider } from './stores/AuthContext'
@@ -31,8 +33,11 @@ createRoot(document.getElementById('root')).render(
                   <Route path="auth" element={<AuthPage />} />
                   <Route path="learn" element={<RequireAuth><LearnPage /></RequireAuth>} />
                   <Route path="learn/:themeId" element={<RequireAuth><LearnPage /></RequireAuth>} />
+                  <Route path="study/:themeId" element={<RequireAuth><StudyPage /></RequireAuth>} />
                   <Route path="training" element={<RequireAuth><TrainingPage /></RequireAuth>} />
                   <Route path="cards" element={<RequireAuth><CardsPage /></RequireAuth>} />
+                  <Route path="email" element={<EmailPage />} />
+                  <Route path="email/:themeId" element={<EmailPage />} />
                 </Route>
               </Routes>
             </UserProgressProvider>

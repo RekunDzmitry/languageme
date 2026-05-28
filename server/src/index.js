@@ -17,6 +17,9 @@ import migrateRoutes from './routes/migrate.js';
 import adminRoutes from './routes/admin.js';
 import exportRoutes from './routes/export.js';
 import importRoutes from './routes/import.js';
+import exerciseNotesRoutes from './routes/exerciseNotes.js';
+import vocabNotesRoutes from './routes/vocabNotes.js';
+import emailRoutes from './routes/email.js';
 
 const app = express();
 
@@ -46,6 +49,9 @@ app.use('/api/migrate', migrateRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/import', importRoutes);
+app.use('/api/exercise-notes', exerciseNotesRoutes);
+app.use('/api/vocab-notes', vocabNotesRoutes);
+app.use('/api/email', emailRoutes);
 
 // Health check
 app.get('/api/health', async (req, res) => {

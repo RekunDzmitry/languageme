@@ -6,7 +6,7 @@ const router = Router();
 router.get('/', async (req, res, next) => {
   try {
     const { rows } = await pool.query(
-      'SELECT id, "order", title, title_ru, description, description_ru, unlock_theme_id, unlock_min_score FROM theme ORDER BY "order"'
+      'SELECT id, lang, "order", title, title_ru, description, description_ru, unlock_theme_id, unlock_min_score FROM theme ORDER BY lang, "order"'
     );
     res.json(rows);
   } catch (err) { next(err); }
