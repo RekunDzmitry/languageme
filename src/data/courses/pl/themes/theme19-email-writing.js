@@ -1,0 +1,550 @@
+// Polish email writing exercises — TELC B1/B2 exam format
+// Each exercise follows the official structure:
+//   1. Scenario (real-life situation)
+//   2. Specific recipient
+//   3. 3 mandatory bullet points to address
+//   4. Etiquette reminder (greeting + closing)
+
+const theme19EmailWriting = {
+  id: 'pl_theme19',
+  order: 119,
+  title: 'Pisanie e-maili — format egzaminacyjny',
+  titleRu: 'Pisanie e-maili — format egzaminacyjny',
+  description: 'Ćwiczymy pisanie e-maili w formacie egzaminu TELC (B1/B2). Każde zadanie ma 3 obowiązkowe punkty do rozwinięcia.',
+  descriptionRu: 'Ćwiczymy pisanie e-maili w formacie egzaminu TELC (B1/B2). Każde zadanie ma 3 obowiązkowe punkty do rozwinięcia.',
+  unlockCondition: null,
+  vocabIds: [],
+  sections: [
+    {
+      type: 'email_writing',
+      title: 'Zadania egzaminacyjne',
+      exercises: [
+
+        // ── ZESTAW 1A: Kurs językowy ──
+        {
+          id: 'email_01',
+          type: 'telc',
+          level: 'B1',
+          register: 'nieformalny',
+          category: 'Nieformalny — do kolegi',
+          scenario: 'Właśnie wróciłeś/wróciłaś do domu z Wrocławia, gdzie spędziłeś/spędziłaś 4 tygodnie na Intensywnym Letnim Kursie Języka Polskiego. Jesteś bardzo zadowolony/zadowolona z zajęć językowych oraz wszystkich warunków (zakwaterowania, wyżywienia itd.).',
+          recipient: 'Twój kolega Marek',
+          points: [
+            'Opisz, jak był zorganizowany kurs i jak wyglądał Twój plan dnia.',
+            'Opowiedz o innych uczestnikach kursu.',
+            'Napisz, co i dlaczego podobało Ci się najbardziej.',
+          ],
+          etiquetteHint: 'Nie zapomnij użyć odpowiednich zwrotów grzecznościowych na początku i na końcu e-maila.',
+          minWords: 100,
+          maxWords: 150,
+          usefulPhrases: [
+            { label: 'POCZĄTEK MAILA', phrases: ['Cześć Marku!', 'Drogi Marku!', 'Co u Ciebie słychać?'] },
+            { label: 'GŁÓWNA TREŚĆ MAILA', phrases: ['Właśnie wróciłem z intensywnego kursu języka polskiego we Wrocławiu.', 'Chciałem Ci opowiedzieć, jak minęły mi te 4 tygodnie.'] },
+            { label: 'Konstrukcje czasu', phrases: ['w zeszłym miesiącu', 'przez 4 tygodnie', 'codziennie od 9:00 do 14:00', 'w ubiegłym tygodniu'] },
+            { label: 'Przysłówki częstotliwości', phrases: ['codziennie', 'często', 'regularnie', 'czasem'] },
+            { label: 'Konstrukcje miejsca', phrases: ['na kursie', 'we Wrocławiu', 'w akademiku', 'w sali wykładowej'] },
+            { label: 'Zwroty opisujące kolejność', phrases: ['najpierw', 'potem', 'następnie', 'na zakończenie'] },
+            { label: 'Inne przydatne zwroty', phrases: ['zwłaszcza', 'oczywiście', 'koniecznie', 'również'] },
+            { label: 'ZAKOŃCZENIE MAILA', phrases: ['Pozdrawiam ciepło', 'Pozdrawiam serdecznie', 'Czekam na Twoją odpowiedź!'] },
+          ],
+        },
+
+        // ── ZESTAW 1B: Współlokatorzy ──
+        {
+          id: 'email_02',
+          type: 'telc',
+          level: 'B1',
+          register: 'nieformalny',
+          category: 'Nieformalny — do koleżanki',
+          scenario: 'Właśnie przyjechałeś/przyjechałaś do Polski na studia i wprowadziłeś/wprowadziłaś się do nowego mieszkania, które dzielisz ze współlokatorami — innymi studentami.',
+          recipient: 'Twoja koleżanka Aleksandra',
+          points: [
+            'Opisz, jak wygląda Twój pokój.',
+            'Opisz krótko swoich współlokatorów.',
+            'Przedstaw wady i zalety zakwaterowania w mieszkaniu studenckim.',
+          ],
+          etiquetteHint: 'Nie zapomnij użyć odpowiednich zwrotów grzecznościowych na początku i na końcu e-maila.',
+          minWords: 100,
+          maxWords: 150,
+          usefulPhrases: [
+            { label: 'POCZĄTEK MAILA', phrases: ['Hej Ola!', 'Cześć Olu!', 'Co tam u Ciebie?'] },
+            { label: 'GŁÓWNA TREŚĆ MAILA', phrases: ['Właśnie wprowadziłem się do nowego mieszkania w Polsce.', 'Chciałam Ci opowiedzieć o moich współlokatorach.'] },
+            { label: 'Konstrukcje miejsca', phrases: ['w nowym mieszkaniu', 'w pokoju', 'w kuchni', 'w akademiku'] },
+            { label: 'Przysłówki częstotliwości', phrases: ['codziennie', 'często', 'czasem', 'rzadko'] },
+            { label: 'Zwroty opisujące kolejność', phrases: ['po pierwsze', 'po drugie', 'po trzecie'] },
+            { label: 'Inne przydatne zwroty', phrases: ['zwłaszcza', 'również', 'oczywiście', 'zależy mi na tym, żeby'] },
+            { label: 'ZAKOŃCZENIE MAILA', phrases: ['Ściskam!', 'Pisz!', 'Czekam na wiadomości!'] },
+          ],
+        },
+
+        // ── ZESTAW 2A: Wycieczka po Polsce ──
+        {
+          id: 'email_03',
+          type: 'telc',
+          level: 'B1',
+          register: 'nieformalny',
+          category: 'Nieformalny — opis doświadczeń',
+          scenario: 'Właśnie wróciłeś/wróciłaś z wycieczki objazdowej po największych miastach Polski. Zwiedziłeś/zwiedziłaś Warszawę, Kraków, Gdańsk, Poznań i Wrocław. Wyjazd bardzo Ci się podobał.',
+          recipient: 'Twój kolega Marek',
+          points: [
+            'Opisz, jak zorganizowana była wycieczka (transport, noclegi, wyżywienie itd.).',
+            'Napisz, co szczególnie Ci się podobało.',
+            'Opowiedz o innych uczestnikach wycieczki, których poznałeś/poznałaś.',
+          ],
+          etiquetteHint: 'Nie zapomnij użyć odpowiednich zwrotów grzecznościowych na początku i na końcu e-maila.',
+          minWords: 100,
+          maxWords: 150,
+          usefulPhrases: [
+            { label: 'POCZĄTEK MAILA', phrases: ['Cześć Marku!', 'Hej!', 'Co u Ciebie?'] },
+            { label: 'GŁÓWNA TREŚĆ MAILA', phrases: ['Właśnie wróciłem z niesamowitej wycieczki po Polsce.', 'Muszę Ci opowiedzieć, co widziałem!'] },
+            { label: 'Konstrukcje czasu', phrases: ['w zeszłym tygodniu', 'przez 5 dni', 'w ubiegłym miesiącu', 'za rok'] },
+            { label: 'Konstrukcje miejsca', phrases: ['w Warszawie', 'w Krakowie', 'w Gdańsku', 'na wycieczce', 'na Starym Mieście'] },
+            { label: 'Zwroty opisujące kolejność', phrases: ['najpierw', 'potem', 'następnie', 'na zakończenie'] },
+            { label: 'Inne przydatne zwroty', phrases: ['zwłaszcza', 'na pewno', 'koniecznie', 'wszędzie'] },
+            { label: 'ZAKOŃCZENIE MAILA', phrases: ['Pozdrawiam!', 'Musisz tam pojechać!', 'Do zobaczenia!'] },
+          ],
+        },
+
+        // ── ZESTAW 2B: Nowa praca ──
+        {
+          id: 'email_04',
+          type: 'telc',
+          level: 'B1',
+          register: 'nieformalny',
+          category: 'Nieformalny — nowa praca',
+          scenario: 'Właśnie zacząłeś/zaczęłaś nową pracę. Po pierwszym dniu wracasz do domu zestresowany/zestresowana nowymi obowiązkami.',
+          recipient: 'Twój brat lub Twoja siostra',
+          points: [
+            'Opisz warunki i obowiązki w swojej nowej pracy.',
+            'Opisz krótko nowych współpracowników.',
+            'Przedstaw wady i zalety pracy na tym stanowisku.',
+          ],
+          etiquetteHint: 'Nie zapomnij użyć odpowiednich zwrotów grzecznościowych na początku i na końcu e-maila.',
+          minWords: 100,
+          maxWords: 150,
+          usefulPhrases: [
+            { label: 'POCZĄTEK MAILA', phrases: ['Cześć!', 'Hej!', 'Wiesz co się stało?'] },
+            { label: 'GŁÓWNA TREŚĆ MAILA', phrases: ['Właśnie zacząłem nową pracę.', 'Po pierwszym dniu jestem trochę zestresowany.'] },
+            { label: 'Konstrukcje czasu', phrases: ['dzisiaj', 'wczoraj', 'od jutra', 'w przyszłym tygodniu'] },
+            { label: 'Konstrukcje miejsca', phrases: ['w biurze', 'w nowej firmie', 'na stanowisku'] },
+            { label: 'Zwroty opisujące kolejność', phrases: ['po pierwsze', 'po drugie', 'przede wszystkim'] },
+            { label: 'Inne przydatne zwroty', phrases: ['na pewno', 'oczywiście', 'również', 'lepiej / gorzej'] },
+            { label: 'ZAKOŃCZENIE MAILA', phrases: ['Ściskam!', 'Trzymaj kciuki!', 'Dam znać, jak pójdzie!'] },
+          ],
+        },
+
+        // ── ZESTAW 3A: Wizyta kolegi z Polski ──
+        {
+          id: 'email_05',
+          type: 'telc',
+          level: 'B1',
+          register: 'nieformalny',
+          category: 'Nieformalny — propozycja wizyty',
+          scenario: 'Odwiedzi Cię kolega/koleżanka z Polski i spędzicie razem kilka dni. Bardzo chciałbyś/chciałabyś zobaczyć najciekawsze miejsca w Twoim mieście.',
+          recipient: 'Kolega/koleżanka z Polski',
+          points: [
+            'Wymień i krótko opisz kilka interesujących obiektów w okolicy.',
+            'Napisz, co będziecie robić wieczorami.',
+            'Uzasadnij, dlaczego proponujesz taki plan spędzenia czasu.',
+          ],
+          etiquetteHint: 'Nie zapomnij użyć odpowiednich zwrotów grzecznościowych na początku i na końcu e-maila.',
+          minWords: 100,
+          maxWords: 150,
+          usefulPhrases: [
+            { label: 'POCZĄTEK MAILA', phrases: ['Cześć!', 'Hej!', 'Super, że przyjeżdżasz!'] },
+            { label: 'GŁÓWNA TREŚĆ MAILA', phrases: ['Przygotowałem plan zwiedzania na kilka dni.', 'Mam nadzieję, że będzie Ci się podobało.'] },
+            { label: 'Konstrukcje czasu', phrases: ['w przyszłym tygodniu', 'za kilka dni', 'wieczorami', 'jutro'] },
+            { label: 'Konstrukcje miejsca', phrases: ['w moim mieście', 'w okolicy', 'w restauracji', 'na koncercie'] },
+            { label: 'Zwroty opisujące kolejność', phrases: ['najpierw', 'potem', 'wieczorem', 'na zakończenie dnia'] },
+            { label: 'Inne przydatne zwroty', phrases: ['zwłaszcza', 'na pewno', 'koniecznie', 'być może'] },
+            { label: 'ZAKOŃCZENIE MAILA', phrases: ['Do zobaczenia!', 'Będzie fajnie!', 'Czekam z niecierpliwością!'] },
+          ],
+        },
+
+        // ─ ZESTAW 3B: Festiwal filmowy ──
+        {
+          id: 'email_06',
+          type: 'telc',
+          level: 'B1',
+          register: 'półformalny',
+          category: 'Półformalny — do redaktorki',
+          scenario: 'Brałeś/brałaś ze swoją klasą udział w bardzo ciekawym festiwalu filmowym, który teraz chcesz opisać na stronie internetowej swojej szkoły.',
+          recipient: 'Pani Marzena Nowicka (redaktorka strony)',
+          points: [
+            'Opisz przebieg festiwalu i najważniejsze wydarzenia.',
+            'Napisz, jakie dokładnie to było wydarzenie i kiedy się odbyło.',
+            'Przedstaw swoją opinię o tym wydarzeniu.',
+          ],
+          etiquetteHint: 'Nie zapomnij użyć odpowiednich zwrotów grzecznościowych na początku i na końcu e-maila.',
+          minWords: 100,
+          maxWords: 150,
+          usefulPhrases: [
+            { label: 'POCZĄTEK MAILA', phrases: ['Szanowna Pani Nowicka', 'Szanowna Pani', 'Dzień dobry'] },
+            { label: 'GŁÓWNA TREŚĆ MAILA', phrases: ['Zwracam się z uprzejmą prośbą o opublikowanie relacji z festiwalu filmowego.', 'Chciałbym podzielić się wrażeniami z wydarzenia.'] },
+            { label: 'Konstrukcje czasu', phrases: ['w ubiegłym tygodniu', 'w zeszłym miesiącu', 'w piątek 10 maja'] },
+            { label: 'Konstrukcje miejsca', phrases: ['na festiwalu', 'w kinie', 'na sali projekcyjnej'] },
+            { label: 'Inne przydatne zwroty', phrases: ['przede wszystkim', 'zwłaszcza', 'zależy mi na tym, żeby', 'oczywiście'] },
+            { label: 'ZAKOŃCZENIE MAILA', phrases: ['Z wyrazami szacunku', 'Z poważaniem', 'Będę wdzięczna za odpowiedź.'] },
+          ],
+        },
+
+        // ── ZESTAW 4A: Zaproszenie na urodziny ──
+        {
+          id: 'email_07',
+          type: 'telc',
+          level: 'B1',
+          register: 'nieformalny',
+          category: 'Nieformalny — zaproszenie',
+          scenario: 'W najbliższą sobotę organizujesz przyjęcie urodzinowe w domu. Chcesz zaprosić kilku przyjaciół na wieczór pełen muzyki, dobrego jedzenia i gier towarzyskich.',
+          recipient: 'Twój przyjaciel Tomek',
+          points: [
+            'Podaj datę, godzinę i dokładny adres przyjęcia.',
+            'Opisz, co planujesz przygotować (jedzenie, muzyka, atrakcje).',
+            'Poproś o potwierdzenie przybycia i informację o ewentualnych alergiach pokarmowych.',
+          ],
+          etiquetteHint: 'Nie zapomnij użyć odpowiednich zwrotów grzecznościowych na początku i na końcu e-maila.',
+          minWords: 100,
+          maxWords: 150,
+          usefulPhrases: [
+            { label: 'POCZĄTEK MAILA', phrases: ['Hej Tomek!', 'Cześć Tomku!', 'Zapraszam Cię serdecznie!'] },
+            { label: 'GŁÓWNA TREŚĆ MAILA', phrases: ['W najbliższą sobotę organizuję przyjęcie urodzinowe.', 'Planuję wieczór pełen muzyki i dobrego jedzenia.'] },
+            { label: 'Konstrukcje czasu', phrases: ['w sobotę', 'o godzinie 18:00', 'w najbliższy weekend', 'od 18:00 do północy'] },
+            { label: 'Konstrukcje miejsca', phrases: ['w domu', 'w ogrodzie', 'na tarasie'] },
+            { label: 'Inne przydatne zwroty', phrases: ['przede wszystkim', 'oczywiście', 'również', 'koniecznie'] },
+            { label: 'ZAKOŃCZENIE MAILA', phrases: ['Będzie super!', 'Daj znać, czy przyjdziesz!', 'Pozdrawiam!'] },
+          ],
+        },
+
+        // ─ ZESTAW 4B: Skarga na hałas ──
+        {
+          id: 'email_08',
+          type: 'telc',
+          level: 'B1',
+          register: 'formalny',
+          category: 'Formalny — skarga do zarządcy',
+          scenario: 'Od trzech tygodni sąsiedzi z mieszkania powyżej organizują głośne imprezy w każdy piątek i sobotę. Przeszkadza Ci to w pracy i wypoczynku. Napiszesz oficjalną skargę do zarządcy budynku.',
+          recipient: 'Zarządca budynku',
+          points: [
+            'Opisz problem z hałasem — kiedy, jak często i jak bardzo Ci to przeszkadza.',
+            'Napisz, jakie kroki już podjąłeś/podjęłaś (np. rozmowa z sąsiadami).',
+            'Określ, czego oczekujesz od zarządcy.',
+          ],
+          etiquetteHint: 'Nie zapomnij użyć odpowiednich zwrotów grzecznościowych na początku i na końcu e-maila.',
+          minWords: 120,
+          maxWords: 180,
+          usefulPhrases: [
+            { label: 'POCZĄTEK MAILA', phrases: ['Szanowny Panie Zarządco', 'Szanowni Państwo'] },
+            { label: 'GŁÓWNA TREŚĆ MAILA', phrases: ['Zwracam się z uprzejmą prośbą o interwencję w sprawie hałasu.', 'Kontaktuję się w związku z powtarzającym się zakłócaniem spokoju.'] },
+            { label: 'Konstrukcje czasu', phrases: ['od trzech tygodni', 'w każdy piątek i sobotę', 'w godzinach nocnych'] },
+            { label: 'Przysłówki częstotliwości', phrases: ['regularnie', 'często', 'codziennie', 'sporadycznie'] },
+            { label: 'Zwroty opisujące kolejność', phrases: ['po pierwsze', 'po drugie', 'przede wszystkim'] },
+            { label: 'Inne przydatne zwroty', phrases: ['przede wszystkim', 'również', 'zwłaszcza', 'na pewno'] },
+            { label: 'ZAKOŃCZENIE MAILA', phrases: ['Z wyrazami szacunku', 'Z poważaniem', 'Liczę na pozytywne rozpatrzenie mojej prośby.', 'Będę wdzięczny za szybką odpowiedź.'] },
+          ],
+        },
+
+        // ── ZESTAW 5A: Rejestracja na kurs ──
+        {
+          id: 'email_09',
+          type: 'telc',
+          level: 'B1',
+          register: 'formalny',
+          category: 'Formalny — rejestracja na kurs',
+          scenario: 'Chcesz zapisać się na kurs języka niemieckiego w centrum językowym „Lingua" w Warszawie. Potrzebujesz informacji o dostępnych terminach, cenie i wymaganiach wstępnych.',
+          recipient: 'Sekretariat centrum „Lingua"',
+          points: [
+            'Przedstaw się krótko i podaj swój aktualny poziom znajomości niemieckiego.',
+            'Zapytaj o dostępne terminy kursów, cenę oraz czy potrzebne są materiały dodatkowe.',
+            'Zapytaj o możliwość płatności w ratach lub dofinansowanie.',
+          ],
+          etiquetteHint: 'Nie zapomnij użyć odpowiednich zwrotów grzecznościowych na początku i na końcu e-maila.',
+          minWords: 100,
+          maxWords: 150,
+          usefulPhrases: [
+            { label: 'POCZĄTEK MAILA', phrases: ['Szanowni Państwo', 'Szanowna Pani / Szanowny Panie'] },
+            { label: 'GŁÓWNA TREŚĆ MAILA', phrases: ['Chciałbym się zapisać na kurs języka niemieckiego.', 'Zwracam się z uprzejmą prośbą o udzielenie informacji na temat kursu.', 'Zapoznałem się z informacjami na stronie Państwa szkoły.'] },
+            { label: 'Konstrukcje czasu', phrases: ['w przyszłym miesiącu', 'od września', 'w semestrze jesiennym', 'za tydzień'] },
+            { label: 'Konstrukcje miejsca', phrases: ['w Warszawie', 'w centrum językowym „Lingua"', 'na kursie'] },
+            { label: 'Inne przydatne zwroty', phrases: ['przede wszystkim', 'również', 'oczywiście'] },
+            { label: 'ZAKOŃCZENIE MAILA', phrases: ['Z góry dziękuję za odpowiedź.', 'Z poważaniem', 'Będę wdzięczny za szybką odpowiedź.'] },
+          ],
+        },
+
+        // ── ZESTAW 5B: List motywacyjny ──
+        {
+          id: 'email_10',
+          type: 'telc',
+          level: 'B2',
+          register: 'formalny',
+          category: 'Formalny — list motywacyjny',
+          scenario: 'Znalazłeś/znalazłaś ogłoszenie o pracę na stanowisku asystenta/asystentki w biurze podróży „Globtour". Chcesz aplikować i przesłać swoje CV oraz list motywacyjny.',
+          recipient: 'Dział Rekrutacji firmy „Globtour"',
+          points: [
+            'Wskaż, na jakie stanowisko aplikujesz i skąd znasz ogłoszenie.',
+            'Opisz swoje doświadczenie zawodowe i umiejętności przydatne w tej pracy.',
+            'Wyjaśnij, dlaczego chcesz pracować właśnie w firmie „Globtour".',
+          ],
+          etiquetteHint: 'Nie zapomnij użyć odpowiednich zwrotów grzecznościowych na początku i na końcu e-maila.',
+          minWords: 150,
+          maxWords: 200,
+          usefulPhrases: [
+            { label: 'POCZĄTEK MAILA', phrases: ['Szanowni Państwo', 'Szanowna Pani / Szanowny Panie'] },
+            { label: 'GŁÓWNA TREŚĆ MAILA', phrases: ['W odpowiedzi na Państwa ogłoszenie zamieszczone na stronie...', 'Pragnę złożyć swoją kandydaturę na stanowisko asystenta.', 'W załączniku przesyłam swoje CV.'] },
+            { label: 'Konstrukcje czasu', phrases: ['w zeszłym roku', 'przez 2 lata', 'od trzech miesięcy', 'w ubiegłym miesiącu'] },
+            { label: 'Konstrukcje miejsca', phrases: ['w firmie „Globtour"', 'w biurze podróży', 'na stanowisku asystenta'] },
+            { label: 'Inne przydatne zwroty', phrases: ['przede wszystkim', 'zwłaszcza', 'również', 'zależy mi na tym, żeby', 'na pewno'] },
+            { label: 'ZAKOŃCZENIE MAILA', phrases: ['Z poważaniem', 'Z wyrazami szacunku', 'Będę wdzięczny za rozpatrzenie mojej kandydatury.', 'Liczę na pozytywną odpowiedź.'] },
+          ],
+        },
+
+        // ── ZESTAW 6A: Zamówienie w restauracji ──
+        {
+          id: 'email_11',
+          type: 'telc',
+          level: 'B1',
+          register: 'formalny',
+          category: 'Formalny — zamówienie cateringowe',
+          scenario: 'Organizujesz spotkanie firmowe dla 20 osób i chcesz zamówić catering z restauracji „Smakosz". Potrzebujesz potwierdzenia dostawy i menu.',
+          recipient: 'Restauracja „Smakosz"',
+          points: [
+            'Podaj datę, godzinę dostawy oraz adres miejsca imprezy.',
+            'Zapytaj o dostępne menu i cenę za osobę.',
+            'Poinformuj o osobach z alergiami pokarmowymi (2 osoby bezglutenowe).',
+          ],
+          etiquetteHint: 'Nie zapomnij użyć odpowiednich zwrotów grzecznościowych na początku i na końcu e-maila.',
+          minWords: 100,
+          maxWords: 150,
+          usefulPhrases: [
+            { label: 'POCZĄTEK MAILA', phrases: ['Szanowni Państwo', 'Szanowna Pani / Szanowny Panie'] },
+            { label: 'GŁÓWNA TREŚĆ MAILA', phrases: ['Chciałbym zamówić catering na spotkanie firmowe.', 'Zwracam się z uprzejmą prośbą o przygotowanie oferty cateringowej.'] },
+            { label: 'Konstrukcje czasu', phrases: ['w piątek 15 czerwca', 'o godzinie 12:00', 'w przyszłym tygodniu'] },
+            { label: 'Konstrukcje miejsca', phrases: ['w biurze', 'pod wskazany adres', 'na miejscu'] },
+            { label: 'Inne przydatne zwroty', phrases: ['przede wszystkim', 'również', 'zwłaszcza', 'oczywiście'] },
+            { label: 'ZAKOŃCZENIE MAILA', phrases: ['Proszę o potwierdzenie dostawy.', 'Z góry dziękuję za odpowiedź.', 'Z poważaniem'] },
+          ],
+        },
+
+        // ─ ZESTAW 6B: Wynajem mieszkania ──
+        {
+          id: 'email_12',
+          type: 'telc',
+          level: 'B1',
+          register: 'półformalny',
+          category: 'Półformalny — zapytanie o mieszkanie',
+          scenario: 'Znalazłeś/znalazłaś w internecie ogłoszenie o wynajmie mieszkania dwupokojowego w Krakowie. Mieszkanie Ci się podoba, ale chcesz uzyskać więcej informacji.',
+          recipient: 'Właściciel mieszkania',
+          points: [
+            'Przedstaw się krótko i napisz, skąd masz informacje o mieszkaniu.',
+            'Zapytaj o dokładny adres, piętro oraz czy mieszkanie jest umeblowane.',
+            'Zapytaj o wysokość czynszu, kaucję oraz kiedy możliwe jest wprowadzenie.',
+          ],
+          etiquetteHint: 'Nie zapomnij użyć odpowiednich zwrotów grzecznościowych na początku i na końcu e-maila.',
+          minWords: 100,
+          maxWords: 150,
+          usefulPhrases: [
+            { label: 'POCZĄTEK MAILA', phrases: ['Dzień dobry', 'Szanowny Panie / Szanowna Pani'] },
+            { label: 'GŁÓWNA TREŚĆ MAILA', phrases: ['Piszę w sprawie ogłoszenia zamieszczonego na stronie...', 'Jestem zainteresowany wynajmem mieszkania.'] },
+            { label: 'Konstrukcje czasu', phrases: ['w przyszłym miesiącu', 'od września', 'za tydzień', 'jak najszybciej'] },
+            { label: 'Konstrukcje miejsca', phrases: ['w Krakowie', 'w mieszkaniu', 'w centrum', 'na piętrze'] },
+            { label: 'Inne przydatne zwroty', phrases: ['również', 'przede wszystkim', 'oczywiście', 'być może'] },
+            { label: 'ZAKOŃCZENIE MAILA', phrases: ['Z góry dziękuję za odpowiedź.', 'Z wyrazami szacunku', 'Będę wdzięczny za szybką odpowiedź.'] },
+          ],
+        },
+
+        // ── ZESTAW 7A: Powrót z wakacji ──
+        {
+          id: 'email_13',
+          type: 'telc',
+          level: 'B1',
+          register: 'nieformalny',
+          category: 'Nieformalny — relacja z wakacji',
+          scenario: 'Właśnie wróciłeś/wróciłaś z dwutygodniowych wakacji nad Morzem Bałtyckim. Pogoda była fantastyczna, a ty spędziłeś/spędziłaś dużo czasu na plaży i zwiedzaniu okolicy.',
+          recipient: 'Twój przyjaciel Piotr',
+          points: [
+            'Opisz, gdzie dokładnie byłeś/byłaś i z kim podróżowałeś/podróżowałaś.',
+            'Napisz o najpiękniejszych miejscach, które odwiedziłeś/odwiedziłaś.',
+            'Przedstaw swoje wrażenia z podróży i czy polecasz to miejsce.',
+          ],
+          etiquetteHint: 'Nie zapomnij użyć odpowiednich zwrotów grzecznościowych na początku i na końcu e-maila.',
+          minWords: 100,
+          maxWords: 150,
+          usefulPhrases: [
+            { label: 'POCZĄTEK MAILA', phrases: ['Cześć Piotrze!', 'Hej!', 'Co u Ciebie słychać?'] },
+            { label: 'GŁÓWNA TREŚĆ MAILA', phrases: ['Właśnie wróciłem z dwutygodniowych wakacji nad Bałtykiem.', 'Pogoda była fantastyczna!'] },
+            { label: 'Konstrukcje czasu', phrases: ['w zeszłym tygodniu', 'przez 2 tygodnie', 'codziennie', 'w ubiegłym miesiącu'] },
+            { label: 'Konstrukcje miejsca', phrases: ['nad Morzem Bałtyckim', 'na plaży', 'w hotelu', 'w okolicy'] },
+            { label: 'Zwroty opisujące kolejność', phrases: ['najpierw', 'potem', 'na zakończenie'] },
+            { label: 'Inne przydatne zwroty', phrases: ['na pewno', 'koniecznie', 'zwłaszcza', 'wszędzie', 'być może'] },
+            { label: 'ZAKOŃCZENIE MAILA', phrases: ['Pozdrawiam!', 'Musisz tam pojechać!', 'Czekam na Twoją wiadomość!'] },
+          ],
+        },
+
+        // ── ZESTAW 7B: Zmiana terminu wizyty ──
+        {
+          id: 'email_14',
+          type: 'telc',
+          level: 'B1',
+          register: 'formalny',
+          category: 'Formalny — zmiana wizyty u lekarza',
+          scenario: 'Masz umówioną wizytę u lekarza na następny wtorek o godzinie 10:00, ale niestety nie możesz przyjść w tym terminie z powodu wyjazdu służbowego. Musisz zmienić termin.',
+          recipient: 'Przychodnia „Zdrowie"',
+          points: [
+            'Podaj datę i godzinę obecnej wizyty oraz imię i nazwisko.',
+            'Wyjaśnij przyczynę nieobecności.',
+            'Zaproponuj 2-3 alternatywne terminy wizyty.',
+          ],
+          etiquetteHint: 'Nie zapomnij użyć odpowiednich zwrotów grzecznościowych na początku i na końcu e-maila.',
+          minWords: 80,
+          maxWords: 130,
+          usefulPhrases: [
+            { label: 'POCZĄTEK MAILA', phrases: ['Szanowni Państwo', 'Szanowna Pani / Szanowny Panie'] },
+            { label: 'GŁÓWNA TREŚĆ MAILA', phrases: ['Chciałbym odwołać wizytę zaplanowaną na wtorek.', 'Zwracam się z uprzejmą prośbą o przełożenie terminu wizyty.'] },
+            { label: 'Konstrukcje czasu', phrases: ['w następny wtorek', 'o godzinie 10:00', 'w środę lub czwartek', 'za tydzień'] },
+            { label: 'Konstrukcje miejsca', phrases: ['w przychodni „Zdrowie"', 'w gabinecie lekarskim'] },
+            { label: 'Inne przydatne zwroty', phrases: ['niestety', 'z powodu', 'przede wszystkim', 'oczywiście'] },
+            { label: 'ZAKOŃCZENIE MAILA', phrases: ['Z poważaniem', 'Z góry dziękuję za odpowiedź.', 'Proszę o potwierdzenie zmiany terminu.'] },
+          ],
+        },
+
+        // ── ZESTAW 8A: Zaproszenie na grilla ──
+        {
+          id: 'email_15',
+          type: 'telc',
+          level: 'B1',
+          register: 'nieformalny',
+          category: 'Nieformalny — zaproszenie na grilla',
+          scenario: 'W sobotę planujesz zorganizować grilla w ogrodzie z okazji Twoich urodzin. Chcesz zaprosić przyjaciół na wieczór pełen dobrej atmosfery, muzyki i pysznego jedzenia.',
+          recipient: 'Twoi przyjaciele',
+          points: [
+            'Podaj datę, godzinę i miejsce grillowania.',
+            'Opisz, co planujesz przygotować na grilla i jakie atrakcje będą dostępne.',
+            'Poproś gości o informację, czy przyjdą i czy coś konkretnego chcą przynieść.',
+          ],
+          etiquetteHint: 'Nie zapomnij użyć odpowiednich zwrotów grzecznościowych na początku i na końcu e-maila.',
+          minWords: 100,
+          maxWords: 150,
+          usefulPhrases: [
+            { label: 'POCZĄTEK MAILA', phrases: ['Hej wszystkim!', 'Cześć!', 'Zapraszam Was serdecznie!'] },
+            { label: 'GŁÓWNA TREŚĆ MAILA', phrases: ['W sobotę organizuję grilla w ogrodzie z okazji moich urodzin.', 'Planuję wieczór pełen dobrej atmosfery i muzyki.'] },
+            { label: 'Konstrukcje czasu', phrases: ['w sobotę', 'o godzinie 16:00', 'od 16:00 do późnego wieczora', 'w najbliższy weekend'] },
+            { label: 'Konstrukcje miejsca', phrases: ['w ogrodzie', 'w moim domu', 'na tarasie', 'na grillu'] },
+            { label: 'Inne przydatne zwroty', phrases: ['przede wszystkim', 'oczywiście', 'również', 'koniecznie', 'zwłaszcza'] },
+            { label: 'ZAKOŃCZENIE MAILA', phrases: ['Będzie wesoło!', 'Dajcie znać, czy przyjdziecie!', 'Pozdrawiam!'] },
+          ],
+        },
+
+        // ── ZESTAW 9A: Adopcja zwierzęcia ze schroniska ──
+        {
+          id: 'email_16',
+          type: 'telc',
+          level: 'B1',
+          register: 'nieformalny',
+          category: 'Nieformalny — adopcja zwierzęcia',
+          scenario: 'Zdecydowałeś/zdecydowałaś się na adopcję zwierzęcia ze schroniska i chcesz podzielić się swoim doświadczeniem. Chcesz opowiedzieć znajomemu o procesie adopcji i zachęcić go do podjęcia podobnej decyzji.',
+          recipient: 'Twój znajomy',
+          points: [
+            'Opisz, jakie zwierzę adoptowałeś/adoptowałaś i jak wyglądał proces adopcji.',
+            'Opisz pierwsze wrażenia związane z pobytem zwierzęcia w domu.',
+            'Zachęć znajomego do adopcji i wyjaśnij, dlaczego warto pomagać zwierzętom ze schronisk.',
+          ],
+          etiquetteHint: 'Nie zapomnij użyć odpowiednich zwrotów grzecznościowych na początku i na końcu e-maila.',
+          minWords: 100,
+          maxWords: 150,
+          usefulPhrases: [
+            { label: 'POCZĄTEK MAILA', phrases: ['Cześć!', 'Hej!', 'Muszę Ci coś opowiedzieć!'] },
+            { label: 'GŁÓWNA TREŚĆ MAILA', phrases: ['Zdecydowałem się na adopcję zwierzęcia ze schroniska.', 'Chciałem podzielić się z Tobą tym doświadczeniem.'] },
+            { label: 'Konstrukcje czasu', phrases: ['w zeszłym tygodniu', 'przedwczoraj', 'od kilku dni', 'w ubiegłym miesiącu'] },
+            { label: 'Konstrukcje miejsca', phrases: ['w schronisku', 'w domu', 'w pokoju', 'w nowym miejscu'] },
+            { label: 'Zwroty opisujące kolejność', phrases: ['najpierw', 'potem', 'następnie', 'na zakończenie'] },
+            { label: 'Inne przydatne zwroty', phrases: ['przede wszystkim', 'na pewno', 'koniecznie', 'zależy mi na tym, żeby'] },
+            { label: 'ZAKOŃCZENIE MAILA', phrases: ['Pozdrawiam serdecznie', 'Daj znać, co o tym myślisz!', 'Czekam na Twoją odpowiedź!'] },
+          ],
+        },
+
+        // ── ZESTAW 9B: Ekologiczny tryb życia ──
+        {
+          id: 'email_17',
+          type: 'telc',
+          level: 'B1',
+          register: 'nieformalny',
+          category: 'Nieformalny — ekologiczne porady',
+          scenario: 'Twój znajomy chciałby prowadzić bardziej ekologiczny tryb życia i poprosił Cię o kilka praktycznych wskazówek. Chcesz podzielić się z nim poradami dotyczącymi codziennych działań na rzecz ochrony środowiska.',
+          recipient: 'Twój znajomy',
+          points: [
+            'Przedstaw proste sposoby na zmniejszenie zużycia plastiku.',
+            'Zaproponuj ekologiczne nawyki, które można wprowadzić w codziennym życiu.',
+            'Zmotywuj znajomego do stopniowej zmiany stylu życia na bardziej przyjazny dla środowiska.',
+          ],
+          etiquetteHint: 'Nie zapomnij użyć odpowiednich zwrotów grzecznościowych na początku i na końcu e-maila.',
+          minWords: 100,
+          maxWords: 150,
+          usefulPhrases: [
+            { label: 'POCZĄTEK MAILA', phrases: ['Hej!', 'Cześć!', 'Świetnie, że chcesz żyć bardziej ekologicznie!'] },
+            { label: 'GŁÓWNA TREŚĆ MAILA', phrases: ['Przygotowałem dla Ciebie kilka praktycznych wskazówek.', 'Oto moje pomysły na zmniejszenie zużycia plastiku.'] },
+            { label: 'Przysłówki częstotliwości', phrases: ['codziennie', 'często', 'regularnie', 'czasem', 'rzadko'] },
+            { label: 'Zwroty opisujące kolejność', phrases: ['po pierwsze', 'po drugie', 'po trzecie', 'przede wszystkim'] },
+            { label: 'Inne przydatne zwroty', phrases: ['na pewno', 'zależy mi na tym, żeby', 'również', 'oczywiście', 'lepiej'] },
+            { label: 'ZAKOŃCZENIE MAILA', phrases: ['Daj znać, jak Ci idzie!', 'Pozdrawiam!', 'Powodzenia!'] },
+          ],
+        },
+
+        // ── ZESTAW 10A: Podróż autostopem ──
+        {
+          id: 'email_18',
+          type: 'telc',
+          level: 'B1',
+          register: 'nieformalny',
+          category: 'Nieformalny — porady dla autostopowicza',
+          scenario: 'Twój znajomy planuje podróż autostopem, ale ma pewne obawy i chciałby otrzymać kilka wskazówek. Chcesz doradzić mu, jak dobrze przygotować się do takiej podróży i na co zwrócić uwagę.',
+          recipient: 'Twój znajomy',
+          points: [
+            'Doradź, jak wybrać trasę i przygotować się do podróży autostopem.',
+            'Napisz, jakie rzeczy powinien/powinna ze sobą zabrać.',
+            'Poleć sprawdzone aplikacje, fora lub grupy dla autostopowiczów.',
+          ],
+          etiquetteHint: 'Nie zapomnij użyć odpowiednich zwrotów grzecznościowych na początku i na końcu e-maila.',
+          minWords: 100,
+          maxWords: 150,
+          usefulPhrases: [
+            { label: 'POCZĄTEK MAILA', phrases: ['Cześć!', 'Hej!', 'To świetna przygoda!'] },
+            { label: 'GŁÓWNA TREŚĆ MAILA', phrases: ['Przygotowałem dla Ciebie kilka wskazówek dotyczących podróży autostopem.', 'Pamiętaj, żeby dobrze zaplanować trasę.'] },
+            { label: 'Konstrukcje czasu', phrases: ['w przyszłym tygodniu', 'za kilka dni', 'w ciągu dnia', 'wieczorem'] },
+            { label: 'Konstrukcje miejsca', phrases: ['na trasie', 'na autostradzie', 'na stacji benzynowej', 'w aplikacji'] },
+            { label: 'Zwroty opisujące kolejność', phrases: ['po pierwsze', 'po drugie', 'najpierw', 'potem'] },
+            { label: 'Inne przydatne zwroty', phrases: ['przede wszystkim', 'koniecznie', 'na pewno', 'być może', 'zależy mi na tym, żeby'] },
+            { label: 'ZAKOŃCZENIE MAILA', phrases: ['Trzymaj się!', 'Daj znać, jak podróżujesz!', 'Pozdrawiam!'] },
+          ],
+        },
+
+        // ── ZESTAW 10B: Przyjęcie urodzinowe dla dziecka ──
+        {
+          id: 'email_19',
+          type: 'telc',
+          level: 'B1',
+          register: 'nieformalny',
+          category: 'Nieformalny — organizacja przyjęcia dla dziecka',
+          scenario: 'Twój znajomy organizuje przyjęcie urodzinowe dla swojego dziecka w domu i poprosił Cię o rady dotyczące przygotowań. Chcesz podzielić się praktycznymi wskazówkami dotyczącymi organizacji takiej imprezy.',
+          recipient: 'Twój znajomy',
+          points: [
+            'Zaproponuj pomysły na dekoracje i motyw przewodni przyjęcia.',
+            'Poleć zabawy i atrakcje odpowiednie dla dzieci.',
+            'Doradź, jakie przekąski i napoje najlepiej sprawdzą się na imprezie.',
+          ],
+          etiquetteHint: 'Nie zapomnij użyć odpowiednich zwrotów grzecznościowych na początku i na końcu e-maila.',
+          minWords: 100,
+          maxWords: 150,
+          usefulPhrases: [
+            { label: 'POCZĄTEK MAILA', phrases: ['Hej!', 'Cześć!', 'Z przyjemnością pomogę!'] },
+            { label: 'GŁÓWNA TREŚĆ MAILA', phrases: ['Przygotowałam kilka pomysłów na przyjęcie urodzinowe dla dziecka.', 'Oto moje propozycje dekoracji i zabaw.'] },
+            { label: 'Konstrukcje miejsca', phrases: ['w domu', 'w ogrodzie', 'w salonie', 'na podwórku'] },
+            { label: 'Zwroty opisujące kolejność', phrases: ['po pierwsze', 'po drugie', 'najpierw', 'potem', 'na zakończenie'] },
+            { label: 'Inne przydatne zwroty', phrases: ['przede wszystkim', 'na pewno', 'również', 'zwłaszcza', 'oczywiście'] },
+            { label: 'ZAKOŃCZENIE MAILA', phrases: ['Powodzenia!', 'Daj znać, jak poszło!', 'Pozdrawiam!'] },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+export default theme19EmailWriting;
