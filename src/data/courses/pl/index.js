@@ -11,6 +11,16 @@ import theme06 from './themes/theme06-j-i.js'
 import theme07 from './themes/theme07-gie-ge.js'
 import theme08 from './themes/theme08-nosowki.js'
 import theme09 from './themes/theme09-wielka-litera.js'
+import theme10 from './themes/theme10-praca.js'
+import theme11 from './themes/theme11-edukacja.js'
+import theme12 from './themes/theme12-ochrona-srodowiska.js'
+import theme13 from './themes/theme13-katastrofy-naturalne.js'
+import theme14 from './themes/theme14-smieci-i-zasoby.js'
+import theme15 from './themes/theme15-cyfrowy-nomadyzm.js'
+import theme16 from './themes/theme16-konstrukcje-z-przypadkami.js'
+import theme17 from './themes/theme17-media-spolecznosciowe.js'
+import theme18 from './themes/theme18-my-i-media.js'
+import theme19 from './themes/theme19-email-writing.js'
 
 export const COURSE = {
   id: 'pl',
@@ -19,7 +29,7 @@ export const COURSE = {
   nativeLang: 'ru',
   targetLang: 'pl',
   flag: '🇵🇱',
-  totalThemes: 9,
+  totalThemes: 18,
 }
 
 export const THEMES = [
@@ -32,6 +42,16 @@ export const THEMES = [
   theme07,
   theme08,
   theme09,
+  theme10,
+  theme11,
+  theme12,
+  theme13,
+  theme14,
+  theme15,
+  theme16,
+  theme17,
+  theme18,
+  theme19,
 ]
 
 export { VOCAB }
