@@ -167,8 +167,8 @@ export const exerciseNoteApi = {
 // Email Writing API
 export const emailApi = {
   // Evaluate user's email (TELC format)
-  evaluate: (userText, taskDescription, targetLang = 'pl', nativeLang = 'ru', points, register, etiquetteHint) =>
-    api.post('/api/email/evaluate', { userText, taskDescription, targetLang, nativeLang, points, register, etiquetteHint }),
+  evaluate: (userText, taskDescription, targetLang = 'pl', nativeLang = 'ru', points, register, etiquetteHint, targetLevel = 'B1') =>
+    api.post('/api/email/evaluate', { userText, taskDescription, targetLang, nativeLang, points, register, etiquetteHint, targetLevel }),
 
   // Save evaluation attempt to history
   saveAttempt: (themeId, exerciseIdx, userText, score, aiEvaluation) =>

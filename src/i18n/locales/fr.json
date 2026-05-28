@@ -210,5 +210,9 @@
   "attempts_used": "{n} tentative",
   "correct_answer_is": "La bonne réponse:",
   "all_caught_up": "Tout est fait !",
-  "come_back_later": "Revenez quand les cartes seront prêtes à être révisées."
+  "come_back_later": "Revenez quand les cartes seront prêtes à être révisées.",
+  "email_constructions": "Konstrukcje",
+  "email_construction_original": "Oryginał",
+  "email_construction_suggested": "Sugestia",
+  "email_target_level": "Poziom docelowy"
 }

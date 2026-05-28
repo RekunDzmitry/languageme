@@ -164,6 +164,73 @@ function RegisterMatchSection({ registerMatch, register }) {
   )
 }
 
+// ---------------------------------------------------------------------------
+// Construction Replacements sub-component
+// Shows level-appropriate alternatives for the user's phrasing
+// ---------------------------------------------------------------------------
+
+const LEVEL_STYLES = {
+  A1: { bg: 'bg-emerald-500/15', border: 'border-emerald-500/40', text: 'text-emerald-400', dot: 'bg-emerald-500' },
+  A2: { bg: 'bg-green-500/15', border: 'border-green-500/40', text: 'text-green-400', dot: 'bg-green-500' },
+  B1: { bg: 'bg-yellow-500/15', border: 'border-yellow-500/40', text: 'text-yellow-400', dot: 'bg-yellow-500' },
+  B2: { bg: 'bg-orange-500/15', border: 'border-orange-500/40', text: 'text-orange-400', dot: 'bg-orange-500' },
+  C1: { bg: 'bg-red-500/15', border: 'border-red-500/40', text: 'text-red-400', dot: 'bg-red-500' },
+  C2: { bg: 'bg-purple-500/15', border: 'border-purple-500/40', text: 'text-purple-400', dot: 'bg-purple-500' },
+}
+
+function LevelBadge({ level }) {
+  const style = LEVEL_STYLES[level] || LEVEL_STYLES.B1
+  return (
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${style.bg} ${style.text} border ${style.border}`}>
+      {level}
+    </span>
+  )
+}
+
+function ConstructionReplacementsSection({ constructionReplacements }) {
+  const { t } = useT()
+  if (!constructionReplacements || constructionReplacements.length === 0) return null
+
+  return (
+    <div className="p-4 border-t border-border">
+      <h4 className="text-sm text-text-muted uppercase tracking-wide mb-3">
+        {t('email_constructions', 'Konstrukcje')}
+      </h4>
+      <div className="space-y-3">
+        {constructionReplacements.map((cr, i) => (
+          <div key={i} className="bg-white/[0.03] border border-border rounded-lg p-3">
+            {/* Original → Suggested */}
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <LevelBadge level={cr.originalLevel} />
+              <span className="text-xs text-text-muted">→</span>
+              <LevelBadge level={cr.suggestedLevel} />
+            </div>
+
+            <div className="space-y-1.5">
+              <div>
+                <span className="text-[10px] text-text-muted uppercase tracking-wide">
+                  {t('email_construction_original', 'Oryginał')}
+                </span>
+                <p className="text-sm text-white/70 italic">{cr.originalText}</p>
+              </div>
+              <div>
+                <span className="text-[10px] text-text-muted uppercase tracking-wide">
+                  {t('email_construction_suggested', 'Sugestia')}
+                </span>
+                <p className="text-sm text-green-400 font-medium">{cr.suggestedText}</p>
+              </div>
+            </div>
+
+            {cr.explanation && (
+              <p className="text-xs text-text-muted mt-2 leading-relaxed">{cr.explanation}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function EmailSidePanel({
   evaluation,
   stage,
@@ -191,6 +258,7 @@ export default function EmailSidePanel({
   const taskCoverage = evaluation?.taskCoverage || {}
   const etiquetteCheck = evaluation?.etiquetteCheck || {}
   const registerMatch = evaluation?.registerMatch
+  const constructionReplacements = evaluation?.constructionReplacements || []
 
   return (
     <div className="bg-surface border border-border rounded-xl divide-y divide-border max-h-[calc(100vh-12rem)] flex flex-col">
@@ -258,6 +326,11 @@ export default function EmailSidePanel({
       {/* Register Match */}
       {evaluation && register && (
         <RegisterMatchSection registerMatch={registerMatch} register={register} />
+      )}
+
+      {/* Construction Replacements */}
+      {evaluation && (
+        <ConstructionReplacementsSection constructionReplacements={constructionReplacements} />
       )}
 
       {/* Error list */}

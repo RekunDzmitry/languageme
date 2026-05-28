@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useT } from '../../i18n'
+import { useSettings } from '../../stores/SettingsContext'
 import { emailApi, themesApi } from '../../api/client'
 import EmailInputPanel from './EmailInputPanel'
 import EmailResultView from './EmailResultView'
@@ -21,6 +22,8 @@ function formatTime(seconds) {
 
 export default function EmailExercise({ exercise, themeId, exerciseIdx, onContinue, sessionId }) {
   const { t } = useT()
+  const { settings } = useSettings()
+  const targetLevel = settings?.targetLevel || 'B1'
   const TIME_LIMIT = exercise.timeLimit || 30 * 60 // 30 min default (TELC exam standard)
   const ck = cacheKey(sessionId, themeId, exerciseIdx)
   const saved = stateCache[ck]
@@ -107,7 +110,8 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
         'ru',
         exercise.points,
         exercise.register,
-        exercise.etiquetteHint
+        exercise.etiquetteHint,
+        targetLevel
       )
 
       setEvaluation(result)
@@ -130,7 +134,7 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
       setError(err.message || t('email_eval_error', 'Błąd sprawdzania. Spróbuj ponownie.'))
       setStage('ready')
     }
-  }, [userText, stage, exercise, themeId, exerciseIdx, t])
+  }, [userText, stage, exercise, themeId, exerciseIdx, t, targetLevel])
 
   // Keep handleEvaluate ref in sync
   useEffect(() => { handleEvaluateRef.current = handleEvaluate }, [handleEvaluate])

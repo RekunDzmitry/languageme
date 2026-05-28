@@ -53,7 +53,7 @@ async function callAI(prompt) {
 
 const LANG_LABELS = { ru: 'Russian', en: 'English', pl: 'Polish', fr: 'French' };
 
-function buildEvaluationPrompt(userText, taskDescription, points, register, etiquetteHint, nativeLang) {
+function buildEvaluationPrompt(userText, taskDescription, points, register, etiquetteHint, nativeLang, targetLevel) {
   // For B1/B2 exercises, all feedback is in Polish
   const langLabel = 'Polish';
   // Word translations go in the learner's native language so added cards are useful
@@ -67,8 +67,15 @@ function buildEvaluationPrompt(userText, taskDescription, points, register, etiq
     ? `The expected register is: ${register} (${register === 'nieformalny' ? 'informal — casual, friendly tone' : register === 'półformalny' ? 'semi-formal — polite but not stiff' : 'formal — official, professional tone'}). Evaluate whether the register used matches this requirement.`
     : '';
 
+  // Construction replacement instructions — direction depends on target level
+  const userLevel = targetLevel || 'B1';
+  const replacementInstructions = userLevel === 'B2'
+    ? `The learner is targeting B2 level. Identify 2–4 constructions in their text that are too simple (A2/B1 level) and suggest more sophisticated B2-level alternatives. For each, explain why the B2 version sounds more natural or precise.`
+    : `The learner is targeting B1 level. Identify 2–4 constructions in their text that are overly complex (B2/C1 level attempts that didn't quite work) and suggest simpler, more natural B1-level alternatives. For each, explain why the simpler version is clearer and more appropriate.`;
+
   return `Evaluate the following email written by a Polish language learner.
 The learner's native language is ${langLabel}.
+The learner's current CEFR target level is ${userLevel}.
 
 WRITING TASK:
 "${taskDescription}"
@@ -119,6 +126,15 @@ Return a JSON object with this exact structure:
         }
       ]
     }
+  ],
+  "constructionReplacements": [
+    {
+      "originalText": "<the user's original phrase from the email>",
+      "suggestedText": "<the suggested alternative at ${userLevel} level>",
+      "originalLevel": "<estimated CEFR level of the original: A2, B1, B2, or C1>",
+      "suggestedLevel": "${userLevel}",
+      "explanation": "<brief explanation in ${langLabel} of the level difference and why the suggested version fits better>"
+    }
   ]
 }
 
@@ -129,7 +145,8 @@ IMPORTANT RULES:
 - For "registerMatch": set to true if the overall tone matches the expected register, false if it's too formal or too casual.
 - For "proposedWords": ALWAYS include at least one item per error — the corrected word or short phrase as "target", with its "translation" in ${nativeLabel}. Add up to 2 more if the error reveals a related vocabulary gap. Never leave proposedWords empty.
 - For "errors": analyze spelling, grammar, style, and vocabulary. Do NOT flag things the learner got right. Only flag actual mistakes.
-- If there are no errors, return an empty errors array.
+- For "constructionReplacements": ${replacementInstructions} Focus on constructions that are grammatically correct but stylistically mismatched to the learner's level. Do NOT include constructions that already have errors (those are covered in "errors").
+- If there are no constructions worth replacing, return an empty constructionReplacements array.
 - Be constructive and encouraging in overallFeedback.
 - Return ONLY the JSON object, no other text, no markdown code fences.`;
 }
@@ -140,7 +157,7 @@ IMPORTANT RULES:
 
 router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
   try {
-    const { userText, taskDescription, targetLang: emailTargetLang, nativeLang, points, register, etiquetteHint } = req.body;
+    const { userText, taskDescription, targetLang: emailTargetLang, nativeLang, points, register, etiquetteHint, targetLevel } = req.body;
     const userId = req.user?.sub || null;
 
     if (!userText || !userText.trim()) {
@@ -160,7 +177,8 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
       points || [],
       register || '',
       etiquetteHint || '',
-      userNativeLang
+      userNativeLang,
+      targetLevel || 'B1'
     );
     let rawResponse;
     try {
@@ -236,6 +254,17 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
     // Deduplicate and sort errors by position
     evaluation.errors.sort((a, b) => a.startOffset - b.startOffset);
 
+    // Normalize constructionReplacements
+    const constructionReplacements = Array.isArray(evaluation.constructionReplacements)
+      ? evaluation.constructionReplacements.map(cr => ({
+          originalText: cr.originalText || '',
+          suggestedText: cr.suggestedText || '',
+          originalLevel: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].includes(cr.originalLevel) ? cr.originalLevel : 'B1',
+          suggestedLevel: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].includes(cr.suggestedLevel) ? cr.suggestedLevel : (targetLevel || 'B1'),
+          explanation: cr.explanation || '',
+        }))
+      : [];
+
     res.json({
       score: evaluation.score,
       taskCoverage: normalizedTaskCoverage,
@@ -243,6 +272,7 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
       registerMatch: evaluation.registerMatch === true,
       overallFeedback: evaluation.overallFeedback || '',
       errors: evaluation.errors,
+      constructionReplacements,
     });
   } catch (err) {
     console.error('Email evaluation error:', err);

@@ -267,5 +267,9 @@
   "email_cat_spelling": "Ortografia",
   "email_cat_grammar": "Gramatyka",
   "email_cat_style": "Styl",
-  "email_cat_vocabulary": "Słownictwo"
+  "email_cat_vocabulary": "Słownictwo",
+  "email_constructions": "Konstrukcje",
+  "email_construction_original": "Oryginał",
+  "email_construction_suggested": "Sugestia",
+  "email_target_level": "Poziom docelowy"
 }
