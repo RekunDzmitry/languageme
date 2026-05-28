@@ -13,6 +13,15 @@ export const TARGET_LANGUAGES = {
   pl: { name: 'Polski', flag: '🇵🇱' },
 }
 
+// CEFR levels the learner can target
+export const CEFR_LEVELS = {
+  A1: { name: 'A1', desc: 'Początkujący' },
+  A2: { name: 'A2', desc: 'Podstawowy' },
+  B1: { name: 'B1', desc: 'Średnio zaawansowany' },
+  B2: { name: 'B2', desc: 'Wyższy średnio zaawansowany' },
+  C1: { name: 'C1', desc: 'Zaawansowany' },
+}
+
 // UI languages (interface display)
 export const UI_LANGUAGES = {
   ru: { name: 'Русский', flag: '🇷🇺' },
@@ -27,6 +36,7 @@ export function SettingsProvider({ children }) {
       nativeLang: 'ru',
       targetLang: 'fr',
       uiLang: 'ru',
+      targetLevel: 'B1',
       autoPlayAudio: true,
     }
   })

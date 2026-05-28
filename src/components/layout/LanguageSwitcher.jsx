@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useT } from '../../i18n'
-import { useSettings, NATIVE_LANGUAGES, TARGET_LANGUAGES } from '../../stores/SettingsContext'
+import { useSettings, NATIVE_LANGUAGES, TARGET_LANGUAGES, CEFR_LEVELS } from '../../stores/SettingsContext'
 
 export default function LanguageSwitcher() {
   const { lang, setLanguage } = useT()
@@ -70,6 +70,32 @@ export default function LanguageSwitcher() {
                   <span>{flag}</span>
                   <span>{name}</span>
                   {settings.targetLang === code && <span className="ml-auto text-accent">✓</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="border-t border-border my-1.5" />
+
+          {/* CEFR Target Level */}
+          <div className="px-3 py-1.5">
+            <div className="text-[10px] text-text-muted uppercase tracking-wide mb-1.5">
+              {lang === 'pl' ? 'Poziom docelowy' : 'Целевой уровень'}
+            </div>
+            <div className="space-y-0.5">
+              {Object.entries(CEFR_LEVELS).map(([code, { name, desc }]) => (
+                <button
+                  key={code}
+                  onClick={() => {
+                    updateSettings({ targetLevel: code });
+                    setOpen(false)
+                  }}
+                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors
+                    ${settings.targetLevel === code ? 'bg-accent/20 text-accent' : 'text-text-primary hover:bg-surface-hover'}`}
+                >
+                  <span className="text-xs font-bold w-7 text-center">{name}</span>
+                  <span className="text-xs text-text-muted">{desc}</span>
+                  {settings.targetLevel === code && <span className="ml-auto text-accent">✓</span>}
                 </button>
               ))}
             </div>
