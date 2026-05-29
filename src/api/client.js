@@ -178,13 +178,25 @@ export const emailApi = {
   addExercise: (attemptId, targetWord, translation, hint = null, themeId = null) =>
     api.post('/api/email/add-exercise', { attemptId, targetWord, translation, hint, themeId }),
 
-  // Get user's email writing history
-  getHistory: (limit = 20) =>
-    api.get(`/api/email/history?limit=${limit}&includeText=true`),
+  // Get user's email writing history, optionally scoped to one exercise
+  getHistory: (limit = 20, themeId = null, exerciseIdx = null) => {
+    let qs = `?limit=${limit}&includeText=true`
+    if (themeId != null) qs += `&themeId=${encodeURIComponent(themeId)}`
+    if (exerciseIdx != null) qs += `&exerciseIdx=${exerciseIdx}`
+    return api.get(`/api/email/history${qs}`)
+  },
 
   // Get a single attempt with full details (text + evaluation)
   getHistoryDetail: (id) =>
     api.get(`/api/email/history/${id}`),
+
+  // Delete a single attempt
+  deleteAttempt: (id) =>
+    api.delete(`/api/email/history/${id}`),
+
+  // Clear all attempts for one exercise (theme + exercise index required)
+  clearHistory: (themeId, exerciseIdx) =>
+    api.delete(`/api/email/history?themeId=${encodeURIComponent(themeId)}&exerciseIdx=${exerciseIdx}`),
 
   // Get words user has added from emails
   getAddedWords: () =>

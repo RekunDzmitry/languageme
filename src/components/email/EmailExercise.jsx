@@ -1,14 +1,19 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useT } from '../../i18n'
-import { useSettings } from '../../stores/SettingsContext'
 import { emailApi, themesApi } from '../../api/client'
 import EmailInputPanel from './EmailInputPanel'
 import EmailResultView from './EmailResultView'
 import EmailSidePanel from './EmailSidePanel'
+import EmailHistoryPanel from './EmailHistoryPanel'
 
 // Module-level state cache — survives component unmounts so users can
 // switch between exercises without losing their text or timer progress.
 const stateCache = {}
+const EMAIL_TARGET_LEVELS = ['B1', 'B2']
+
+function normalizeEmailTargetLevel(level) {
+  return EMAIL_TARGET_LEVELS.includes(level) ? level : 'B1'
+}
 
 function cacheKey(sessionId, themeId, exerciseIdx) {
   return `${sessionId}:${themeId}:${exerciseIdx}`
@@ -20,15 +25,14 @@ function formatTime(seconds) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-export default function EmailExercise({ exercise, themeId, exerciseIdx, onContinue, onAttemptSaved, sessionId }) {
+export default function EmailExercise({ exercise, themeId, exerciseIdx, onContinue, sessionId }) {
   const { t } = useT()
-  const { settings } = useSettings()
-  const targetLevel = settings?.targetLevel || 'B1'
   const TIME_LIMIT = exercise.timeLimit || 30 * 60 // 30 min default (TELC exam standard)
   const ck = cacheKey(sessionId, themeId, exerciseIdx)
   const saved = stateCache[ck]
 
   const [stage, setStage] = useState(saved?.stage || 'empty') // empty | ready | loading | evaluated
+  const [targetLevel, setTargetLevel] = useState(normalizeEmailTargetLevel(saved?.targetLevel))
   const [userText, setUserText] = useState(saved?.userText || '')
   const [evaluation, setEvaluation] = useState(saved?.evaluation || null)
   const [error, setError] = useState(saved?.error || null)
@@ -41,6 +45,7 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
   const [timerRunning, setTimerRunning] = useState(saved?.timerRunning ?? false)
   const [timerExpired, setTimerExpired] = useState(saved?.timerExpired ?? false)
   const [themes, setThemes] = useState([])
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
 
   // Theme options for the "add to learning" picker — only themes for the
   // language being practised (email exercises are Polish-only today).
@@ -60,6 +65,7 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
   useEffect(() => {
     stateRef.current = {
       stage,
+      targetLevel,
       userText,
       evaluation,
       error,
@@ -127,7 +133,7 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
           result
         )
         setAttemptId(saved.id)
-        onAttemptSaved?.()
+        setHistoryRefreshKey(k => k + 1)
       } catch (saveErr) {
         console.error('Failed to save attempt:', saveErr)
       }
@@ -188,6 +194,7 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
     setSelectedErrorIdx(null)
     setAttemptId(null)
     setAddedWords(new Set())
+    setTargetLevel('B1')
     setTimeLeft(TIME_LIMIT)
     setTimerRunning(false)
     setTimerExpired(false)
@@ -204,10 +211,42 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
     setSelectedErrorIdx(null)
     setAttemptId(null)
     setAddedWords(new Set())
+    setTargetLevel('B1')
     setTimeLeft(TIME_LIMIT)
     setTimerRunning(false)
     setTimerExpired(false)
   }, [TIME_LIMIT, ck])
+
+  // Load a past attempt into the main window — renders exactly like a fresh grade
+  const handleSelectAttempt = useCallback((detail) => {
+    if (!detail) return
+    setUserText(detail.user_text || '')
+    setEvaluation(detail.ai_evaluation || null)
+    setTargetLevel(normalizeEmailTargetLevel(detail.ai_evaluation?.targetLevel))
+    setAttemptId(detail.id)
+    setSelectedErrorIdx(null)
+    setAddedWords(new Set())
+    setStage('evaluated')
+    setTimerRunning(false)
+  }, [])
+
+  // When an attempt is removed, drop the main view if it's the one being shown
+  const handleAttemptDeleted = useCallback((deletedId) => {
+    if (deletedId !== attemptId) return
+    // Reset to a fresh, blank writing state
+    delete stateCache[ck]
+    setStage('empty')
+    setUserText('')
+    setEvaluation(null)
+    setError(null)
+    setSelectedErrorIdx(null)
+    setAttemptId(null)
+    setAddedWords(new Set())
+    setTargetLevel('B1')
+    setTimeLeft(TIME_LIMIT)
+    setTimerRunning(false)
+    setTimerExpired(false)
+  }, [attemptId, ck, TIME_LIMIT])
 
   const toggleTimer = useCallback(() => {
     setTimerRunning(prev => !prev)
@@ -392,6 +431,8 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
               isLoading={stage === 'loading'}
               error={error}
               placeholder={exercise.placeholder || t('email_placeholder', 'Wpisz lub wklej treść e-maila...')}
+              targetLevel={targetLevel}
+              onTargetLevelChange={setTargetLevel}
             />
           ) : (
             <EmailResultView
@@ -407,20 +448,23 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
           )}
         </div>
 
-        {/* Right: side panel — always visible; shows waiting state before evaluation */}
-        <div className="lg:w-96 lg:flex-shrink-0">
+        {/* Right: side panel + per-exercise history */}
+        <div className="lg:w-96 lg:flex-shrink-0 flex flex-col gap-4">
           <EmailSidePanel
             evaluation={evaluation}
             stage={stage}
-            selectedErrorIdx={selectedErrorIdx}
-            onSelectError={handleSelectError}
-            onAddWord={handleAddWord}
-            addedWords={addedWords}
             onNewExercise={handleNewExercise}
             onRestartExercise={handleRestartExercise}
             taskPoints={taskPoints}
             register={exercise.register}
-            themes={themes}
+          />
+          <EmailHistoryPanel
+            themeId={themeId}
+            exerciseIdx={exerciseIdx}
+            refreshKey={historyRefreshKey}
+            activeAttemptId={attemptId}
+            onSelectAttempt={handleSelectAttempt}
+            onAttemptDeleted={handleAttemptDeleted}
           />
         </div>
       </div>

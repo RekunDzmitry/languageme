@@ -52,6 +52,11 @@ async function callAI(prompt) {
 // ============================================================================
 
 const LANG_LABELS = { ru: 'Russian', en: 'English', pl: 'Polish', fr: 'French' };
+const EMAIL_TARGET_LEVELS = ['B1', 'B2'];
+
+function normalizeTargetLevel(targetLevel) {
+  return EMAIL_TARGET_LEVELS.includes(targetLevel) ? targetLevel : 'B1';
+}
 
 function buildEvaluationPrompt(userText, taskDescription, points, register, etiquetteHint, nativeLang, targetLevel) {
   // For B1/B2 exercises, all feedback is in Polish
@@ -68,10 +73,14 @@ function buildEvaluationPrompt(userText, taskDescription, points, register, etiq
     : '';
 
   // Construction replacement instructions — direction depends on target level
-  const userLevel = targetLevel || 'B1';
+  const userLevel = normalizeTargetLevel(targetLevel);
   const replacementInstructions = userLevel === 'B2'
     ? `The learner is targeting B2 level. Identify 2–4 constructions in their text that are too simple (A2/B1 level) and suggest more sophisticated B2-level alternatives. For each, explain why the B2 version sounds more natural or precise.`
     : `The learner is targeting B1 level. Identify 2–4 constructions in their text that are overly complex (B2/C1 level attempts that didn't quite work) and suggest simpler, more natural B1-level alternatives. For each, explain why the simpler version is clearer and more appropriate.`;
+
+  const errorAlternativeInstructions = userLevel === 'B2'
+    ? `For every error, propose 1–3 B2-level alternatives that are correct, natural, and richer or more precise than the learner's erroneous version. Alternatives may be single words, short phrases, or constructions.`
+    : `For every error, propose 1–3 B1-level alternatives that are correct, natural, clear, and exam-safe. Prefer simple phrasing over complex constructions. Alternatives may be single words, short phrases, or constructions.`;
 
   return `Evaluate the following email written by a Polish language learner.
 The learner's native language is ${langLabel}.
@@ -124,6 +133,14 @@ Return a JSON object with this exact structure:
           "translation": "<translation in ${nativeLabel}>",
           "suggestedThemeId": "<theme ID like pl_theme10, pl_theme15, or null>"
         }
+      ],
+      "alternatives": [
+        {
+          "text": "<alternative corrected wording at ${userLevel} level>",
+          "type": "word|phrase|construction",
+          "level": "${userLevel}",
+          "explanation": "<brief explanation in ${langLabel} why this alternative fits ${userLevel}>"
+        }
       ]
     }
   ],
@@ -145,6 +162,8 @@ IMPORTANT RULES:
 - For "registerMatch": set to true if the overall tone matches the expected register, false if it's too formal or too casual.
 - For "proposedWords": ALWAYS include at least one item per error — the corrected word or short phrase as "target", with its "translation" in ${nativeLabel}. Add up to 2 more if the error reveals a related vocabulary gap. Never leave proposedWords empty.
 - For "errors": analyze spelling, grammar, style, and vocabulary. Do NOT flag things the learner got right. Only flag actual mistakes.
+- You MUST iterate over every item in "errors" and fill "alternatives" for each one. ${errorAlternativeInstructions}
+- For "alternatives": use type "word" for one-word lexical replacements, "phrase" for short multi-word replacements, and "construction" for grammar/sentence-pattern rewrites. Never return more than 3 alternatives per error.
 - For "constructionReplacements": ${replacementInstructions} Focus on constructions that are grammatically correct but stylistically mismatched to the learner's level. Do NOT include constructions that already have errors (those are covered in "errors").
 - If there are no constructions worth replacing, return an empty constructionReplacements array.
 - Be constructive and encouraging in overallFeedback.
@@ -169,6 +188,7 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
 
     const targetLang = emailTargetLang || 'pl';
     const userNativeLang = nativeLang || 'ru';
+    const normalizedTargetLevel = normalizeTargetLevel(targetLevel);
 
     // Build prompt and call AI
     const prompt = buildEvaluationPrompt(
@@ -178,7 +198,7 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
       register || '',
       etiquetteHint || '',
       userNativeLang,
-      targetLevel || 'B1'
+      normalizedTargetLevel
     );
     let rawResponse;
     try {
@@ -249,6 +269,14 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
             suggestedThemeId: w.suggestedThemeId || null,
           }))
         : [],
+      alternatives: Array.isArray(err.alternatives)
+        ? err.alternatives.slice(0, 3).map(alt => ({
+            text: alt.text || '',
+            type: ['word', 'phrase', 'construction'].includes(alt.type) ? alt.type : 'phrase',
+            level: EMAIL_TARGET_LEVELS.includes(alt.level) ? alt.level : normalizedTargetLevel,
+            explanation: alt.explanation || '',
+          })).filter(alt => alt.text)
+        : [],
     }));
 
     // Deduplicate and sort errors by position
@@ -260,7 +288,7 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
           originalText: cr.originalText || '',
           suggestedText: cr.suggestedText || '',
           originalLevel: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].includes(cr.originalLevel) ? cr.originalLevel : 'B1',
-          suggestedLevel: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].includes(cr.suggestedLevel) ? cr.suggestedLevel : (targetLevel || 'B1'),
+          suggestedLevel: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].includes(cr.suggestedLevel) ? cr.suggestedLevel : normalizedTargetLevel,
           explanation: cr.explanation || '',
         }))
       : [];
@@ -271,6 +299,7 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
       etiquetteCheck: normalizedEtiquette,
       registerMatch: evaluation.registerMatch === true,
       overallFeedback: evaluation.overallFeedback || '',
+      targetLevel: normalizedTargetLevel,
       errors: evaluation.errors,
       constructionReplacements,
     });
@@ -358,7 +387,19 @@ router.post('/add-exercise', requireAuth, async (req, res) => {
 router.get('/history', requireAuth, async (req, res) => {
   try {
     const userId = req.user.sub;
-    const { limit = 10, includeText } = req.query;
+    const { limit = 10, includeText, themeId, exerciseIdx } = req.query;
+
+    const filters = ['user_id = $1'];
+    const vals = [userId];
+    if (themeId) {
+      vals.push(themeId);
+      filters.push(`theme_id = $${vals.length}`);
+    }
+    if (exerciseIdx !== undefined) {
+      vals.push(parseInt(exerciseIdx));
+      filters.push(`exercise_idx = $${vals.length}`);
+    }
+    vals.push(parseInt(limit));
 
     const result = await pool.query(
       `SELECT id, theme_id, exercise_idx, score, created_at,
@@ -366,16 +407,68 @@ router.get('/history', requireAuth, async (req, res) => {
               ${includeText === 'true' ? `ai_evaluation->>'overallFeedback' AS overall_feedback,` : ''}
               ${includeText === 'true' ? `jsonb_array_length(ai_evaluation->'errors') AS error_count` : '0 AS error_count'}
        FROM email_attempt
-       WHERE user_id = $1
+       WHERE ${filters.join(' AND ')}
        ORDER BY created_at DESC
-       LIMIT $2`,
-      [userId, parseInt(limit)]
+       LIMIT $${vals.length}`,
+      vals
     );
 
     res.json(result.rows);
   } catch (err) {
     console.error('Error fetching email history:', err);
     res.status(500).json({ error: 'Failed to fetch history', details: err.message });
+  }
+});
+
+// ============================================================================
+// DELETE /api/email/history — clear all attempts for one exercise
+// (themeId + exerciseIdx required; no global wipe is exposed)
+// ============================================================================
+
+router.delete('/history', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const { themeId, exerciseIdx } = req.query;
+
+    if (!themeId || exerciseIdx === undefined) {
+      return res.status(400).json({ error: 'themeId and exerciseIdx are required' });
+    }
+
+    const result = await pool.query(
+      `DELETE FROM email_attempt
+       WHERE user_id = $1 AND theme_id = $2 AND exercise_idx = $3`,
+      [userId, themeId, parseInt(exerciseIdx)]
+    );
+
+    res.json({ deleted: result.rowCount });
+  } catch (err) {
+    console.error('Error clearing email history:', err);
+    res.status(500).json({ error: 'Failed to clear history', details: err.message });
+  }
+});
+
+// ============================================================================
+// DELETE /api/email/history/:id — delete a single attempt
+// ============================================================================
+
+router.delete('/history/:id', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `DELETE FROM email_attempt WHERE id = $1 AND user_id = $2`,
+      [id, userId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Attempt not found' });
+    }
+
+    res.json({ deleted: result.rowCount });
+  } catch (err) {
+    console.error('Error deleting email attempt:', err);
+    res.status(500).json({ error: 'Failed to delete attempt', details: err.message });
   }
 });
 

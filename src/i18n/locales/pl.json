@@ -248,6 +248,7 @@
   "email_theme_other": "Inny temat",
   "email_add_to_srs": "Dodaj do nauki",
   "email_new_exercise": "Nowe ćwiczenie",
+  "email_retry": "Spróbuj ponownie",
   "email_no_exercises": "Brak ćwiczeń z pisania e-maili",
   "email_no_exercises_hint": "Ćwiczenia z pisania e-maili nie zostały jeszcze dodane dla tego języka.",
   "email_all_done": "Wszystkie ćwiczenia wykonane!",
@@ -271,5 +272,16 @@
   "email_constructions": "Konstrukcje",
   "email_construction_original": "Oryginał",
   "email_construction_suggested": "Sugestia",
-  "email_target_level": "Poziom docelowy"
+  "email_target_level": "Poziom docelowy",
+  "email_alternatives": "Alternatywy",
+  "email_alt_type_word": "słowo",
+  "email_alt_type_phrase": "fraza",
+  "email_alt_type_construction": "konstrukcja",
+  "email_history": "Poprzednie próby",
+  "email_no_history": "Brak prób dla tego zadania",
+  "email_errors_short": "bł.",
+  "email_load_error": "Nie udało się załadować",
+  "email_delete_attempt": "Usuń próbę",
+  "email_clear_history": "Wyczyść historię",
+  "email_clear_confirm": "Usunąć wszystkie próby dla tego zadania?"
 }
