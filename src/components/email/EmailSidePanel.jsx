@@ -239,6 +239,7 @@ export default function EmailSidePanel({
   onAddWord,
   addedWords,
   onNewExercise,
+  onRestartExercise,
   taskPoints = [],
   register = '',
   themes = [],
@@ -410,8 +411,19 @@ export default function EmailSidePanel({
         )}
       </div>
 
-      {/* New exercise button */}
-      <div className="p-4">
+      {/* Action buttons */}
+      <div className="p-4 space-y-2">
+        {/* Restart current exercise — only visible after evaluation */}
+        {evaluation && onRestartExercise && (
+          <button
+            onClick={onRestartExercise}
+            className="w-full py-2.5 rounded-xl font-bold text-sm text-accent
+                       border border-accent/40 hover:bg-accent/10
+                       transition-colors"
+          >
+            ↻ {t('email_retry', 'Spróbuj ponownie')}
+          </button>
+        )}
         <button
           onClick={onNewExercise}
           className="w-full py-3 rounded-xl font-bold text-white

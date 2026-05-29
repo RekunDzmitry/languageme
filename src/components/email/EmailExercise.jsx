@@ -20,7 +20,7 @@ function formatTime(seconds) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-export default function EmailExercise({ exercise, themeId, exerciseIdx, onContinue, sessionId }) {
+export default function EmailExercise({ exercise, themeId, exerciseIdx, onContinue, onAttemptSaved, sessionId }) {
   const { t } = useT()
   const { settings } = useSettings()
   const targetLevel = settings?.targetLevel || 'B1'
@@ -127,6 +127,7 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
           result
         )
         setAttemptId(saved.id)
+        onAttemptSaved?.()
       } catch (saveErr) {
         console.error('Failed to save attempt:', saveErr)
       }
@@ -192,6 +193,21 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
     setTimerExpired(false)
     if (onContinue) onContinue()
   }, [onContinue, TIME_LIMIT, ck])
+
+  const handleRestartExercise = useCallback(() => {
+    // Reset current exercise from scratch — same exercise, blank slate
+    delete stateCache[ck]
+    setStage('empty')
+    setUserText('')
+    setEvaluation(null)
+    setError(null)
+    setSelectedErrorIdx(null)
+    setAttemptId(null)
+    setAddedWords(new Set())
+    setTimeLeft(TIME_LIMIT)
+    setTimerRunning(false)
+    setTimerExpired(false)
+  }, [TIME_LIMIT, ck])
 
   const toggleTimer = useCallback(() => {
     setTimerRunning(prev => !prev)
@@ -401,6 +417,7 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
             onAddWord={handleAddWord}
             addedWords={addedWords}
             onNewExercise={handleNewExercise}
+            onRestartExercise={handleRestartExercise}
             taskPoints={taskPoints}
             register={exercise.register}
             themes={themes}
