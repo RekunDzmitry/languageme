@@ -1,10 +1,8 @@
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useT } from '../i18n'
 import { useSettings } from '../stores/SettingsContext'
-import { useAuth } from '../stores/AuthContext'
-import { getThemes, getThemeTitle } from '../data/courses'
-import { emailApi } from '../api/client'
+import { getThemes } from '../data/courses'
 import EmailExercise from '../components/email/EmailExercise'
 
 export default function EmailPage() {
@@ -49,55 +47,6 @@ export default function EmailPage() {
   const [currentIdx, setCurrentIdx] = useState(0)
   const [completed, setCompleted] = useState(false)
   const [sessionId, setSessionId] = useState(() => Date.now())
-
-  // History
-  const { isAuthenticated } = useAuth()
-  const [history, setHistory] = useState([])
-  const [historyLoading, setHistoryLoading] = useState(false)
-  const [historyOpen, setHistoryOpen] = useState(false)
-  const [expandedHistoryId, setExpandedHistoryId] = useState(null)
-  const [historyDetail, setHistoryDetail] = useState(null)
-  const [historyDetailLoading, setHistoryDetailLoading] = useState(false)
-  const historyFetched = useRef(false)
-
-  const fetchHistory = useCallback(async () => {
-    if (!isAuthenticated) return
-    setHistoryLoading(true)
-    try {
-      const rows = await emailApi.getHistory(20)
-      setHistory(rows || [])
-    } catch (e) {
-      console.error('Failed to fetch email history:', e)
-    } finally {
-      setHistoryLoading(false)
-      historyFetched.current = true
-    }
-  }, [isAuthenticated])
-
-  useEffect(() => {
-    if (!historyFetched.current && historyOpen) {
-      fetchHistory()
-    }
-  }, [historyOpen, fetchHistory])
-
-  const loadHistoryDetail = useCallback(async (id) => {
-    if (expandedHistoryId === id) {
-      setExpandedHistoryId(null)
-      setHistoryDetail(null)
-      return
-    }
-    setExpandedHistoryId(id)
-    setHistoryDetailLoading(true)
-    setHistoryDetail(null)
-    try {
-      const detail = await emailApi.getHistoryDetail(id)
-      setHistoryDetail(detail)
-    } catch (e) {
-      console.error('Failed to fetch history detail:', e)
-    } finally {
-      setHistoryDetailLoading(false)
-    }
-  }, [expandedHistoryId])
 
   const currentExercise = allExercises[currentIdx]
 
@@ -202,111 +151,6 @@ export default function EmailPage() {
             </button>
           ))}
         </div>
-        {/* History section */}
-        <div className="border-t border-border">
-          <button
-            onClick={() => setHistoryOpen(prev => !prev)}
-            className="w-full px-3 py-2.5 flex items-center justify-between text-xs text-text-muted hover:text-white transition-colors"
-          >
-            <span>📋 {t('email_history', 'Historia')}</span>
-            <span className={`text-[10px] transition-transform ${historyOpen ? 'rotate-90' : ''}`}>›</span>
-          </button>
-          {historyOpen && (
-            <div className="max-h-64 overflow-y-auto border-t border-border/50">
-              {historyLoading ? (
-                <div className="px-3 py-4 text-center">
-                  <span className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin inline-block" />
-                </div>
-              ) : history.length === 0 ? (
-                <p className="px-3 py-4 text-[10px] text-text-muted/60 text-center">
-                  {t('email_no_history', 'Brak zapisanych prób')}
-                </p>
-              ) : (
-                <div className="py-1">
-                  {history.map((entry) => {
-                    const theme = themes.find(th => th.id === entry.theme_id)
-                    const themeTitle = theme ? getThemeTitle(theme, settings?.targetLang || 'pl') : entry.theme_id
-                    const isExpanded = expandedHistoryId === entry.id
-
-                    return (
-                      <div key={entry.id} className="border-b border-border/30 last:border-b-0">
-                        <button
-                          onClick={() => loadHistoryDetail(entry.id)}
-                          className={`w-full text-left px-3 py-2 transition-colors hover:bg-white/[0.04] ${isExpanded ? 'bg-accent/10' : ''}`}
-                        >
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="text-[10px] text-text-muted line-clamp-1 leading-tight">
-                              {themeTitle}
-                            </span>
-                            <ScorePill score={entry.score} />
-                          </div>
-                          <div className="flex items-center justify-between mt-0.5">
-                            <span className="text-[9px] text-text-muted/50">
-                              {formatHistoryDate(entry.created_at)}
-                            </span>
-                            {entry.error_count > 0 && (
-                              <span className="text-[9px] text-red-400/70">
-                                {entry.error_count} {t('email_errors_short', 'bł.')}
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                        {/* Expanded detail */}
-                        {isExpanded && (
-                          <div className="px-3 pb-3">
-                            {historyDetailLoading ? (
-                              <div className="flex justify-center py-3">
-                                <span className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin inline-block" />
-                              </div>
-                            ) : historyDetail ? (
-                              <div className="space-y-2">
-                                {/* Score + feedback */}
-                                {historyDetail.ai_evaluation?.overallFeedback && (
-                                  <p className="text-[10px] text-text-muted leading-relaxed">
-                                    {historyDetail.ai_evaluation.overallFeedback}
-                                  </p>
-                                )}
-                                {/* Error summary */}
-                                {historyDetail.ai_evaluation?.errors?.length > 0 && (
-                                  <div className="space-y-1">
-                                    {historyDetail.ai_evaluation.errors.slice(0, 5).map((err, i) => (
-                                      <div key={i} className="text-[10px] flex gap-1">
-                                        <span className="text-red-400 line-through flex-shrink-0">{err.originalText}</span>
-                                        {err.correction && (
-                                          <>
-                                            <span className="text-text-muted/40">→</span>
-                                            <span className="text-green-400">{err.correction}</span>
-                                          </>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                                {/* User text preview */}
-                                <details>
-                                  <summary className="text-[9px] text-text-muted/60 cursor-pointer hover:text-text-muted">
-                                    {t('email_show_full_text', 'Pokaż pełny tekst')}
-                                  </summary>
-                                  <p className="mt-1 text-[10px] text-white/70 whitespace-pre-wrap leading-relaxed bg-bg rounded p-2">
-                                    {historyDetail.user_text}
-                                  </p>
-                                </details>
-                              </div>
-                            ) : (
-                              <p className="text-[10px] text-text-muted/50">
-                                {t('email_load_error', 'Nie udało się załadować')}
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
 
         <div className="px-3 py-3 border-t border-border">
           <button
@@ -356,7 +200,6 @@ export default function EmailPage() {
               themeId={currentExercise._themeId}
               exerciseIdx={currentExercise._exerciseIdx}
               onContinue={handleContinue}
-              onAttemptSaved={fetchHistory}
               sessionId={sessionId}
             />
           )}
@@ -364,38 +207,4 @@ export default function EmailPage() {
       </div>
     </div>
   )
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function ScorePill({ score }) {
-  if (score == null) return null
-  let color
-  if (score >= 80) color = 'bg-green-500/20 text-green-400 border-green-500/30'
-  else if (score >= 60) color = 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
-  else color = 'bg-red-500/20 text-red-400 border-red-500/30'
-
-  return (
-    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${color} flex-shrink-0`}>
-      {score}
-    </span>
-  )
-}
-
-function formatHistoryDate(dateStr) {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  const now = new Date()
-  const diff = now - d
-  const mins = Math.floor(diff / 60000)
-  const hours = Math.floor(diff / 3600000)
-  const days = Math.floor(diff / 86400000)
-
-  if (mins < 1) return 'przed chwilą'
-  if (mins < 60) return `${mins} min temu`
-  if (hours < 24) return `${hours} godz. temu`
-  if (days < 7) return `${days} dni temu`
-  return d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })
 }
