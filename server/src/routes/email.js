@@ -358,10 +358,13 @@ router.post('/add-exercise', requireAuth, async (req, res) => {
 router.get('/history', requireAuth, async (req, res) => {
   try {
     const userId = req.user.sub;
-    const { limit = 10 } = req.query;
+    const { limit = 10, includeText } = req.query;
 
     const result = await pool.query(
-      `SELECT id, theme_id, exercise_idx, score, created_at
+      `SELECT id, theme_id, exercise_idx, score, created_at,
+              ${includeText === 'true' ? `LEFT(user_text, 150) AS user_text_preview,` : ''}
+              ${includeText === 'true' ? `ai_evaluation->>'overallFeedback' AS overall_feedback,` : ''}
+              ${includeText === 'true' ? `jsonb_array_length(ai_evaluation->'errors') AS error_count` : '0 AS error_count'}
        FROM email_attempt
        WHERE user_id = $1
        ORDER BY created_at DESC
@@ -373,6 +376,33 @@ router.get('/history', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Error fetching email history:', err);
     res.status(500).json({ error: 'Failed to fetch history', details: err.message });
+  }
+});
+
+// ============================================================================
+// GET /api/email/history/:id — get a single attempt with full details
+// ============================================================================
+
+router.get('/history/:id', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `SELECT id, theme_id, exercise_idx, user_text, score, ai_evaluation, created_at
+       FROM email_attempt
+       WHERE id = $1 AND user_id = $2`,
+      [id, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Attempt not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error fetching history detail:', err);
+    res.status(500).json({ error: 'Failed to fetch history detail', details: err.message });
   }
 });
 
