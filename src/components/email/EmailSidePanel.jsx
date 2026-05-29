@@ -1,6 +1,4 @@
-import { useRef, useEffect } from 'react'
 import { useT } from '../../i18n'
-import WordProposalCard from './WordProposalCard'
 
 // Category color mapping
 const CATEGORY_STYLES = {
@@ -234,24 +232,12 @@ function ConstructionReplacementsSection({ constructionReplacements }) {
 export default function EmailSidePanel({
   evaluation,
   stage,
-  selectedErrorIdx,
-  onSelectError,
-  onAddWord,
-  addedWords,
   onNewExercise,
+  onRestartExercise,
   taskPoints = [],
   register = '',
-  themes = [],
 }) {
   const { t } = useT()
-  const errorRefs = useRef({})
-
-  // Scroll to selected error
-  useEffect(() => {
-    if (selectedErrorIdx !== null && errorRefs.current[selectedErrorIdx]) {
-      errorRefs.current[selectedErrorIdx].scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }
-  }, [selectedErrorIdx])
 
   const errors = evaluation?.errors || []
   const score = evaluation?.score ?? 0
@@ -261,7 +247,7 @@ export default function EmailSidePanel({
   const constructionReplacements = evaluation?.constructionReplacements || []
 
   return (
-    <div className="bg-surface border border-border rounded-xl divide-y divide-border max-h-[calc(100vh-12rem)] flex flex-col">
+    <div className="bg-surface border border-border rounded-xl divide-y divide-border max-h-[calc(100vh-12rem)] overflow-y-auto flex flex-col">
       {/* Header: Score + Feedback */}
       <div className="p-4">
         <div className="flex items-center justify-between mb-3">
@@ -333,85 +319,22 @@ export default function EmailSidePanel({
         <ConstructionReplacementsSection constructionReplacements={constructionReplacements} />
       )}
 
-      {/* Error list */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {errors.length === 0 ? (
-          evaluation ? (
-            <div className="text-center py-6">
-              <span className="text-3xl">🎉</span>
-              <p className="text-text-muted text-sm mt-2">
-                {t('email_no_errors', 'Nie znaleziono błędów! Świetna robota!')}
-              </p>
-            </div>
-          ) : null
-        ) : (
-          errors.map((err, idx) => {
-            const style = CATEGORY_STYLES[err.category] || CATEGORY_STYLES.grammar
-            const isSelected = selectedErrorIdx === idx
+      {/* Errors themselves are shown inline on hover over the highlighted
+          text (see EmailResultView), so no error list is rendered here. */}
 
-            return (
-              <div
-                key={err.id || idx}
-                ref={el => (errorRefs.current[idx] = el)}
-                onClick={() => onSelectError(idx)}
-                className={`rounded-lg border-2 p-3 cursor-pointer transition-all
-                  ${style.bg} ${isSelected ? `${style.border} ring-2 ring-accent` : 'border-transparent hover:border-white/10'}`}
-              >
-                {/* Category + index */}
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={`w-2 h-2 rounded-full ${style.dot}`} />
-                  <span className={`text-xs font-bold uppercase ${style.text}`}>
-                    {t(style.labelKey)}
-                  </span>
-                  <span className="text-xs text-text-muted">#{idx + 1}</span>
-                </div>
-
-                {/* Original → Correction */}
-                <div className="space-y-1">
-                  <div className="text-sm">
-                    <span className="text-red-400 line-through">{err.originalText}</span>
-                  </div>
-                  {err.correction && (
-                    <div className="text-sm">
-                      <span className="text-green-400 font-semibold">{err.correction}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Explanation */}
-                {err.explanation && (
-                  <p className="text-xs text-text-muted mt-2 leading-relaxed">
-                    {err.explanation}
-                  </p>
-                )}
-
-                {/* Word proposals */}
-                {err.proposedWords && err.proposedWords.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    <p className="text-xs text-text-muted font-medium">
-                       {t('email_learn_words', 'Dodaj do nauki')}
-                    </p>
-                    {err.proposedWords.map((pw, pwi) => (
-                      <WordProposalCard
-                        key={pwi}
-                        target={pw.target}
-                        translation={pw.translation}
-                        suggestedThemeId={pw.suggestedThemeId}
-                        themes={themes}
-                        isAdded={addedWords.has(pw.target)}
-                        onAdd={(themeId) => onAddWord(pw.target, pw.translation, themeId, err.explanation)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )
-          })
+      {/* Action buttons */}
+      <div className="p-4 space-y-2">
+        {/* Restart current exercise — only visible after evaluation */}
+        {evaluation && onRestartExercise && (
+          <button
+            onClick={onRestartExercise}
+            className="w-full py-2.5 rounded-xl font-bold text-sm text-accent
+                       border border-accent/40 hover:bg-accent/10
+                       transition-colors"
+          >
+            ↻ {t('email_retry', 'Spróbuj ponownie')}
+          </button>
         )}
-      </div>
-
-      {/* New exercise button */}
-      <div className="p-4">
         <button
           onClick={onNewExercise}
           className="w-full py-3 rounded-xl font-bold text-white

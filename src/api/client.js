@@ -179,8 +179,12 @@ export const emailApi = {
     api.post('/api/email/add-exercise', { attemptId, targetWord, translation, hint, themeId }),
 
   // Get user's email writing history
-  getHistory: (limit = 10) =>
-    api.get(`/api/email/history?limit=${limit}`),
+  getHistory: (limit = 20) =>
+    api.get(`/api/email/history?limit=${limit}&includeText=true`),
+
+  // Get a single attempt with full details (text + evaluation)
+  getHistoryDetail: (id) =>
+    api.get(`/api/email/history/${id}`),
 
   // Get words user has added from emails
   getAddedWords: () =>
