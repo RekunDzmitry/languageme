@@ -480,21 +480,23 @@ export default function TrainingPage() {
     const hasExercises = exerciseSection?.exercises?.length > 0
     const exerciseCount = exerciseSection?.exercises?.length || 0
     const hasVocab = theme.vocabIds?.length > 0
-    const isInteractive = hasVerbs || (isPolish && (hasExercises || hasVocab))
+    const useExerciseMode = isPolish && activeTab === 'exercises' && hasExercises
+    const useVocabMode = isPolish && activeTab === 'vocab' && hasVocab
+    const isInteractive = hasVerbs || useExerciseMode || useVocabMode
     const formType = getFormType(theme.id)
     const themeMastery = hasVerbs
       ? getThemeConjugationMastery(conjugationCards, theme.verbList, formType)
-      : (isPolish && hasExercises
+      : (useExerciseMode
         ? getExerciseMastery(exerciseCards, theme.id, exerciseCount)
-        : (isPolish && hasVocab
+        : (useVocabMode
           ? getVocabMastery(cards, theme.vocabIds)
           : null))
     const percent = themeMastery ? themeMastery.percent : 0
     const dueCount = hasVerbs
       ? getConjugationDueCount(conjugationCards, theme.verbList, formType)
-      : (isPolish && hasExercises
+      : (useExerciseMode
         ? getExerciseDueCountByTheme(exerciseCards, theme.id, exerciseCount)
-        : (isPolish && hasVocab
+        : (useVocabMode
           ? getVocabDueCount(cards, theme.vocabIds)
           : 0))
     const isExpanded = expandedThemeId === theme.id
@@ -519,7 +521,7 @@ export default function TrainingPage() {
             </div>
             <div className="flex items-center gap-2">
               {!isInteractive && <span className="text-text-muted text-sm">{t('locked')}</span>}
-              {(hasVerbs || (isPolish && (hasExercises || hasVocab))) && <span className="text-text-muted text-sm">{percent}%</span>}
+              {isInteractive && <span className="text-text-muted text-sm">{percent}%</span>}
               {isInteractive && (
                 <span className="text-text-muted text-xs">
                   {isExpanded ? '▲' : '▼'}
@@ -527,7 +529,7 @@ export default function TrainingPage() {
               )}
             </div>
           </div>
-          {(hasVerbs || (isPolish && (hasExercises || hasVocab))) && (
+          {isInteractive && (
             <div className="bg-white/[0.08] rounded-md h-1.5 overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-purple-400 to-indigo-400 rounded-md transition-width"
@@ -565,7 +567,7 @@ export default function TrainingPage() {
           </div>
         )}
 
-        {isExpanded && !hasVerbs && hasVocab && isPolish && (
+        {isExpanded && !hasVerbs && useVocabMode && (
           <div className="mt-3 border-t border-white/[0.08] pt-3">
             <VocabGrid vocabIds={theme.vocabIds} vocab={vocab} cards={cards} vocabNotes={vocabNotes} t={t} nativeLang={settings.nativeLang} onNoteClick={(id, word) => setVocabNoteModal({ vocabId: id, word })} />
             <div className="mt-4 flex justify-center">
@@ -579,7 +581,7 @@ export default function TrainingPage() {
           </div>
         )}
 
-        {isExpanded && !hasVerbs && hasExercises && (
+        {isExpanded && !hasVerbs && useExerciseMode && (
           <div className="mt-3 border-t border-white/[0.08] pt-3">
             <ExerciseGrid
               themeId={theme.id}

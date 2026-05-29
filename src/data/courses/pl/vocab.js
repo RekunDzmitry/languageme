@@ -579,6 +579,16 @@ const _VOCAB = [
   { id: "pl_513", target: "Państwo", ipa: "/ˈpaɲstfɔ/", gender: null, freq: 553, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "дамы и господа; Вы (к группе)", en: "ladies and gentlemen; formal you plural" } },
   { id: "pl_514", target: "Panie Profesorze!", ipa: "/ˈpaɲɛ prɔfɛˈsɔʐɛ/", gender: null, freq: 554, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "Господин профессор!", en: "Professor!" } },
   { id: "pl_515", target: "Widzę. Słyszysz? Idę.", ipa: "/ˈvid͡zɛ ˈswɨʂɨʂ ˈidɛ/", gender: null, freq: 555, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "Я вижу. Ты слышишь? Я иду.", en: "I see. Do you hear? I am going." } },
+  { id: "pl_516", target: "Pamiętam to.", ipa: "/paˈmjɛntam tɔ/", gender: null, freq: 556, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "Я это помню.", en: "I remember it." } },
+  { id: "pl_517", target: "Spotykam się z Anną.", ipa: "/spɔˈtɨkam ɕɛ z ˈannɔ̃/", gender: null, freq: 557, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "Я встречаюсь с Анной.", en: "I am meeting Anna." } },
+  { id: "pl_518", target: "Trzymam książkę.", ipa: "/ˈtʂɨmam ˈkɕɔ̃ʂkɛ/", gender: null, freq: 558, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "Я держу книгу.", en: "I am holding a book." } },
+  { id: "pl_519", target: "Gram w piłkę.", ipa: "/ɡram f ˈpiwkɛ/", gender: null, freq: 559, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "Я играю в футбол.", en: "I am playing football." } },
+  { id: "pl_520", target: "Śpiewam piosenkę.", ipa: "/ˈɕpjɛvam pjɔˈsɛŋkɛ/", gender: null, freq: 560, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "Я пою песню.", en: "I am singing a song." } },
+  { id: "pl_521", target: "Pomagam mamie.", ipa: "/pɔˈmaɡam ˈmamjɛ/", gender: null, freq: 561, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "Я помогаю маме.", en: "I am helping mom." } },
+  { id: "pl_522", target: "Odpowiadam na pytanie.", ipa: "/ɔtpɔˈvjadam na pɨˈtaɲɛ/", gender: null, freq: 562, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "Я отвечаю на вопрос.", en: "I am answering the question." } },
+  { id: "pl_523", target: "Używam słownika.", ipa: "/uˈʐɨvam swɔvˈɲika/", gender: null, freq: 563, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "Я пользуюсь словарём.", en: "I am using a dictionary." } },
+  { id: "pl_524", target: "Sprawdzam słowo.", ipa: "/ˈspravd͡zam ˈswɔvɔ/", gender: null, freq: 564, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "Я проверяю слово.", en: "I am checking a word." } },
+  { id: "pl_525", target: "Zbieram znaczki.", ipa: "/ˈzbjɛram ˈznat͡ʂki/", gender: null, freq: 565, theme: "verbs_m_polite", themeIds: ["pl_theme20"], translations: { ru: "Я собираю марки.", en: "I collect stamps." } },
 ]
 
 export const VOCAB = _VOCAB

@@ -5,29 +5,21 @@ const theme20VerbsMPoliteAddress = {
   order: 20,
   title: 'Czasowniki na -m i formy grzecznościowe',
   titleRu: 'Глаголы на -m и вежливое обращение',
-  description: 'Дополнительные ресурсы, польские вопросы, спряжение rozumieć/szukać и обращения Pan/Pani',
-  descriptionRu: 'Дополнительные ресурсы, польские вопросы, спряжение rozumieć/szukać и обращения Pan/Pani',
+  description: 'Польские вопросы, спряжение rozumieć/szukać и обращения Pan/Pani',
+  descriptionRu: 'Польские вопросы, спряжение rozumieć/szukać и обращения Pan/Pani',
   unlockCondition: null,
   vocabIds: [
     'pl_492', 'pl_493', 'pl_494', 'pl_495', 'pl_496', 'pl_497',
     'pl_498', 'pl_499', 'pl_500', 'pl_501', 'pl_502', 'pl_503',
     'pl_504', 'pl_505', 'pl_506', 'pl_507', 'pl_508', 'pl_509',
     'pl_510', 'pl_511', 'pl_512', 'pl_513', 'pl_514', 'pl_515',
+    'pl_516', 'pl_517', 'pl_518', 'pl_519', 'pl_520', 'pl_521',
+    'pl_522', 'pl_523', 'pl_524', 'pl_525',
   ],
   sections: [
     {
       type: 'grammar',
       notes: [
-        {
-          title: 'Ресурсы для самостоятельной проверки',
-          text: 'Для примеров в контексте полезны Glosbe, Bab.la и Reverso Context; для произношения — Forvo; для форм слова — Wiktionary. Фразу можно проверить поиском в кавычках, например "w języku polskim".',
-          examples: [
-            { pl: 'Glosbe / Bab.la / Reverso Context', ru: 'контекстные словари и примеры употребления' },
-            { pl: 'Forvo', ru: 'произношение от носителей' },
-            { pl: 'Wiktionary', ru: 'спряжения и склонения' },
-            { pl: '"w języku polskim"', ru: 'проверка устойчивости фразы через точный поиск' },
-          ],
-        },
         {
           title: 'Глаголы с -m в форме ja',
           text: 'У многих частотных польских глаголов в 1-м лице единственного числа окончание -m. Часто достаточно убрать -ć у инфинитива и добавить личное окончание: -m, -sz, нулевое, -my, -cie, -ją.',
@@ -37,6 +29,29 @@ const theme20VerbsMPoliteAddress = {
             { pl: 'mieszkać → mieszkam w Polsce', ru: 'жить → я живу в Польше' },
             { pl: 'czytać → czytam książkę', ru: 'читать → я читаю книгу' },
             { pl: 'kochać → kocham cię', ru: 'любить → я тебя люблю' },
+            { pl: 'pamiętać → Pamiętam to.', ru: 'помнить → Я это помню.' },
+            { pl: 'trzymać → Trzymam książkę.', ru: 'держать → Я держу книгу.' },
+            { pl: 'grać → Gram w piłkę.', ru: 'играть → Я играю в футбол.' },
+            { pl: 'śpiewać → Śpiewam piosenkę.', ru: 'петь → Я пою песню.' },
+          ],
+        },
+        {
+          title: 'Глаголы с się',
+          text: 'Возвратная частица się обычно стоит после глагола или рядом с ним. В форме ja окончание глагола остаётся тем же: spotykam się.',
+          examples: [
+            { pl: 'spotykać się → Spotykam się z Anną.', ru: 'встречаться → Я встречаюсь с Анной.' },
+            { pl: 'Spotykasz się z Markiem?', ru: 'Ты встречаешься с Мареком?' },
+          ],
+        },
+        {
+          title: 'Управление частотных глаголов',
+          text: 'У некоторых глаголов важно запоминать не только форму ja, но и падеж или предлог после глагола.',
+          examples: [
+            { pl: 'pomagać komuś → Pomagam mamie.', ru: 'помогать кому-то → Я помогаю маме.' },
+            { pl: 'odpowiadać na coś → Odpowiadam na pytanie.', ru: 'отвечать на что-то → Я отвечаю на вопрос.' },
+            { pl: 'używać czegoś → Używam słownika.', ru: 'пользоваться чем-то → Я пользуюсь словарём.' },
+            { pl: 'sprawdzać coś → Sprawdzam słowo.', ru: 'проверять что-то → Я проверяю слово.' },
+            { pl: 'zbierać coś → Zbieram znaczki.', ru: 'собирать что-то → Я собираю марки.' },
           ],
         },
         {
@@ -108,6 +123,21 @@ const theme20VerbsMPoliteAddress = {
             { pronoun: 'oni/one', form: 'szukają', ipa: '/ʂuˈkajɔ̃/' },
           ],
         },
+      ],
+    },
+    {
+      type: 'exercises',
+      exercises: [
+        { type: 'write_answer', category: 'Глаголы на -am', prompt: 'Я это помню.', answer: 'Pamiętam to.', hint: 'pamiętać → pamiętam' },
+        { type: 'write_answer', category: 'Глаголы с się', prompt: 'Я встречаюсь с Анной.', answer: 'Spotykam się z Anną.', hint: 'spotykać się z kimś; z Anną' },
+        { type: 'write_answer', category: 'Глаголы на -am', prompt: 'Я держу книгу.', answer: 'Trzymam książkę.', hint: 'trzymać → trzymam; biernik: książkę' },
+        { type: 'write_answer', category: 'Глаголы на -am', prompt: 'Я играю в футбол.', answer: 'Gram w piłkę.', hint: 'grać w coś; w piłkę' },
+        { type: 'write_answer', category: 'Глаголы на -am', prompt: 'Я пою песню.', answer: 'Śpiewam piosenkę.', hint: 'śpiewać → śpiewam; biernik: piosenkę' },
+        { type: 'write_answer', category: 'Управление глаголов', prompt: 'Я помогаю маме.', answer: 'Pomagam mamie.', hint: 'pomagać komuś; celownik: mamie' },
+        { type: 'write_answer', category: 'Управление глаголов', prompt: 'Я отвечаю на вопрос.', answer: 'Odpowiadam na pytanie.', hint: 'odpowiadać na coś; na pytanie' },
+        { type: 'write_answer', category: 'Управление глаголов', prompt: 'Я пользуюсь словарём.', answer: 'Używam słownika.', hint: 'używać czegoś; dopełniacz: słownika' },
+        { type: 'write_answer', category: 'Управление глаголов', prompt: 'Я проверяю слово.', answer: 'Sprawdzam słowo.', hint: 'sprawdzać coś; biernik: słowo' },
+        { type: 'write_answer', category: 'Управление глаголов', prompt: 'Я собираю марки.', answer: 'Zbieram znaczki.', hint: 'zbierać coś; biernik: znaczki' },
       ],
     },
   ],
