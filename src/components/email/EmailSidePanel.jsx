@@ -440,6 +440,7 @@ export default function EmailSidePanel({
             ↻ {t('email_retry', 'Spróbuj ponownie')}
           </button>
         )}
+
         <button
           onClick={onNewExercise}
           className="w-full py-3 rounded-xl font-bold text-white
