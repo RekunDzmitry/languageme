@@ -1,3 +1,4 @@
+/* global process */
 import { Router } from 'express';
 import { pool } from '../db/pool.js';
 import { authenticate as requireAuth, optionallyAuthenticate } from '../middleware/auth.js';
@@ -53,6 +54,75 @@ async function callAI(prompt) {
 
 const LANG_LABELS = { ru: 'Russian', en: 'English', pl: 'Polish', fr: 'French' };
 
+function clampTelcScore(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(5, Math.round(n)));
+}
+
+function telcBand(total) {
+  if (total >= 15) return 'B2';
+  if (total >= 7) return 'B1';
+  return 'below_B1';
+}
+
+function normalizePointRating(value, covered) {
+  if (['++', '+', '0'].includes(value)) return value;
+  if (['Ø', 'O', 'o'].includes(value)) return '0';
+  return covered ? '+' : '0';
+}
+
+function normalizeTelcRubric(evaluation, pointsCount) {
+  const raw = evaluation.telcRubric || {};
+  const criteria = raw.criteria || {};
+  const fallbackCoverage = evaluation.taskCoverage || {};
+
+  const normalizedCriteria = {
+    content: {
+      score: clampTelcScore(criteria.content?.score ?? raw.contentScore ?? 0),
+      comment: criteria.content?.comment || '',
+    },
+    composition: {
+      score: clampTelcScore(criteria.composition?.score ?? raw.compositionScore ?? 0),
+      comment: criteria.composition?.comment || '',
+    },
+    accuracy: {
+      score: clampTelcScore(criteria.accuracy?.score ?? raw.accuracyScore ?? 0),
+      comment: criteria.accuracy?.comment || '',
+    },
+    vocabulary: {
+      score: clampTelcScore(criteria.vocabulary?.score ?? raw.vocabularyScore ?? 0),
+      comment: criteria.vocabulary?.comment || '',
+    },
+  };
+
+  const pointRatings = {};
+  for (let i = 1; i <= pointsCount; i++) {
+    const key = `point${i}`;
+    const rawPoint = raw.pointRatings?.[key] || {};
+    const fallbackPoint = fallbackCoverage[key] || {};
+    pointRatings[key] = {
+      rating: normalizePointRating(rawPoint.rating, fallbackPoint.covered === true),
+      snippet: rawPoint.snippet || fallbackPoint.snippet || '',
+      comment: rawPoint.comment || fallbackPoint.feedback || '',
+    };
+  }
+
+  const total = Object.values(normalizedCriteria).reduce((sum, item) => sum + item.score, 0);
+
+  return {
+    criteria: normalizedCriteria,
+    pointRatings,
+    total,
+    maxTotal: 20,
+    percentage: Math.round((total / 20) * 100),
+    cefrBand: ['B2', 'B1', 'below_B1'].includes(raw.cefrBand) ? raw.cefrBand : telcBand(total),
+    offTopic: raw.offTopic === true,
+    taskMisunderstood: raw.taskMisunderstood === true,
+    examinerSummary: raw.examinerSummary || '',
+  };
+}
+
 function buildEvaluationPrompt(userText, taskDescription, points, register, etiquetteHint, nativeLang, targetLevel) {
   // For B1/B2 exercises, all feedback is in Polish
   const langLabel = 'Polish';
@@ -73,8 +143,9 @@ function buildEvaluationPrompt(userText, taskDescription, points, register, etiq
     ? `The learner is targeting B2 level. Identify 2–4 constructions in their text that are too simple (A2/B1 level) and suggest more sophisticated B2-level alternatives. For each, explain why the B2 version sounds more natural or precise.`
     : `The learner is targeting B1 level. Identify 2–4 constructions in their text that are overly complex (B2/C1 level attempts that didn't quite work) and suggest simpler, more natural B1-level alternatives. For each, explain why the simpler version is clearer and more appropriate.`;
 
-  return `Evaluate the following email written by a Polish language learner.
-The learner's native language is ${langLabel}.
+  return `Evaluate the following email written by a learner of Polish.
+The learner's native language is ${nativeLabel}.
+All human-readable feedback and comments must be in ${langLabel}.
 The learner's current CEFR target level is ${userLevel}.
 
 WRITING TASK:
@@ -95,7 +166,27 @@ ${userText}
 
 Return a JSON object with this exact structure:
 {
-  "score": <number 0-100>,
+  "score": <number 0-100 derived from telcRubric.total / 20>,
+  "telcRubric": {
+    "criteria": {
+      "content": { "score": <integer 0-5>, "comment": "<TELC-style examiner comment in ${langLabel}>" },
+      "composition": { "score": <integer 0-5>, "comment": "<comment on structure, coherence, greeting/closing, register in ${langLabel}>" },
+      "accuracy": { "score": <integer 0-5>, "comment": "<comment on grammar, spelling, punctuation in ${langLabel}>" },
+      "vocabulary": { "score": <integer 0-5>, "comment": "<comment on range and precision of vocabulary in ${langLabel}>" }
+    },
+    "pointRatings": {
+      "point1": { "rating": "++|+|0", "snippet": "<quote from text or empty>", "comment": "<brief content comment in ${langLabel}>" },
+      "point2": { "rating": "++|+|0", "snippet": "<quote from text or empty>", "comment": "<brief content comment in ${langLabel}>" },
+      "point3": { "rating": "++|+|0", "snippet": "<quote from text or empty>", "comment": "<brief content comment in ${langLabel}>" }
+    },
+    "total": <integer 0-20>,
+    "maxTotal": 20,
+    "percentage": <integer 0-100>,
+    "cefrBand": "B2|B1|below_B1",
+    "offTopic": <true|false>,
+    "taskMisunderstood": <true|false>,
+    "examinerSummary": "<strict TELC-style summary in ${langLabel}, 1-2 sentences>"
+  },
   "taskCoverage": {
     "point1": { "covered": <true|false>, "snippet": "<quote from text showing coverage or empty if not covered>", "feedback": "<brief comment in ${langLabel}>" },
     "point2": { "covered": <true|false>, "snippet": "...", "feedback": "..." },
@@ -139,6 +230,16 @@ Return a JSON object with this exact structure:
 }
 
 IMPORTANT RULES:
+- Score the writing like telc Język polski B1·B2 Szkoła. Use the 4 official writing criteria: I Treść/content, II Kompozycja/composition, III Poprawność/accuracy, IV Słownictwo/vocabulary.
+- Each TELC criterion must be an integer from 0 to 5. telcRubric.total must be the sum of the four criteria, max 20. score must be Math.round(total / 20 * 100).
+- CEFR writing band: 15-20 = B2, 7-14 = B1, 0-6 = below_B1.
+- For telcRubric.pointRatings use TELC content marks: "++" means clear, developed, and task-appropriate; "+" means understandable and task-appropriate but not developed; "0" means missing, unclear, or not task-appropriate.
+- Content score should follow the point ratings strictly: three developed points deserve 5; three merely adequate points are around 3; missing/unclear points must lower the content score substantially.
+- If the text is completely off topic, set offTopic true and give 0 for all four TELC criteria.
+- If the task is misunderstood but the text is still a Polish email, set taskMisunderstood true, give content 0, but still score composition, accuracy, and vocabulary.
+- Composition includes logical order, cohesion, paragraphing, appropriate greeting/closing, and matching the required register (${register || 'unspecified'}).
+- Accuracy is not an error count. Judge whether grammar, spelling, word order, cases, conjugation, and punctuation interfere with communication at B1/B2 level.
+- Vocabulary is not just rare words. Judge range, precision, idiomatic suitability, repetition, and lexical mistakes for the task.
 - startOffset and endOffset must be exact character positions in the email text (0-indexed)
 - For "taskCoverage": evaluate whether each mandatory point was addressed. Set "covered" to true if the user mentions the topic, false if completely missing. Include a short quote from their text as "snippet".
 - For "etiquetteCheck": check if the email has an appropriate greeting at the beginning and sign-off at the end, suitable for the given register.
@@ -157,8 +258,7 @@ IMPORTANT RULES:
 
 router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
   try {
-    const { userText, taskDescription, targetLang: emailTargetLang, nativeLang, points, register, etiquetteHint, targetLevel } = req.body;
-    const userId = req.user?.sub || null;
+    const { userText, taskDescription, nativeLang, points, register, etiquetteHint, targetLevel } = req.body;
 
     if (!userText || !userText.trim()) {
       return res.status(400).json({ error: 'userText is required' });
@@ -167,7 +267,6 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
       return res.status(400).json({ error: 'taskDescription is required' });
     }
 
-    const targetLang = emailTargetLang || 'pl';
     const userNativeLang = nativeLang || 'ru';
 
     // Build prompt and call AI
@@ -198,7 +297,7 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
       } else {
         evaluation = JSON.parse(rawResponse);
       }
-    } catch (parseErr) {
+    } catch {
       console.error('Failed to parse AI response:', rawResponse.substring(0, 500));
       return res.status(502).json({ error: 'AI returned invalid response format', rawPreview: rawResponse.substring(0, 200) });
     }
@@ -222,6 +321,8 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
         feedback: raw.feedback || '',
       };
     }
+
+    const telcRubric = normalizeTelcRubric(evaluation, pointsCount);
 
     // Normalize etiquetteCheck
     const rawEtiquette = evaluation.etiquetteCheck || {};
@@ -266,7 +367,8 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
       : [];
 
     res.json({
-      score: evaluation.score,
+      score: telcRubric.percentage,
+      telcRubric,
       taskCoverage: normalizedTaskCoverage,
       etiquetteCheck: normalizedEtiquette,
       registerMatch: evaluation.registerMatch === true,
