@@ -18,6 +18,71 @@ import SpeakerButton from '../../common/SpeakerButton'
 import { getResultLevel, getQualityFromAttempts } from './attemptLevels'
 import ExerciseNotePanel from './ExerciseNotePanel'
 
+const splitAnswerAlternatives = (answer) => String(answer || '')
+  .split(/\s*\/\s*/)
+  .map(a => a.trim())
+  .filter(Boolean)
+
+const normalizeAnswer = (str) => String(str || '')
+  .split(/\s*\/\s*/)
+  .map(part => part
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[.!?…]+$/u, '')
+    .trim()
+    .toLowerCase())
+  .filter(Boolean)
+  .join(' / ')
+
+const hasFinalSentencePunctuation = (answer) => /[.!?…]\s*$/u.test(String(answer || ''))
+
+const dedupeAnswers = (answers) => {
+  const deduped = []
+  const seen = new Set()
+  const indexes = new Map()
+
+  answers.forEach(answer => {
+    const normalized = normalizeAnswer(answer)
+    if (!normalized) return
+
+    if (seen.has(normalized)) {
+      const existingIndex = indexes.get(normalized)
+      if (!hasFinalSentencePunctuation(deduped[existingIndex]) && hasFinalSentencePunctuation(answer)) {
+        deduped[existingIndex] = answer
+      }
+      return
+    }
+
+    seen.add(normalized)
+    indexes.set(normalized, deduped.length)
+    deduped.push(answer)
+  })
+
+  return deduped
+}
+
+const getAcceptedAnswers = (exercise) => {
+  const answers = Array.isArray(exercise.answers) ? exercise.answers : [exercise.answer]
+
+  return dedupeAnswers(answers.flatMap(answer => {
+    const alternatives = splitAnswerAlternatives(answer)
+
+    return alternatives.length > 1 ? [answer, ...alternatives] : [answer]
+  }))
+}
+
+const getDisplayAnswer = (exercise) => {
+  if (Array.isArray(exercise.answers)) {
+    return dedupeAnswers(exercise.answers).join(' / ')
+  }
+
+  const alternatives = splitAnswerAlternatives(exercise.answer)
+
+  return alternatives.length > 1
+    ? dedupeAnswers(alternatives).join(' / ')
+    : exercise.answer
+}
+
 export default function WriteAnswer({ exercise, onAnswer, priorAttempts = 0, exerciseKey, themeId, note, onNoteSave, onNoteDelete }) {
   const { t } = useT()
   const [value, setValue] = useState('')
@@ -37,19 +102,11 @@ export default function WriteAnswer({ exercise, onAnswer, priorAttempts = 0, exe
   // sees "Со второй попытки" rather than "С первой попытки".
   const totalAttempts = priorAttempts + attempts
 
-  // Normalize answer for comparison (trim, lowercase)
-  const normalize = (str) => String(str || '').trim().toLowerCase()
-
   // Check if answer is correct
   const checkAnswer = (userAnswer) => {
-    const normalized = normalize(userAnswer)
-    
-    // Support multiple correct answers
-    if (Array.isArray(exercise.answers)) {
-      return exercise.answers.some(a => normalize(a) === normalized)
-    }
-    
-    return normalize(exercise.answer) === normalized
+    const normalized = normalizeAnswer(userAnswer)
+
+    return getAcceptedAnswers(exercise).some(a => normalizeAnswer(a) === normalized)
   }
 
   const handleSubmit = (e) => {
@@ -244,9 +301,7 @@ export default function WriteAnswer({ exercise, onAnswer, priorAttempts = 0, exe
                     <div className="text-text-muted text-sm">
                       {t('correct_answer_is', 'Правильный ответ:')}
                       <span className="text-green-400 font-semibold ml-2">
-                        {Array.isArray(exercise.answers) 
-                          ? exercise.answers.join(' / ') 
-                          : exercise.answer}
+                        {getDisplayAnswer(exercise)}
                       </span>
                     </div>
                   </div>
