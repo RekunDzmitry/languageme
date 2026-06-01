@@ -22,6 +22,7 @@ import theme17 from './themes/theme17-media-spolecznosciowe.js'
 import theme18 from './themes/theme18-my-i-media.js'
 import theme19 from './themes/theme19-email-writing.js'
 import theme20 from './themes/theme20-verbs-m-polite-address.js'
+import theme21 from './themes/theme21-verbs-2nd-conj.js'
 
 export const COURSE = {
   id: 'pl',
@@ -30,7 +31,7 @@ export const COURSE = {
   nativeLang: 'ru',
   targetLang: 'pl',
   flag: '🇵🇱',
-  totalThemes: 20,
+  totalThemes: 21,
 }
 
 export const THEMES = [
@@ -54,6 +55,7 @@ export const THEMES = [
   theme18,
   theme19,
   theme20,
+  theme21,
 ]
 
 export { VOCAB }
