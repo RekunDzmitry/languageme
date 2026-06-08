@@ -80,6 +80,15 @@ const theme22EmailZwroty = {
           ],
         },
         {
+          title: 'Жалоба и рекламация',
+          text: 'В письме-жалобе (reklamacja, skarga) сначала называем причину обращения и выражаем недовольство, затем описываем проблему — что не так и чем реальность отличается от обещанного, — и в конце формулируем требование: возврат, замену или компенсацию. Тон остается официальным и вежливым, но твердым.',
+          examples: [
+            { pl: 'Piszę do Państwa, aby wyrazić swoje niezadowolenie.', ru: 'Пишу Вам, чтобы выразить своё неудовлетворение.' },
+            { pl: 'Niestety rzeczywistość nie pokrywa się z opisem.', ru: 'К сожалению, реальность не совпадает с описанием.' },
+            { pl: 'Żądam natychmiastowej reakcji.', ru: 'Требую немедленной реакции.' },
+          ],
+        },
+        {
           title: 'Пунктуация и заглавные буквы',
           text: 'После финальной формулы прощания в польском письме не ставим запятую перед именем. Местоимения и формы обращения к адресату пишем с заглавной: Ty, Tobie, Was, Pan, Pani, Państwo.',
           examples: [
@@ -148,6 +157,27 @@ const theme22EmailZwroty = {
         { type: 'write_answer', category: 'Заглавная буква', prompt: 'твою (в письме к адресату)', answer: 'Twoją', hint: 'Местоимения адресата в письме пишем с заглавной.' },
         { type: 'write_answer', category: 'Заглавная буква', prompt: 'господин / вы, вежливо', answer: 'Pan', hint: 'Pan, Pani, Państwo в обращении пишем с заглавной.' },
         { type: 'write_answer', category: 'Заглавная буква', prompt: 'господа / вы, вежливо', answer: 'Państwo', hint: 'Официальная форма обращения к группе.' },
+
+        // ── Жалоба / рекламация: причина обращения, проблема, требование ──
+        { type: 'write_answer', category: 'Рекламация: начало', prompt: 'Пишу Вам, чтобы выразить своё неудовлетворение.', answers: ['Piszę do Państwa, aby wyrazić swoje niezadowolenie.', 'Piszę do Państwa, żeby wyrazić swoje niezadowolenie.'], hint: 'Официальное начало жалобы; do Państwa — вежливое обращение.' },
+        { type: 'write_answer', category: 'Рекламация: начало', prompt: 'Обращаюсь к вам с рекламацией.', answer: 'Zwracam się do Państwa z reklamacją.', hint: 'Zwracać się z + narzędnik: z reklamacją.' },
+        { type: 'write_answer', category: 'Рекламация: начало', prompt: 'Я (мужчина) хотел бы подать рекламацию.', answer: 'Chciałbym złożyć reklamację.', hint: 'Złożyć reklamację = подать рекламацию; мужская форма chciałbym.' },
+        { type: 'write_answer', category: 'Рекламация: начало', prompt: 'Я (женщина) хотела бы подать рекламацию.', answer: 'Chciałabym złożyć reklamację.', hint: 'Женская форма: chciałabym.' },
+
+        { type: 'write_answer', category: 'Рекламация: проблема', prompt: 'К сожалению, реальность не совпадает с описанием.', answers: ['Niestety rzeczywistość nie pokrywa się z opisem.', 'Niestety rzeczywistość nie zgadza się z opisem.'], hint: 'Pokrywać się / zgadzać się z + narzędnik: z opisem.' },
+        { type: 'write_answer', category: 'Рекламация: проблема', prompt: 'Я (мужчина) не доволен сложившейся ситуацией.', answer: 'Nie jestem zadowolony z zaistniałej sytuacji.', hint: 'Zadowolony z + dopełniacz; zaistniała sytuacja = сложившаяся ситуация.' },
+        { type: 'write_answer', category: 'Рекламация: проблема', prompt: 'Я (женщина) не довольна сложившейся ситуацией.', answer: 'Nie jestem zadowolona z zaistniałej sytuacji.', hint: 'Женская форма: zadowolona.' },
+        { type: 'write_answer', category: 'Рекламация: проблема', prompt: 'Товар оказался бракованным.', answer: 'Towar okazał się wadliwy.', hint: 'Okazać się + przymiotnik: okazał się wadliwy.' },
+        { type: 'write_answer', category: 'Рекламация: проблема', prompt: 'Услуга не оправдала моих ожиданий.', answer: 'Usługa nie spełniła moich oczekiwań.', hint: 'Spełnić oczekiwania = оправдать ожидания.' },
+
+        { type: 'write_answer', category: 'Рекламация: требования', prompt: 'Требую немедленной реакции.', answer: 'Żądam natychmiastowej reakcji.', hint: 'Żądać + dopełniacz: żądam reakcji.' },
+        { type: 'write_answer', category: 'Рекламация: требования', prompt: 'Ожидаю возврата денег.', answer: 'Oczekuję zwrotu pieniędzy.', hint: 'Oczekiwać + dopełniacz: oczekuję zwrotu.' },
+        { type: 'write_answer', category: 'Рекламация: требования', prompt: 'Прошу обменять товар на новый.', answer: 'Proszę o wymianę towaru na nowy.', hint: 'Prosić o + biernik: o wymianę towaru.' },
+        { type: 'write_answer', category: 'Рекламация: требования', prompt: 'Требую компенсации.', answers: ['Domagam się rekompensaty.', 'Żądam rekompensaty.'], hint: 'Domagać się / żądać + dopełniacz: rekompensaty.' },
+
+        { type: 'write_answer', category: 'Рекламация: завершение', prompt: 'Рассчитываю на быстрое решение вопроса.', answer: 'Liczę na szybkie rozwiązanie sprawy.', hint: 'Liczyć na + biernik: na rozwiązanie sprawy.' },
+        { type: 'write_answer', category: 'Рекламация: завершение', prompt: 'Я (мужчина) буду вынужден предпринять дальнейшие шаги.', answer: 'Będę zmuszony podjąć dalsze kroki.', hint: 'Podjąć kroki = предпринять шаги; мужская форма zmuszony.' },
+        { type: 'write_answer', category: 'Рекламация: завершение', prompt: 'Я (женщина) буду вынуждена предпринять дальнейшие шаги.', answer: 'Będę zmuszona podjąć dalsze kroki.', hint: 'Женская форма: zmuszona.' },
       ],
     },
   ],
