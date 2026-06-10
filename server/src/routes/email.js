@@ -121,7 +121,10 @@ function normalizeTelcRubric(evaluation, pointsCount) {
     total,
     maxTotal: 20,
     percentage: Math.round((total / 20) * 100),
-    cefrBand: ['B2', 'B1', 'below_B1'].includes(raw.cefrBand) ? raw.cefrBand : telcBand(total),
+    // Always derive the CEFR band from the criterion total so the points and
+    // the band label can never disagree. The model's own cefrBand is ignored
+    // because it sometimes contradicts the points it assigned (e.g. 10/20 → below_B1).
+    cefrBand: telcBand(total),
     offTopic: raw.offTopic === true,
     taskMisunderstood: raw.taskMisunderstood === true,
     examinerSummary: raw.examinerSummary || '',
