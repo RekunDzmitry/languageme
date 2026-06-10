@@ -13,12 +13,15 @@ const MODEL_NAME = process.env.OPENCODE_MODEL || 'deepseek-v4-flash';
 // AI call helper
 // ============================================================================
 
-async function callAI(prompt) {
-  const apiKey = process.env.OPENCODE_API_KEY;
-  if (!apiKey) {
-    throw new Error('OPENCODE_API_KEY environment variable is not set');
-  }
+// The OpenCode gateway is flaky: it occasionally returns a 5xx, or a 200 with
+// an empty `content` body. Both are transient, so callAI retries a few times
+// with a short backoff before surfacing the failure.
+const AI_MAX_ATTEMPTS = 3;
+const AI_RETRY_DELAY_MS = 1500;
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function callAIOnce(prompt, apiKey) {
   const response = await fetch(`${OPENCODE_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -43,7 +46,34 @@ async function callAI(prompt) {
   }
 
   const data = await response.json();
-  return data.choices[0]?.message?.content || '';
+  const content = data.choices[0]?.message?.content || '';
+  // An empty 200 response is a transient gateway hiccup — treat it as an error
+  // so the retry loop kicks in instead of returning '' and failing to parse.
+  if (!content.trim()) {
+    throw new Error('OpenCode API returned empty content');
+  }
+  return content;
+}
+
+async function callAI(prompt) {
+  const apiKey = process.env.OPENCODE_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENCODE_API_KEY environment variable is not set');
+  }
+
+  let lastErr;
+  for (let attempt = 1; attempt <= AI_MAX_ATTEMPTS; attempt++) {
+    try {
+      return await callAIOnce(prompt, apiKey);
+    } catch (err) {
+      lastErr = err;
+      if (attempt < AI_MAX_ATTEMPTS) {
+        console.warn(`AI call attempt ${attempt}/${AI_MAX_ATTEMPTS} failed: ${err.message} — retrying`);
+        await sleep(AI_RETRY_DELAY_MS * attempt);
+      }
+    }
+  }
+  throw lastErr;
 }
 
 // ============================================================================
