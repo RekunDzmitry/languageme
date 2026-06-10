@@ -1,7 +1,6 @@
 import { useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useT } from '../i18n'
-import { useSettings } from '../stores/SettingsContext'
 import { getThemes } from '../data/courses'
 import EmailExercise from '../components/email/EmailExercise'
 
@@ -9,8 +8,7 @@ export default function EmailPage() {
   const { themeId } = useParams()
   const navigate = useNavigate()
   const { t } = useT()
-  const { settings } = useSettings()
-  const targetLang = settings?.targetLang || 'pl'
+  const targetLang = 'pl'
 
   const themes = useMemo(() => getThemes(targetLang), [targetLang])
 

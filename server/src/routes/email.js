@@ -7,11 +7,25 @@ const router = Router();
 
 // OpenCode Go API configuration
 const OPENCODE_BASE_URL = 'https://opencode.ai/zen/go/v1';
-const MODEL_NAME = 'qwen3.6-plus';
+const MODEL_NAME = process.env.OPENCODE_MODEL || 'deepseek-v4-flash';
 
 // ============================================================================
 // AI call helper
 // ============================================================================
+
+const AI_RETRY_STATUSES = new Set([429, 500, 502, 503, 504]);
+
+class UpstreamAIError extends Error {
+  constructor(status, details) {
+    super(`OpenCode API error: ${status} - ${details}`);
+    this.status = status;
+    this.details = details;
+  }
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 async function callAI(prompt) {
   const apiKey = process.env.OPENCODE_API_KEY;
@@ -19,33 +33,56 @@ async function callAI(prompt) {
     throw new Error('OPENCODE_API_KEY environment variable is not set');
   }
 
-  const response = await fetch(`${OPENCODE_BASE_URL}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: MODEL_NAME,
-      messages: [
-        { role: 'system', content: 'You are a Polish language tutor. Return ONLY valid JSON, no markdown, no extra text.' },
-        { role: 'user', content: prompt }
-      ],
-      // Disable extended reasoning: with thinking on, this model takes ~110s
-      // for the structured-JSON eval and the gateway intermittently 500s/503s.
-      // Reasoning off returns the same JSON in ~25s, reliably.
-      reasoning_effort: 'none',
-      max_tokens: 8000,
-    }),
+  const body = JSON.stringify({
+    model: MODEL_NAME,
+    messages: [
+      {
+        role: 'system',
+        content: 'You are a Polish language tutor. Return ONLY valid JSON, no markdown, no extra text.'
+      },
+      { role: 'user', content: prompt }
+    ],
+    // Keep reasoning low for faster, cheaper structured-JSON evaluation.
+    reasoning_effort: 'low',
+    max_tokens: 8000,
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenCode API error: ${response.status} - ${errorText}`);
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await fetch(`${OPENCODE_BASE_URL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.choices[0]?.message?.content || '';
+      }
+
+      const errorText = await response.text();
+      lastError = new UpstreamAIError(response.status, errorText);
+      if (!AI_RETRY_STATUSES.has(response.status) || attempt === 2) {
+        throw lastError;
+      }
+    } catch (err) {
+      lastError = err;
+      if (err instanceof UpstreamAIError && !AI_RETRY_STATUSES.has(err.status)) {
+        throw err;
+      }
+      if (attempt === 2) {
+        throw err;
+      }
+    }
+
+    await sleep(1000 * (attempt + 1));
   }
 
-  const data = await response.json();
-  return data.choices[0]?.message?.content || '';
+  throw lastError;
 }
 
 // ============================================================================
@@ -407,7 +444,8 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
     });
   } catch (err) {
     console.error('Email evaluation error:', err);
-    res.status(500).json({ error: 'Failed to evaluate email', details: err.message });
+    const status = err instanceof UpstreamAIError ? 502 : 500;
+    res.status(status).json({ error: 'Failed to evaluate email', details: err.message });
   }
 });
 
