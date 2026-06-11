@@ -9,6 +9,31 @@ const router = Router();
 const OPENCODE_BASE_URL = 'https://opencode.ai/zen/go/v1';
 const MODEL_NAME = process.env.OPENCODE_MODEL || 'deepseek-v4-flash';
 
+// Catch-all theme for corrections the user doesn't attach to a real theme.
+const OTHER_THEME_ID = 'pl_other';
+
+// ============================================================================
+// Theme classification helper
+// ============================================================================
+
+// Polish themes the AI can classify errors into (excludes the catch-all).
+// Returned in display order so the prompt lists them coherently.
+async function fetchClassifiableThemes() {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, title, description
+         FROM theme
+        WHERE lang = 'pl' AND id <> $1
+        ORDER BY "order"`,
+      [OTHER_THEME_ID]
+    );
+    return rows;
+  } catch (err) {
+    console.error('Failed to load themes for classification:', err.message);
+    return [];
+  }
+}
+
 // ============================================================================
 // AI call helper
 // ============================================================================
@@ -159,7 +184,7 @@ function normalizeTelcRubric(evaluation, pointsCount) {
   };
 }
 
-function buildEvaluationPrompt(userText, taskDescription, points, register, etiquetteHint, nativeLang, targetLevel) {
+function buildEvaluationPrompt(userText, taskDescription, points, register, etiquetteHint, nativeLang, targetLevel, themes = []) {
   // For B1/B2 exercises, all feedback is in Polish
   const langLabel = 'Polish';
   // Word translations go in the learner's native language so added cards are useful
@@ -183,6 +208,14 @@ function buildEvaluationPrompt(userText, taskDescription, points, register, etiq
     ? `For every error, propose 1–3 B2-level alternatives that are correct, natural, and richer or more precise than the learner's erroneous version. Alternatives may be single words, short phrases, or constructions.`
     : `For every error, propose 1–3 B1-level alternatives that are correct, natural, clear, and exam-safe. Prefer simple phrasing over complex constructions. Alternatives may be single words, short phrases, or constructions.`;
 
+  // Real catalogue of themes the learner is studying, so the AI files each
+  // correction under an EXISTING theme instead of inventing IDs.
+  const themesBlock = themes.length > 0
+    ? themes
+        .map(th => `- ${th.id}: ${th.title}${th.description ? ` — ${th.description}` : ''}`)
+        .join('\n')
+    : '(no themes available — use null for every suggestedThemeId)';
+
   return `Evaluate the following email written by a learner of Polish.
 The learner's native language is ${nativeLabel}.
 All human-readable feedback and comments must be in ${langLabel}.
@@ -203,6 +236,9 @@ Here is the email they wrote:
 ---
 ${userText}
 ---
+
+AVAILABLE THEMES (the grammar/vocabulary topics the learner is studying — file each correction under the single most relevant one):
+${themesBlock}
 
 Return a JSON object with this exact structure:
 {
@@ -253,7 +289,7 @@ Return a JSON object with this exact structure:
         {
           "target": "<the corrected Polish word or short phrase to learn>",
           "translation": "<translation in ${nativeLabel}>",
-          "suggestedThemeId": "<theme ID like pl_theme10, pl_theme15, or null>"
+          "suggestedThemeId": "<exact theme ID from AVAILABLE THEMES that best fits this correction, or null>"
         }
       ],
       "alternatives": [
@@ -293,6 +329,7 @@ IMPORTANT RULES:
 - For "etiquetteCheck": check if the email has an appropriate greeting at the beginning and sign-off at the end, suitable for the given register.
 - For "registerMatch": set to true if the overall tone matches the expected register, false if it's too formal or too casual.
 - For "proposedWords": ALWAYS include at least one item per error — the corrected word or short phrase as "target", with its "translation" in ${nativeLabel}. Add up to 2 more if the error reveals a related vocabulary gap. Never leave proposedWords empty.
+- For "suggestedThemeId": you MUST use one of the EXACT theme IDs listed under AVAILABLE THEMES (e.g. copy the "pl_themeNN" token verbatim). Pick the single theme whose topic best matches the correction. If no listed theme clearly fits, use null. Never invent a theme ID that is not in the list.
 - For "errors": analyze spelling, grammar, style, and vocabulary. Do NOT flag things the learner got right. Only flag actual mistakes.
 - You MUST iterate over every item in "errors" and fill "alternatives" for each one. ${errorAlternativeInstructions}
 - For "alternatives": use type "word" for one-word lexical replacements, "phrase" for short multi-word replacements, and "construction" for grammar/sentence-pattern rewrites. Never return more than 3 alternatives per error.
@@ -320,6 +357,11 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
     const userNativeLang = nativeLang || 'ru';
     const normalizedTargetLevel = normalizeTargetLevel(targetLevel);
 
+    // Real theme catalogue — fed to the prompt so the AI classifies each
+    // correction into an existing theme, and used below to reject hallucinated IDs.
+    const classifiableThemes = await fetchClassifiableThemes();
+    const validThemeIds = new Set(classifiableThemes.map(th => th.id));
+
     // Build prompt and call AI
     const prompt = buildEvaluationPrompt(
       userText.trim(),
@@ -328,7 +370,8 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
       register || '',
       etiquetteHint || '',
       userNativeLang,
-      normalizedTargetLevel
+      normalizedTargetLevel,
+      classifiableThemes
     );
     let rawResponse;
     try {
@@ -398,7 +441,8 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
         ? err.proposedWords.slice(0, 3).map(w => ({
             target: w.target || '',
             translation: w.translation || '',
-            suggestedThemeId: w.suggestedThemeId || null,
+            // Drop hallucinated IDs so the UI/auto-add only ever sees real themes.
+            suggestedThemeId: validThemeIds.has(w.suggestedThemeId) ? w.suggestedThemeId : null,
           }))
         : [],
       alternatives: Array.isArray(err.alternatives)
@@ -443,6 +487,85 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
 });
 
 // ============================================================================
+// Auto-add corrections as write_answer drills
+// ============================================================================
+
+// Turn each graded error into a personal write_answer drill, filed under the
+// theme the AI matched it to (falling back to the catch-all). Returns the list
+// of corrected words now in the user's drills (newly added or already present)
+// so the client can mark them as added. Never throws — a drill-creation hiccup
+// must not fail the attempt save.
+async function autoAddCorrectionExercises(userId, attemptId, aiEvaluation) {
+  try {
+    const errors = Array.isArray(aiEvaluation?.errors) ? aiEvaluation.errors : [];
+
+    // One canonical card per error: its primary correction. Extra proposedWords
+    // (related vocab gaps) stay opt-in via the "+" button in the UI.
+    const candidates = [];
+    for (const err of errors) {
+      const pw = Array.isArray(err.proposedWords) ? err.proposedWords[0] : null;
+      const rawTarget = pw?.target || '';
+      const answer = rawTarget.trim();
+      const promptText = (pw?.translation || '').trim();
+      if (!answer || !promptText) continue;
+      candidates.push({
+        // rawTarget is returned verbatim so the client can match it against the
+        // popover's proposedWords[].target (which it keys "added" state by).
+        rawTarget,
+        answer,
+        prompt: promptText,
+        hint: err.explanation ? String(err.explanation).trim() : null,
+        themeId: pw.suggestedThemeId || null,
+      });
+    }
+    if (candidates.length === 0) return [];
+
+    // Resolve every requested theme to a real one in a single round-trip;
+    // unknown/empty/"other" all collapse to the catch-all theme.
+    const requestedIds = [...new Set(candidates.map(c => c.themeId).filter(Boolean))];
+    const knownIds = new Set();
+    if (requestedIds.length > 0) {
+      const { rows } = await pool.query('SELECT id FROM theme WHERE id = ANY($1)', [requestedIds]);
+      rows.forEach(r => knownIds.add(r.id));
+    }
+    const resolveTheme = id => (id && id !== OTHER_THEME_ID && knownIds.has(id) ? id : OTHER_THEME_ID);
+
+    // Collapse duplicates within this attempt by (theme, answer).
+    const byKey = new Map();
+    for (const c of candidates) {
+      const resolvedThemeId = resolveTheme(c.themeId);
+      byKey.set(`${resolvedThemeId} ${c.answer}`, { ...c, resolvedThemeId });
+    }
+    const unique = [...byKey.values()];
+
+    // Skip drills the user already has (same theme + answer), so re-grading the
+    // same email doesn't pile up duplicates.
+    const { rows: existing } = await pool.query(
+      `SELECT theme_id, answer FROM user_write_exercise
+        WHERE user_id = $1 AND source = 'email' AND answer = ANY($2::text[])`,
+      [userId, unique.map(u => u.answer)]
+    );
+    const existingKeys = new Set(existing.map(r => `${r.theme_id} ${r.answer}`));
+
+    for (const u of unique) {
+      const key = `${u.resolvedThemeId} ${u.answer}`;
+      if (existingKeys.has(key)) continue;
+      await pool.query(
+        `INSERT INTO user_write_exercise (user_id, theme_id, prompt, answer, hint, attempt_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [userId, u.resolvedThemeId, u.prompt, u.answer, u.hint, attemptId || null]
+      );
+    }
+
+    // Report every correction word now in the user's drills.
+    return unique.map(u => u.rawTarget);
+  } catch (err) {
+    console.error('Auto-add of correction drills failed:', err.message);
+    return [];
+  }
+}
+
+// ============================================================================
 // POST /api/email/save-attempt — save evaluation attempt
 // ============================================================================
 
@@ -462,7 +585,14 @@ router.post('/save-attempt', requireAuth, async (req, res) => {
       [userId, themeId, exerciseIdx, userText, score ?? null, aiEvaluation ? JSON.stringify(aiEvaluation) : null]
     );
 
-    res.status(201).json(result.rows[0]);
+    const attempt = result.rows[0];
+
+    // Auto-file each correction into its matched theme's write_answer drills.
+    const autoAdded = aiEvaluation
+      ? await autoAddCorrectionExercises(userId, attempt.id, aiEvaluation)
+      : [];
+
+    res.status(201).json({ ...attempt, autoAdded });
   } catch (err) {
     console.error('Error saving email attempt:', err);
     res.status(500).json({ error: 'Failed to save attempt', details: err.message });
@@ -472,9 +602,6 @@ router.post('/save-attempt', requireAuth, async (req, res) => {
 // ============================================================================
 // POST /api/email/add-exercise — turn a correction into a write_answer drill
 // ============================================================================
-
-// Catch-all theme for corrections the user doesn't attach to a real theme.
-const OTHER_THEME_ID = 'pl_other';
 
 router.post('/add-exercise', requireAuth, async (req, res) => {
   try {

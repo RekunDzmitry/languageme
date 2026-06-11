@@ -133,6 +133,11 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
           result
         )
         setAttemptId(saved.id)
+        // The backend auto-files each correction into its matched theme's
+        // drills; reflect those as already added so the popover shows ✓.
+        if (Array.isArray(saved.autoAdded)) {
+          setAddedWords(new Set(saved.autoAdded))
+        }
         setHistoryRefreshKey(k => k + 1)
       } catch (saveErr) {
         console.error('Failed to save attempt:', saveErr)
