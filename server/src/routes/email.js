@@ -547,18 +547,28 @@ async function autoAddCorrectionExercises(userId, attemptId, aiEvaluation) {
     );
     const existingKeys = new Set(existing.map(r => `${r.theme_id} ${r.answer}`));
 
+    // Insert each drill individually so one failure doesn't block the rest.
+    const added = [];
     for (const u of unique) {
       const key = `${u.resolvedThemeId} ${u.answer}`;
-      if (existingKeys.has(key)) continue;
-      await pool.query(
-        `INSERT INTO user_write_exercise (user_id, theme_id, prompt, answer, hint, attempt_id)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [userId, u.resolvedThemeId, u.prompt, u.answer, u.hint, attemptId || null]
-      );
+      if (existingKeys.has(key)) {
+        added.push(u.rawTarget); // Already present — still report as added.
+        continue;
+      }
+      try {
+        await pool.query(
+          `INSERT INTO user_write_exercise (user_id, theme_id, prompt, answer, hint, attempt_id)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [userId, u.resolvedThemeId, u.prompt, u.answer, u.hint, attemptId || null]
+        );
+        added.push(u.rawTarget);
+      } catch (insertErr) {
+        console.error(`Failed to auto-add drill "${u.answer}" to theme ${u.resolvedThemeId}:`, insertErr.message);
+        // Continue with remaining drills.
+      }
     }
 
-    // Report every correction word now in the user's drills.
-    return unique.map(u => u.rawTarget);
+    return added;
   } catch (err) {
     console.error('Auto-add of correction drills failed:', err.message);
     return [];
