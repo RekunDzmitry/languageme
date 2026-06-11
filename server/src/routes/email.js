@@ -7,7 +7,7 @@ const router = Router();
 
 // OpenCode Go API configuration
 const OPENCODE_BASE_URL = 'https://opencode.ai/zen/go/v1';
-const MODEL_NAME = 'qwen3.6-plus';
+const MODEL_NAME = process.env.OPENCODE_MODEL || 'deepseek-v4-flash';
 
 // ============================================================================
 // AI call helper
@@ -31,10 +31,8 @@ async function callAI(prompt) {
         { role: 'system', content: 'You are a Polish language tutor. Return ONLY valid JSON, no markdown, no extra text.' },
         { role: 'user', content: prompt }
       ],
-      // Disable extended reasoning: with thinking on, this model takes ~110s
-      // for the structured-JSON eval and the gateway intermittently 500s/503s.
-      // Reasoning off returns the same JSON in ~25s, reliably.
-      reasoning_effort: 'none',
+      // Keep reasoning low for faster, cheaper structured-JSON evaluation.
+      reasoning_effort: 'low',
       max_tokens: 8000,
     }),
   });
