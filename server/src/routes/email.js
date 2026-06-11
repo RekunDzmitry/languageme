@@ -5,9 +5,9 @@ import { authenticate as requireAuth, optionallyAuthenticate } from '../middlewa
 
 const router = Router();
 
-// OpenCode Go API configuration
-const OPENCODE_BASE_URL = 'https://opencode.ai/zen/go/v1';
-const MODEL_NAME = process.env.OPENCODE_MODEL || 'deepseek-v4-flash';
+// OpenAI-compatible AI API configuration
+const AI_BASE_URL = process.env.AI_BASE_URL || process.env.OPENCODE_BASE_URL || 'https://opencode.ai/zen/go/v1';
+const MODEL_NAME = process.env.AI_MODEL || process.env.OPENCODE_MODEL || 'deepseek-v4-flash';
 
 // Catch-all theme for corrections the user doesn't attach to a real theme.
 const OTHER_THEME_ID = 'pl_other';
@@ -45,24 +45,37 @@ const AI_MAX_ATTEMPTS = 3;
 const AI_RETRY_DELAY_MS = 1500;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const USE_NVIDIA_NIM = AI_BASE_URL.includes('nvidia.com');
+
+function buildChatRequestBody(prompt) {
+  return {
+    model: MODEL_NAME,
+    messages: [
+      {
+        role: 'system',
+        content: 'You are a Polish language tutor. Return ONLY one valid JSON object. Do not include reasoning, markdown, labels, or explanatory text.'
+      },
+      { role: 'user', content: prompt }
+    ],
+    temperature: 0.2,
+    top_p: 0.9,
+    max_tokens: 8000,
+    response_format: { type: 'json_object' },
+    ...(USE_NVIDIA_NIM ? {
+      chat_template_kwargs: { enable_thinking: false },
+      reasoning_budget: 0
+    } : {})
+  };
+}
 
 async function callAIOnce(prompt, apiKey) {
-  const response = await fetch(`${OPENCODE_BASE_URL}/chat/completions`, {
+  const response = await fetch(`${AI_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model: MODEL_NAME,
-      messages: [
-        { role: 'system', content: 'You are a Polish language tutor. Return ONLY valid JSON, no markdown, no extra text.' },
-        { role: 'user', content: prompt }
-      ],
-      // Keep reasoning low for faster, cheaper structured-JSON evaluation.
-      reasoning_effort: 'low',
-      max_tokens: 8000,
-    }),
+    body: JSON.stringify(buildChatRequestBody(prompt)),
   });
 
   if (!response.ok) {
@@ -87,9 +100,9 @@ async function callAIOnce(prompt, apiKey) {
 }
 
 async function callAI(prompt) {
-  const apiKey = process.env.OPENCODE_API_KEY;
+  const apiKey = process.env.AI_API_KEY || process.env.NVIDIA_API_KEY || process.env.OPENCODE_API_KEY;
   if (!apiKey) {
-    throw new Error('OPENCODE_API_KEY environment variable is not set');
+    throw new Error('AI_API_KEY, NVIDIA_API_KEY, or OPENCODE_API_KEY environment variable is not set');
   }
 
   let lastErr;
