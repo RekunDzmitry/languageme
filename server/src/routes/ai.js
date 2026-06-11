@@ -7,7 +7,7 @@ const router = Router();
 
 // OpenCode Go API configuration
 const OPENCODE_BASE_URL = 'https://opencode.ai/zen/go/v1';
-const MODEL_NAME = 'kimi-k2.5';
+const MODEL_NAME = process.env.OPENCODE_MODEL || 'deepseek-v4-flash';
 
 // System prompt for the language learning assistant
 function buildSystemPrompt(exerciseContext = null) {
@@ -71,8 +71,7 @@ async function chatWithAI(messages) {
     body: JSON.stringify({
       model: MODEL_NAME,
       messages: messages,
-      max_tokens: 2000,
-      // Note: kimi-k2.5 model only accepts temperature: 1
+      max_tokens: 2000
     }),
   });
 

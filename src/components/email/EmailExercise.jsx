@@ -141,7 +141,7 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
       setError(err.message || t('email_eval_error', 'Błąd sprawdzania. Spróbuj ponownie.'))
       setStage('ready')
     }
-  }, [userText, stage, exercise, themeId, exerciseIdx, t, targetLevel, onAttemptSaved])
+  }, [userText, stage, exercise, themeId, exerciseIdx, t, targetLevel])
 
   // Keep handleEvaluate ref in sync
   useEffect(() => { handleEvaluateRef.current = handleEvaluate }, [handleEvaluate])
