@@ -46,9 +46,18 @@ function ScoreBadge({ score }) {
   )
 }
 
+// Derive the CEFR band from the telc criterion total (max 20) so the points,
+// the band label, and the color are always consistent — mirrors the backend
+// telcBand() and ignores any stale/contradictory cefrBand on the rubric.
+function bandFromTotal(total) {
+  if (total >= 15) return 'B2'
+  if (total >= 7) return 'B1'
+  return '< B1'
+}
+
 function TelcScoreBadge({ rubric }) {
   const total = rubric?.total ?? 0
-  const band = rubric?.cefrBand === 'below_B1' ? '< B1' : rubric?.cefrBand
+  const band = bandFromTotal(total)
   let color
   if (total >= 15) color = 'text-green-400 bg-green-500/15 border-green-500/30'
   else if (total >= 7) color = 'text-yellow-400 bg-yellow-500/15 border-yellow-500/30'
