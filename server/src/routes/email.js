@@ -71,11 +71,17 @@ async function callAIOnce(prompt, apiKey) {
   }
 
   const data = await response.json();
-  const content = data.choices[0]?.message?.content || '';
+  const choice = data.choices?.[0] || {};
+  const message = choice.message || {};
+  const rawContent = message.content ?? choice.text ?? message.reasoning_content ?? '';
+  const content = Array.isArray(rawContent)
+    ? rawContent.map(part => typeof part === 'string' ? part : part?.text || part?.content || '').join('')
+    : String(rawContent || '');
   // An empty 200 response is a transient gateway hiccup — treat it as an error
   // so the retry loop kicks in instead of returning '' and failing to parse.
   if (!content.trim()) {
-    throw new Error('OpenCode API returned empty content');
+    const finishReason = choice.finish_reason || choice.finishReason || 'unknown';
+    throw new Error(`OpenCode API returned empty content (finish_reason=${finishReason})`);
   }
   return content;
 }
@@ -373,13 +379,34 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
       normalizedTargetLevel,
       classifiableThemes
     );
-    let rawResponse;
-    try {
-      rawResponse = await callAI(prompt);
-    } catch (aiErr) {
-      console.error('AI call failed:', aiErr.message);
+  let rawResponse;
+  try {
+    rawResponse = await callAI(prompt);
+  } catch (aiErr) {
+    console.error('AI call failed:', aiErr.message);
+    if (aiErr.message?.includes('empty content') && classifiableThemes.length > 0) {
+      console.warn('Email evaluation AI returned empty content; retrying without theme catalogue');
+      const compactPrompt = buildEvaluationPrompt(
+        userText.trim(),
+        taskDescription,
+        points || [],
+        register || '',
+        etiquetteHint || '',
+        userNativeLang,
+        normalizedTargetLevel,
+        []
+      );
+
+      try {
+        rawResponse = await callAI(compactPrompt);
+      } catch (retryErr) {
+        console.error('Compact AI call failed:', retryErr.message);
+        return res.status(502).json({ error: 'AI evaluation service unavailable', details: retryErr.message });
+      }
+    } else {
       return res.status(502).json({ error: 'AI evaluation service unavailable', details: aiErr.message });
     }
+  }
 
     // Parse AI response
     let evaluation;
