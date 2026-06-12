@@ -21,6 +21,7 @@ const OTHER_THEME_ID = 'pl_other';
 // with a short backoff before surfacing the failure.
 const AI_MAX_ATTEMPTS = 3;
 const AI_RETRY_DELAY_MS = 1500;
+const EMAIL_EVALUATION_TIMEOUT_MS = Number(process.env.EMAIL_EVALUATION_TIMEOUT_MS || 180000);
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const USE_NVIDIA_NIM = AI_BASE_URL.includes('nvidia.com');
@@ -55,6 +56,7 @@ function buildChatRequestBody(prompt, options = {}) {
 async function callAIOnce(prompt, apiKey, options = {}) {
   const response = await fetch(`${AI_BASE_URL}/chat/completions`, {
     method: 'POST',
+    signal: options.signal,
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
@@ -325,6 +327,9 @@ IMPORTANT RULES:
 - Return ONLY the JSON object, no other text, no markdown code fences.`;
 }
 
+// Streaming prompts use strict line-oriented text for providers that do not
+// reliably honor JSON mode. If the model drifts from the requested format, the
+// parsers default missing fields instead of failing the whole evaluation.
 const PLAIN_AI_OPTIONS = {
   json: false,
   maxTokens: 2500,
@@ -687,6 +692,8 @@ router.post('/evaluate-stream', requireAuth, async (req, res) => {
   if (!userText || !userText.trim()) return res.status(400).json({ error: 'userText is required' });
   if (!taskDescription || !taskDescription.trim()) return res.status(400).json({ error: 'taskDescription is required' });
   if (themeId === undefined || exerciseIdx === undefined) return res.status(400).json({ error: 'themeId and exerciseIdx are required' });
+  const parsedExerciseIdx = Number(exerciseIdx);
+  if (!Number.isInteger(parsedExerciseIdx)) return res.status(400).json({ error: 'exerciseIdx must be an integer' });
 
   const trimmedText = userText.trim();
   const userNativeLang = nativeLang || 'ru';
@@ -707,7 +714,7 @@ router.post('/evaluate-stream', requireAuth, async (req, res) => {
        (user_id, theme_id, exercise_idx, user_text, evaluation_status, evaluation_steps, updated_at)
      VALUES ($1, $2, $3, $4, 'running', '{}'::jsonb, NOW())
      RETURNING id, created_at`,
-    [userId, themeId, parseInt(exerciseIdx), trimmedText]
+    [userId, themeId, parsedExerciseIdx, trimmedText]
   );
   const attempt = rows[0];
   let steps = {};
@@ -717,10 +724,14 @@ router.post('/evaluate-stream', requireAuth, async (req, res) => {
   res.setHeader('X-Accel-Buffering', 'no');
   writeStreamEvent(res, 'attempt_created', { attemptId: attempt.id, createdAt: attempt.created_at });
 
+  const requestController = new AbortController();
+  const requestTimeout = setTimeout(() => requestController.abort(), EMAIL_EVALUATION_TIMEOUT_MS);
+  const aiOptions = { ...PLAIN_AI_OPTIONS, signal: requestController.signal };
+
   try {
     writeStreamEvent(res, 'step_started', { step: 'rubric' });
     steps = await updateEvaluationStep({ attemptId: attempt.id, userId, steps, key: 'rubric', patch: { status: 'running', startedAt: new Date().toISOString() } });
-    const rubricRaw = await callAI(buildRubricPrompt(context, taskPoints.length), PLAIN_AI_OPTIONS);
+    const rubricRaw = await callAI(buildRubricPrompt(context, taskPoints.length), aiOptions);
     const rubricData = parseRubricResponse(rubricRaw, taskPoints.length);
     steps = await updateEvaluationStep({
       attemptId: attempt.id,
@@ -737,7 +748,17 @@ router.post('/evaluate-stream', requireAuth, async (req, res) => {
       const step = `errors_${category}`;
       writeStreamEvent(res, 'step_started', { step });
       steps = await updateEvaluationStep({ attemptId: attempt.id, userId, steps, key: step, patch: { status: 'running', startedAt: new Date().toISOString() } });
-      const raw = await callAI(buildErrorDiscoveryPrompt(context, category), PLAIN_AI_OPTIONS);
+    }
+
+    const discoveryResults = await Promise.all(
+      ERROR_CATEGORIES.map(async (category) => ({
+        category,
+        step: `errors_${category}`,
+        raw: await callAI(buildErrorDiscoveryPrompt(context, category), aiOptions)
+      }))
+    );
+
+    for (const { category, step, raw } of discoveryResults) {
       const parsed = parseErrorDiscovery(raw, category, trimmedText, acceptedRanges);
       discoveredErrors.push(...parsed);
       steps = await updateEvaluationStep({
@@ -750,7 +771,7 @@ router.post('/evaluate-stream', requireAuth, async (req, res) => {
       writeStreamEvent(res, 'step_completed', { step, data: parsed });
     }
 
-    const enrichedErrors = [];
+    const enrichmentJobs = [];
     for (let i = 0; i < discoveredErrors.length; i++) {
       const err = discoveredErrors[i];
       const step = `enrichment_${i + 1}`;
@@ -760,8 +781,21 @@ router.post('/evaluate-stream', requireAuth, async (req, res) => {
       }
       writeStreamEvent(res, 'step_started', { step, errorIndex: i });
       steps = await updateEvaluationStep({ attemptId: attempt.id, userId, steps, key: step, patch: { status: 'running', startedAt: new Date().toISOString(), error: err } });
-      try {
-        const raw = await callAI(buildEnrichmentPrompt(context, err, userNativeLang, normalizedTargetLevel), PLAIN_AI_OPTIONS);
+      enrichmentJobs.push({
+        index: i,
+        step,
+        err,
+        run: callAI(buildEnrichmentPrompt(context, err, userNativeLang, normalizedTargetLevel), aiOptions)
+      });
+    }
+
+    const enrichedErrors = [];
+    const enrichmentResults = await Promise.allSettled(enrichmentJobs.map(job => job.run));
+    for (let i = 0; i < enrichmentJobs.length; i++) {
+      const { step, err } = enrichmentJobs[i];
+      const result = enrichmentResults[i];
+      if (result.status === 'fulfilled') {
+        const raw = result.value;
         const enriched = parseEnrichment(raw, err, userNativeLang, normalizedTargetLevel);
         enrichedErrors.push(enriched);
         steps = await updateEvaluationStep({
@@ -772,7 +806,8 @@ router.post('/evaluate-stream', requireAuth, async (req, res) => {
           patch: { status: 'complete', completedAt: new Date().toISOString(), raw, data: enriched }
         });
         writeStreamEvent(res, 'step_completed', { step, data: enriched });
-      } catch (errStep) {
+      } else {
+        const errStep = result.reason;
         steps = await updateEvaluationStep({
           attemptId: attempt.id,
           userId,
@@ -786,7 +821,7 @@ router.post('/evaluate-stream', requireAuth, async (req, res) => {
 
     writeStreamEvent(res, 'step_started', { step: 'constructionReplacements' });
     steps = await updateEvaluationStep({ attemptId: attempt.id, userId, steps, key: 'constructionReplacements', patch: { status: 'running', startedAt: new Date().toISOString() } });
-    const constructionRaw = await callAI(buildConstructionPrompt(context, normalizedTargetLevel, enrichedErrors), PLAIN_AI_OPTIONS);
+    const constructionRaw = await callAI(buildConstructionPrompt(context, normalizedTargetLevel, enrichedErrors), aiOptions);
     const constructionReplacements = parseConstructionResponse(constructionRaw, normalizedTargetLevel);
     steps = await updateEvaluationStep({
       attemptId: attempt.id,
@@ -816,9 +851,11 @@ router.post('/evaluate-stream', requireAuth, async (req, res) => {
     );
     const autoAdded = await autoAddCorrectionExercises(userId, attempt.id, finalEvaluation);
     writeStreamEvent(res, 'evaluation_complete', { attemptId: attempt.id, evaluation: finalEvaluation, autoAdded });
+    clearTimeout(requestTimeout);
     res.end();
   } catch (err) {
     console.error('Progressive email evaluation failed:', err);
+    clearTimeout(requestTimeout);
     await pool.query(
       `UPDATE email_attempt
        SET evaluation_status = 'failed',
@@ -850,8 +887,6 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
     const userNativeLang = nativeLang || 'ru';
     const normalizedTargetLevel = normalizeTargetLevel(targetLevel);
 
-    // Real theme catalogue — fed to the prompt so the AI classifies each
-    // correction into an existing theme, and used below to reject hallucinated IDs.
     // Build prompt and call AI
     const prompt = buildEvaluationPrompt(
       userText.trim(),
@@ -862,13 +897,13 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
       userNativeLang,
       normalizedTargetLevel
     );
-  let rawResponse;
-  try {
-    rawResponse = await callAI(prompt);
-  } catch (aiErr) {
-    console.error('AI call failed:', aiErr.message);
-    return res.status(502).json({ error: 'AI evaluation service unavailable', details: aiErr.message });
-  }
+    let rawResponse;
+    try {
+      rawResponse = await callAI(prompt);
+    } catch (aiErr) {
+      console.error('AI call failed:', aiErr.message);
+      return res.status(502).json({ error: 'AI evaluation service unavailable', details: aiErr.message });
+    }
 
     // Parse AI response
     let evaluation;

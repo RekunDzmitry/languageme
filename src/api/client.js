@@ -226,7 +226,11 @@ async function streamPost(endpoint, body, onEvent) {
 }
 
 function isMissingEndpointError(error) {
-  return error?.status === 404 || /Cannot POST \/api\/email\/evaluate-stream/i.test(error?.message || '')
+  return (
+    error?.status === 404 ||
+    (error?.status === 401 && !getAccessToken()) ||
+    /Cannot POST \/api\/email\/evaluate-stream/i.test(error?.message || '')
+  )
 }
 
 async function evaluateEmailLegacy(payload, onEvent) {
