@@ -1,0 +1,28 @@
+services:
+  # Disable the Vite dev server — Caddy serves built static files instead
+  frontend:
+    profiles:
+      - dev
+
+  # Caddy reverse proxy — serves static files + proxies /api
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./dist:/usr/share/caddy:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
