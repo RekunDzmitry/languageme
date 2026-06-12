@@ -84,7 +84,9 @@ export async function api(endpoint, options = {}) {
     const error = new Error(`API error ${res.status}`)
     try {
       error.data = await res.json()
-    } catch {}
+    } catch {
+      error.data = null
+    }
     error.status = res.status
     throw error
   }
@@ -164,11 +166,118 @@ export const exerciseNoteApi = {
     api.delete(`/api/exercise-notes/${encodeURIComponent(exerciseKey)}`),
 }
 
+async function streamPost(endpoint, body, onEvent) {
+  let token = getAccessToken()
+  const headers = { 'Content-Type': 'application/json' }
+  if (token) headers.Authorization = `Bearer ${token}`
+
+  let res = await fetch(endpoint, {
+    method: 'POST',
+    headers,
+    cache: 'no-cache',
+    body: JSON.stringify(body),
+  })
+
+  if (res.status === 401 && token) {
+    token = await refreshAccessToken()
+    res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { ...headers, Authorization: `Bearer ${token}` },
+      cache: 'no-cache',
+      body: JSON.stringify(body),
+    })
+  }
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    const error = new Error(text || `Request failed: ${res.status}`)
+    error.status = res.status
+    error.responseText = text
+    throw error
+  }
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let finalEvent = null
+
+  while (true) {
+    const { value, done } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || ''
+    for (const line of lines) {
+      if (!line.trim()) continue
+      const event = JSON.parse(line)
+      finalEvent = event
+      onEvent?.(event)
+    }
+  }
+
+  buffer += decoder.decode()
+  if (buffer.trim()) {
+    const event = JSON.parse(buffer)
+    finalEvent = event
+    onEvent?.(event)
+  }
+
+  return finalEvent
+}
+
+function isMissingEndpointError(error) {
+  return error?.status === 404 || /Cannot POST \/api\/email\/evaluate-stream/i.test(error?.message || '')
+}
+
+async function evaluateEmailLegacy(payload, onEvent) {
+  onEvent?.({ type: 'step_started', step: 'evaluation' })
+
+  const evaluation = await api.post('/api/email/evaluate', payload)
+  let attempt = null
+  let autoAdded = []
+
+  if (payload.themeId !== undefined && payload.exerciseIdx !== undefined) {
+    try {
+      attempt = await api.post('/api/email/save-attempt', {
+        themeId: payload.themeId,
+        exerciseIdx: payload.exerciseIdx,
+        userText: payload.userText,
+        score: evaluation.score,
+        aiEvaluation: evaluation,
+      })
+      autoAdded = Array.isArray(attempt.autoAdded) ? attempt.autoAdded : []
+    } catch (err) {
+      if (err.status !== 401) throw err
+    }
+  }
+
+  const finalEvent = {
+    type: 'evaluation_complete',
+    attemptId: attempt?.id ?? null,
+    evaluation,
+    autoAdded,
+  }
+
+  onEvent?.({ type: 'step_completed', step: 'evaluation', data: evaluation })
+  onEvent?.(finalEvent)
+
+  return finalEvent
+}
+
 // Email Writing API
 export const emailApi = {
   // Evaluate user's email (TELC format)
   evaluate: (userText, taskDescription, targetLang = 'pl', nativeLang = 'ru', points, register, etiquetteHint, targetLevel = 'B1') =>
     api.post('/api/email/evaluate', { userText, taskDescription, targetLang, nativeLang, points, register, etiquetteHint, targetLevel }),
+
+  evaluateStream: async (payload, onEvent) => {
+    try {
+      return await streamPost('/api/email/evaluate-stream', payload, onEvent)
+    } catch (err) {
+      if (!isMissingEndpointError(err)) throw err
+      return evaluateEmailLegacy(payload, onEvent)
+    }
+  },
 
   // Save evaluation attempt to history
   saveAttempt: (themeId, exerciseIdx, userText, score, aiEvaluation) =>

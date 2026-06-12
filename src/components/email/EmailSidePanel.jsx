@@ -337,6 +337,33 @@ function ConstructionReplacementsSection({ constructionReplacements }) {
   )
 }
 
+function EvaluationProgressSection({ progress = [] }) {
+  const visible = progress.filter(item => item.status)
+  if (visible.length === 0) return null
+
+  return (
+    <div className="p-4 border-t border-border">
+      <h4 className="text-sm text-text-muted uppercase tracking-wide mb-3">
+        Postęp
+      </h4>
+      <div className="space-y-2">
+        {visible.map(item => {
+          const isRunning = item.status === 'running'
+          const isFailed = item.status === 'failed'
+          return (
+            <div key={item.step} className="flex items-center gap-2 text-xs text-text-muted">
+              <span className={`w-2 h-2 rounded-full ${isFailed ? 'bg-red-400' : isRunning ? 'bg-accent animate-pulse' : 'bg-green-400'}`} />
+              <span className={isFailed ? 'text-red-400' : isRunning ? 'text-white' : 'text-text-muted'}>
+                {item.label}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function EmailSidePanel({
   evaluation,
   stage,
@@ -344,6 +371,7 @@ export default function EmailSidePanel({
   onRestartExercise,
   taskPoints = [],
   register = '',
+  evaluationProgress = [],
 }) {
   const { t } = useT()
 
@@ -407,6 +435,8 @@ export default function EmailSidePanel({
           </div>
         )}
       </div>
+
+      <EvaluationProgressSection progress={evaluationProgress} />
 
       {/* TELC Rubric */}
       {evaluation && telcRubric && (
