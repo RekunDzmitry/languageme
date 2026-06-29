@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback } from 'react'
+import { getDefaultPackId } from '../data/lessonPacks'
 
 const SettingsContext = createContext()
 
@@ -32,12 +33,16 @@ export const UI_LANGUAGES = {
 export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState(() => {
     const saved = localStorage.getItem('lm_settings')
-    return saved ? JSON.parse(saved) : {
+    const parsed = saved ? JSON.parse(saved) : {
       nativeLang: 'ru',
       targetLang: 'fr',
       uiLang: 'ru',
       targetLevel: 'B1',
       autoPlayAudio: true,
+    }
+    return {
+      ...parsed,
+      activePackId: parsed.activePackId || getDefaultPackId(parsed.targetLang),
     }
   })
 

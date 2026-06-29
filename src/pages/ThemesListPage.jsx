@@ -4,13 +4,14 @@ import { useProgress } from '../stores/UserProgressContext'
 import { useAuth } from '../stores/AuthContext'
 import { useSettings } from '../stores/SettingsContext'
 import { getThemes, getThemeTitle } from '../data/courses'
+import { filterThemesByPack } from '../data/lessonPacks'
 import { isThemeUnlocked } from '../utils/progress'
 
 export default function ThemesListPage() {
   const { t } = useT()
   const { settings } = useSettings()
   const targetLang = settings.targetLang
-  const allThemes = getThemes(targetLang)
+  const allThemes = filterThemesByPack(getThemes(targetLang), settings.activePackId, targetLang)
   const { isAuthenticated } = useAuth()
   const { themeProgress, themeUnlockStatus } = useProgress()
   const navigate = useNavigate()

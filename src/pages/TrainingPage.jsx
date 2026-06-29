@@ -5,6 +5,7 @@ import { exerciseApi } from '../api/client'
 import { useProgress } from '../stores/UserProgressContext'
 import { useSettings } from '../stores/SettingsContext'
 import { getThemes, getThemeTitle, getVocab } from '../data/courses'
+import { filterThemesByPack, PACK_IDS } from '../data/lessonPacks'
 import { getThemeConjugationMastery, getConjugationDueCount, getExerciseMastery, getExerciseDueCountByTheme, getVocabMastery, getVocabDueCount } from '../utils/progress'
 import { conjCardKey, PRONOUNS } from '../utils/conjugation'
 import AIChatModal from '../components/ai/AIChatModal'
@@ -317,7 +318,8 @@ export default function TrainingPage() {
   const { conjugationCards, exerciseCards, cards, exerciseNotes, vocabNotes, saveExerciseNote, clearExerciseNote, saveVocabNote, clearVocabNote } = useProgress()
   const { settings } = useSettings()
   const targetLang = settings.targetLang
-  const themes = getThemes(targetLang)
+  const activePackId = settings.activePackId
+  const themes = filterThemesByPack(getThemes(targetLang), activePackId, targetLang)
   const vocab = getVocab(targetLang)
   const { t } = useT()
   const navigate = useNavigate()
@@ -369,7 +371,7 @@ export default function TrainingPage() {
       }
       return { ...theme, sections }
     })
-    if (userExByTheme.pl_other?.length) {
+    if (activePackId === PACK_IDS.PL_TELC && userExByTheme.pl_other?.length) {
       out.push({
         id: 'pl_other',
         order: '★',
@@ -381,9 +383,9 @@ export default function TrainingPage() {
       })
     }
     return out
-  }, [themes, userExByTheme, isPolish])
+  }, [themes, userExByTheme, isPolish, activePackId])
 
-  const themesWithVerbs = useMemo(() => themes.filter(th => th.verbList?.length > 0), [])
+  const themesWithVerbs = useMemo(() => themes.filter(th => th.verbList?.length > 0), [themes])
 
   const pronounLabels = useMemo(() => {
     if (targetLang === 'pl') {

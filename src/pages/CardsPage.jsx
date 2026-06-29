@@ -3,6 +3,7 @@ import { useT } from '../i18n'
 import { useProgress } from '../stores/UserProgressContext'
 import { useSettings } from '../stores/SettingsContext'
 import { getVocab, getHintsByLang, getThemes, getThemeTitle } from '../data/courses'
+import { filterThemesByPack } from '../data/lessonPacks'
 import { getCardStatus, formatDueDate, STATUS_COLORS } from '../utils/cardStatus'
 import SpeakerButton from '../components/common/SpeakerButton'
 
@@ -14,8 +15,12 @@ export default function CardsPage() {
   const { settings } = useSettings()
   const targetLang = settings.targetLang
   const hints = getHintsByLang(settings.nativeLang)
-  const VOCAB = getVocab(targetLang)
-  const themes = getThemes(targetLang)
+  const themes = filterThemesByPack(getThemes(targetLang), settings.activePackId, targetLang)
+  const activeThemeIds = useMemo(() => new Set(themes.map((theme) => theme.id)), [themes])
+  const VOCAB = useMemo(
+    () => getVocab(targetLang).filter((word) => word.themeIds?.some((themeId) => activeThemeIds.has(themeId))),
+    [targetLang, activeThemeIds]
+  )
   const { cards, userMnemonics, resetCard, updateCard } = useProgress()
   const [expandedId, setExpandedId] = useState(null)
 
@@ -33,7 +38,7 @@ export default function CardsPage() {
       const card = cards[word.id] || { ease: 2.5, interval: 1, reps: 0, due: Date.now(), lastReviewed: null }
       return { ...word, card, status: getCardStatus(card) }
     })
-  }, [cards])
+  }, [VOCAB, cards])
 
   // Stats
   const stats = useMemo(() => {

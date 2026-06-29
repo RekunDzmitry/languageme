@@ -1,18 +1,25 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useT } from '../i18n'
 import { useSettings } from '../stores/SettingsContext'
 import { getThemes } from '../data/courses'
+import { filterThemesByPack, PACK_IDS } from '../data/lessonPacks'
 import EmailExercise from '../components/email/EmailExercise'
 
 export default function EmailPage() {
   const { themeId } = useParams()
   const navigate = useNavigate()
   const { t } = useT()
-  const { settings } = useSettings()
-  const targetLang = settings?.targetLang || 'pl'
+  const { settings, updateSettings } = useSettings()
+  const targetLang = 'pl'
 
-  const themes = useMemo(() => getThemes(targetLang), [targetLang])
+  useEffect(() => {
+    if (settings.activePackId !== PACK_IDS.PL_TELC || settings.targetLang !== targetLang) {
+      updateSettings({ activePackId: PACK_IDS.PL_TELC, targetLang })
+    }
+  }, [settings.activePackId, settings.targetLang, targetLang, updateSettings])
+
+  const themes = useMemo(() => filterThemesByPack(getThemes(targetLang), PACK_IDS.PL_TELC, targetLang), [targetLang])
 
   const emailThemes = useMemo(() =>
     themes.filter(th =>
