@@ -10,6 +10,14 @@ import EmailHistoryPanel from './EmailHistoryPanel'
 // switch between exercises without losing their text or timer progress.
 const stateCache = {}
 const EMAIL_TARGET_LEVELS = ['B1', 'B2']
+const STREAM_STEP_LABELS = {
+  rubric: 'TELC',
+  errors_spelling: 'Ortografia',
+  errors_grammar: 'Gramatyka',
+  errors_style: 'Styl',
+  errors_vocabulary: 'Słownictwo',
+  constructionReplacements: 'Konstrukcje',
+}
 
 function normalizeEmailTargetLevel(level) {
   return EMAIL_TARGET_LEVELS.includes(level) ? level : 'B1'
@@ -46,6 +54,7 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
   const [timerExpired, setTimerExpired] = useState(saved?.timerExpired ?? false)
   const [themes, setThemes] = useState([])
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
+  const [evaluationProgress, setEvaluationProgress] = useState(saved?.evaluationProgress || [])
 
   // Theme options for the "add to learning" picker — only themes for the
   // language being practised (email exercises are Polish-only today).
@@ -72,6 +81,7 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
       selectedErrorIdx,
       attemptId,
       addedWords: [...addedWords],
+      evaluationProgress,
       timeLeft,
       timerRunning,
       timerExpired,
@@ -101,52 +111,80 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
     setError(null)
   }, [])
 
+  const updateProgress = useCallback((step, status) => {
+    if (!step) return
+    setEvaluationProgress(prev => {
+      const label = STREAM_STEP_LABELS[step] || (step.startsWith('enrichment_') ? 'Szczegóły błędu' : step)
+      const next = prev.filter(item => item.step !== step)
+      return [...next, { step, label, status }]
+    })
+  }, [])
+
   const handleEvaluate = useCallback(async () => {
     if (!userText.trim() || stage === 'loading') return
 
     setStage('loading')
     setError(null)
     setEvaluation(null)
+    setEvaluationProgress([])
+    setAddedWords(new Set())
 
     try {
-      const result = await emailApi.evaluate(
+      const finalEvent = await emailApi.evaluateStream({
         userText,
-        exercise.scenario || exercise.prompt,
-        'pl',
-        'ru',
-        exercise.points,
-        exercise.register,
-        exercise.etiquetteHint,
-        targetLevel
-      )
-
-      setEvaluation(result)
-      setStage('evaluated')
-
-      // Save attempt to history
-      try {
-        const saved = await emailApi.saveAttempt(
-          themeId,
-          exerciseIdx,
-          userText,
-          result.score,
-          result
-        )
-        setAttemptId(saved.id)
-        // The backend auto-files each correction into its matched theme's
-        // drills; reflect those as already added so the popover shows ✓.
-        if (Array.isArray(saved.autoAdded)) {
-          setAddedWords(new Set(saved.autoAdded))
+        taskDescription: exercise.scenario || exercise.prompt,
+        targetLang: 'pl',
+        nativeLang: 'ru',
+        points: exercise.points,
+        register: exercise.register,
+        etiquetteHint: exercise.etiquetteHint,
+        targetLevel,
+        themeId,
+        exerciseIdx,
+      }, (event) => {
+        if (event.type === 'attempt_created') {
+          setAttemptId(event.attemptId)
+          return
         }
-        setHistoryRefreshKey(k => k + 1)
-      } catch (saveErr) {
-        console.error('Failed to save attempt:', saveErr)
+        if (event.type === 'step_started') {
+          updateProgress(event.step, 'running')
+          return
+        }
+        if (event.type === 'step_completed') {
+          updateProgress(event.step, 'complete')
+          if (event.step === 'rubric') {
+            setEvaluation(prev => ({ ...(prev || {}), ...event.data, errors: prev?.errors || [] }))
+          }
+          if (event.step === 'constructionReplacements') {
+            setEvaluation(prev => ({ ...(prev || {}), constructionReplacements: event.data || [] }))
+          }
+          return
+        }
+        if (event.type === 'step_failed') {
+          updateProgress(event.step, 'failed')
+          if (event.step === 'evaluation') {
+            setError(event.error || t('email_eval_error', 'Błąd sprawdzania. Spróbuj ponownie.'))
+            setStage('ready')
+          }
+          return
+        }
+        if (event.type === 'evaluation_complete') {
+          setEvaluation(event.evaluation)
+          setStage('evaluated')
+          if (Array.isArray(event.autoAdded)) {
+            setAddedWords(new Set(event.autoAdded))
+          }
+          setHistoryRefreshKey(k => k + 1)
+        }
+      })
+      if (finalEvent?.type !== 'evaluation_complete') {
+        throw new Error(finalEvent?.error || t('email_eval_error', 'Błąd sprawdzania. Spróbuj ponownie.'))
       }
     } catch (err) {
       setError(err.message || t('email_eval_error', 'Błąd sprawdzania. Spróbuj ponownie.'))
       setStage('ready')
     }
-  }, [userText, stage, exercise, themeId, exerciseIdx, t, targetLevel])
+  }, [userText, stage, exercise, themeId, exerciseIdx, t, targetLevel, updateProgress])
 
   // Keep handleEvaluate ref in sync
   useEffect(() => { handleEvaluateRef.current = handleEvaluate }, [handleEvaluate])
@@ -199,6 +237,7 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
     setSelectedErrorIdx(null)
     setAttemptId(null)
     setAddedWords(new Set())
+    setEvaluationProgress([])
     setTargetLevel('B1')
     setTimeLeft(TIME_LIMIT)
     setTimerRunning(false)
@@ -216,6 +255,7 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
     setSelectedErrorIdx(null)
     setAttemptId(null)
     setAddedWords(new Set())
+    setEvaluationProgress([])
     setTargetLevel('B1')
     setTimeLeft(TIME_LIMIT)
     setTimerRunning(false)
@@ -227,6 +267,7 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
     if (!detail) return
     setUserText(detail.user_text || '')
     setEvaluation(detail.ai_evaluation || null)
+    setEvaluationProgress([])
     setTargetLevel(normalizeEmailTargetLevel(detail.ai_evaluation?.targetLevel))
     setAttemptId(detail.id)
     setSelectedErrorIdx(null)
@@ -247,6 +288,7 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
     setSelectedErrorIdx(null)
     setAttemptId(null)
     setAddedWords(new Set())
+    setEvaluationProgress([])
     setTargetLevel('B1')
     setTimeLeft(TIME_LIMIT)
     setTimerRunning(false)
@@ -462,6 +504,7 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
             onRestartExercise={handleRestartExercise}
             taskPoints={taskPoints}
             register={exercise.register}
+            evaluationProgress={evaluationProgress}
           />
           <EmailHistoryPanel
             themeId={themeId}
