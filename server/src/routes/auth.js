@@ -5,6 +5,7 @@ import {
   hashPassword, verifyPassword, generateAccessToken,
   generateRefreshToken, storeRefreshToken, validateRefreshToken, revokeRefreshToken
 } from '../services/auth.js';
+import passport, { oAuthSuccess } from '../services/passport.js';
 
 const router = Router();
 
@@ -17,8 +18,11 @@ router.post('/register',
     try {
       const { email, password, displayName } = req.body;
 
-      const existing = await pool.query('SELECT id FROM "user" WHERE email = $1', [email]);
+      const existing = await pool.query('SELECT id, google_id FROM "user" WHERE email = $1', [email]);
       if (existing.rows.length) {
+        if (existing.rows[0].google_id) {
+          return res.status(409).json({ error: 'Email already registered via Google. Please sign in with Google.' });
+        }
         return res.status(409).json({ error: 'Email already registered' });
       }
 
@@ -46,10 +50,18 @@ router.post('/login',
     try {
       const { email, password } = req.body;
       const { rows: [user] } = await pool.query(
-        'SELECT id, email, password_hash, is_admin FROM "user" WHERE email = $1',
+        'SELECT id, email, password_hash, is_admin FROM "user" WHERE email = $1 AND password_hash IS NOT NULL',
         [email]
       );
       if (!user || !(await verifyPassword(password, user.password_hash))) {
+        // Check if this email exists but is Google-only (no password)
+        const { rows: [oauthUser] } = await pool.query(
+          'SELECT id FROM "user" WHERE email = $1 AND google_id IS NOT NULL AND password_hash IS NULL',
+          [email]
+        );
+        if (oauthUser) {
+          return res.status(401).json({ error: 'This email uses Google sign-in. Please use the Google button.' });
+        }
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
@@ -89,5 +101,20 @@ router.post('/logout', async (req, res, next) => {
     res.json({ ok: true });
   } catch (err) { next(err); }
 });
+
+// ── Google OAuth ────────────────────────────────────────────────
+router.get('/google', (req, res, next) => {
+  // Pass optional redirect param so the frontend can specify return path
+  const state = req.query.redirect || '/';
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    state,
+  })(req, res, next);
+});
+
+router.get('/google/callback',
+  passport.authenticate('google', { session: false, failureRedirect: '/' }),
+  (req, res) => oAuthSuccess(res, req.user)
+);
 
 export default router;

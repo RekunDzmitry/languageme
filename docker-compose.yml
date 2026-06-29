@@ -24,6 +24,9 @@ services:
       JWT_SECRET: dev-jwt-secret-change-in-prod
       JWT_REFRESH_SECRET: dev-refresh-secret-change-in-prod
       PORT: 3000
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:5173}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       OPENCODE_API_KEY: ${OPENCODE_API_KEY}
     volumes:
       - ${HOME}/.pi/agent:/root/.pi/agent:ro

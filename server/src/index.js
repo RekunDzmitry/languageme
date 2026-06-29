@@ -1,8 +1,12 @@
 import express from 'express';
 import cors from 'cors';
+import passport from 'passport';
 import { config } from './config.js';
 import { pool } from './db/pool.js';
 import { errorHandler } from './middleware/error.js';
+
+// Load Passport OAuth strategies (must import before routes)
+import './services/passport.js';
 
 import authRoutes from './routes/auth.js';
 import aiRoutes from './routes/ai.js';
@@ -25,6 +29,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
+app.use(passport.initialize());
 
 // Disable caching for all API responses
 app.use('/api', (req, res, next) => {
