@@ -5,4 +5,11 @@ export const config = {
   port: parseInt(process.env.PORT, 10) || 3000,
   jwtExpiresIn: '15m',
   refreshExpiresInDays: 30,
+
+  // OAuth — Google
+  googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+
+  // Public URL for OAuth redirect callbacks
+  publicUrl: process.env.PUBLIC_URL || 'http://localhost:5173',
 };

@@ -1,8 +1,23 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { api, setTokens, clearTokens, getAccessToken } from '../api/client'
 import { storage } from '../utils/storage'
 
 const AuthContext = createContext()
+
+/** Parse OAuth tokens from URL fragment (#access_token=...&refresh_token=...) */
+function parseOAuthFragment() {
+  const hash = window.location.hash.substring(1);
+  if (!hash) return null;
+  const params = new URLSearchParams(hash);
+  const accessToken = params.get('access_token');
+  const refreshToken = params.get('refresh_token');
+  if (accessToken && refreshToken) {
+    // Clear fragment so tokens don't linger in browser history
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    return { accessToken, refreshToken };
+  }
+  return null;
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -66,8 +81,23 @@ export function AuthProvider({ children }) {
     setUser(null)
   }, [])
 
-  // Validate token on mount
+  // Handle OAuth callback on mount (tokens in URL fragment after social login redirect)
+  const oauthHandled = useRef(false);
   useEffect(() => {
+    if (oauthHandled.current) return;
+    const tokens = parseOAuthFragment();
+    if (tokens) {
+      oauthHandled.current = true;
+      setTokens(tokens.accessToken, tokens.refreshToken);
+      migrateLocalData().finally(() => {
+        fetchProfile().finally(() => setIsLoading(false));
+      });
+    }
+  }, [fetchProfile, migrateLocalData]);
+
+  // Validate token on mount (or after OAuth)
+  useEffect(() => {
+    if (oauthHandled.current) return; // Already handling OAuth
     if (getAccessToken()) {
       fetchProfile().finally(() => setIsLoading(false))
     } else {
@@ -84,8 +114,13 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('auth:logout', handler)
   }, [])
 
+  // Redirect browser to OAuth provider
+  const loginWithGoogle = useCallback(() => {
+    window.location.href = '/api/auth/google';
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, register, logout, loginWithGoogle }}>
       {children}
     </AuthContext.Provider>
   )
