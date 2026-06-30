@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { pool } from '../db/pool.js';
+import { config } from '../config.js';
 import { validate } from '../middleware/validate.js';
 import {
   hashPassword, verifyPassword, generateAccessToken,
@@ -113,8 +114,18 @@ router.get('/google', (req, res, next) => {
 });
 
 router.get('/google/callback',
-  passport.authenticate('google', { session: false, failureRedirect: '/' }),
-  (req, res) => oAuthSuccess(res, req.user)
+  passport.authenticate('google', {
+    session: false,
+    failureRedirect: `${config.publicUrl}/auth`,
+  }),
+  async (req, res, next) => {
+    try {
+      const state = req.query.state || '/';
+      await oAuthSuccess(res, req.user, state);
+    } catch (err) {
+      next(err);
+    }
+  }
 );
 
 export default router;

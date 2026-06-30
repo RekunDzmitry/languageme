@@ -5,5 +5,8 @@ ALTER TABLE "user"
   ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false;
 
 -- OAuth users may not have a password; make password_hash nullable
-ALTER TABLE "user"
-  ALTER COLUMN password_hash DROP NOT NULL;
+DO $$ BEGIN
+  ALTER TABLE "user" ALTER COLUMN password_hash DROP NOT NULL;
+EXCEPTION
+  WHEN others THEN NULL;
+END $$;

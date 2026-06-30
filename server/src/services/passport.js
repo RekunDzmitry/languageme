@@ -7,12 +7,17 @@ import { generateAccessToken, generateRefreshToken, storeRefreshToken } from './
 /**
  * Find or create a user by Google OAuth profile.
  * Returns { user, isNew } — isNew is true for first-time OAuth login.
+ * Throws if email is missing (Google OAuth must return a verified email).
  */
 async function findOrCreateOAuthUser(profile) {
   const email = profile.emails?.[0]?.value || null;
   const displayName = profile.displayName || profile.username || null;
   const avatarUrl = profile.photos?.[0]?.value || null;
   const googleId = profile.id;
+
+  if (!email) {
+    throw new Error('Google account did not return an email address');
+  }
 
   // 1. Look up by Google ID
   const byProvider = await pool.query(
@@ -23,20 +28,20 @@ async function findOrCreateOAuthUser(profile) {
     return { user: byProvider.rows[0], isNew: false };
   }
 
-  // 2. Look up by email (link accounts)
-  if (email) {
-    const byEmail = await pool.query(
-      'SELECT id, email, is_admin FROM "user" WHERE email = $1',
-      [email]
+  // 2. Look up by email and link accounts (Google verified the email)
+  const byEmail = await pool.query(
+    'SELECT id, email, is_admin FROM "user" WHERE email = $1',
+    [email]
+  );
+  if (byEmail.rows.length) {
+    // Link Google account to existing email account.
+    // Strip password_hash so any pre-existing password is invalidated —
+    // Google verified the email, so this is the legitimate owner.
+    await pool.query(
+      'UPDATE "user" SET google_id = $1, avatar_url = COALESCE($2, avatar_url), email_verified = true, password_hash = NULL WHERE id = $3',
+      [googleId, avatarUrl, byEmail.rows[0].id]
     );
-    if (byEmail.rows.length) {
-      // Link Google account to existing email account
-      await pool.query(
-        'UPDATE "user" SET google_id = $1, avatar_url = COALESCE($2, avatar_url), email_verified = true WHERE id = $3',
-        [googleId, avatarUrl, byEmail.rows[0].id]
-      );
-      return { user: byEmail.rows[0], isNew: false };
-    }
+    return { user: byEmail.rows[0], isNew: false };
   }
 
   // 3. Create new user
@@ -50,17 +55,21 @@ async function findOrCreateOAuthUser(profile) {
 }
 
 /**
- * Build JWT tokens + redirect URL for successful OAuth login.
+ * Generate JWT tokens and redirect to the frontend.
+ * Tokens go in the URL fragment so they never reach the server.
+ *
+ * @param {object}   res   Express response
+ * @param {object}   user  User row { id, email, is_admin }
+ * @param {string}   state Frontend route to land on after login (e.g. "/study/theme-01")
  */
-function oAuthSuccess(res, user) {
+async function oAuthSuccess(res, user, state) {
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken();
-  storeRefreshToken(user.id, refreshToken);
+  await storeRefreshToken(user.id, refreshToken);
 
-  // Redirect to frontend with tokens in URL fragment (never sent to server)
-  const frontendUrl = config.publicUrl;
+  const targetPath = (state && state !== '/') ? state : '';
   res.redirect(
-    `${frontendUrl}/#access_token=${accessToken}&refresh_token=${refreshToken}`
+    `${config.publicUrl}${targetPath}#access_token=${accessToken}&refresh_token=${refreshToken}`
   );
 }
 
