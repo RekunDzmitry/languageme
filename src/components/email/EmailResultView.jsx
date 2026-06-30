@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { useT } from '../../i18n'
+import { resolveEmailAnnotations } from './emailAnnotations'
 
 // Category color mapping — background fills matched to dark theme
 // Labels now come from i18n keys: email_cat_spelling, email_cat_grammar, etc.
@@ -63,10 +64,9 @@ export default function EmailResultView({ userText, errors, selectedErrorIdx, on
   const segments = []
   let lastIdx = 0
 
-  // Backend returns errors pre-sorted by startOffset; sort defensively anyway.
-  const sorted = [...(errors || [])].sort((a, b) => a.startOffset - b.startOffset)
+  const resolvedErrors = resolveEmailAnnotations(userText, errors)
 
-  for (const err of sorted) {
+  for (const err of resolvedErrors) {
     const start = err.startOffset
     const end = err.endOffset
 
@@ -80,7 +80,7 @@ export default function EmailResultView({ userText, errors, selectedErrorIdx, on
     segments.push({
       type: 'error',
       text: userText.slice(start, end),
-      errorIdx: sorted.indexOf(err),
+      errorIdx: err.annotationId,
       err,
     })
 

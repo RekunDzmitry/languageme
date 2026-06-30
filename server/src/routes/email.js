@@ -5,38 +5,63 @@ import { authenticate as requireAuth, optionallyAuthenticate } from '../middlewa
 
 const router = Router();
 
-// OpenCode Go API configuration
-const OPENCODE_BASE_URL = 'https://opencode.ai/zen/go/v1';
-const MODEL_NAME = 'qwen3.6-plus';
+// OpenAI-compatible AI API configuration
+const AI_BASE_URL = process.env.AI_BASE_URL || process.env.OPENCODE_BASE_URL || 'https://opencode.ai/zen/go/v1';
+const MODEL_NAME = process.env.AI_MODEL || process.env.OPENCODE_MODEL || 'deepseek-v4-flash';
+
+// Catch-all theme for corrections the user doesn't attach to a real theme.
+const OTHER_THEME_ID = 'pl_other';
 
 // ============================================================================
 // AI call helper
 // ============================================================================
 
-async function callAI(prompt) {
-  const apiKey = process.env.OPENCODE_API_KEY;
-  if (!apiKey) {
-    throw new Error('OPENCODE_API_KEY environment variable is not set');
-  }
+// The OpenCode gateway is flaky: it occasionally returns a 5xx, or a 200 with
+// an empty `content` body. Both are transient, so callAI retries a few times
+// with a short backoff before surfacing the failure.
+const AI_MAX_ATTEMPTS = 3;
+const AI_RETRY_DELAY_MS = 1500;
+const EMAIL_EVALUATION_TIMEOUT_MS = Number(process.env.EMAIL_EVALUATION_TIMEOUT_MS || 180000);
 
-  const response = await fetch(`${OPENCODE_BASE_URL}/chat/completions`, {
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const USE_NVIDIA_NIM = AI_BASE_URL.includes('nvidia.com');
+
+function buildChatRequestBody(prompt, options = {}) {
+  const {
+    systemPrompt = 'You are a Polish language tutor. Return ONLY one valid JSON object. Do not include reasoning, markdown, labels, or explanatory text.',
+    json = true,
+    maxTokens = 8000,
+  } = options;
+
+  return {
+    model: MODEL_NAME,
+    messages: [
+      {
+        role: 'system',
+        content: systemPrompt
+      },
+      { role: 'user', content: prompt }
+    ],
+    temperature: 0.2,
+    top_p: 0.9,
+    max_tokens: maxTokens,
+    ...(json ? { response_format: { type: 'json_object' } } : {}),
+    ...(USE_NVIDIA_NIM ? {
+      chat_template_kwargs: { enable_thinking: false },
+      reasoning_budget: 0
+    } : {})
+  };
+}
+
+async function callAIOnce(prompt, apiKey, options = {}) {
+  const response = await fetch(`${AI_BASE_URL}/chat/completions`, {
     method: 'POST',
+    signal: options.signal,
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model: MODEL_NAME,
-      messages: [
-        { role: 'system', content: 'You are a Polish language tutor. Return ONLY valid JSON, no markdown, no extra text.' },
-        { role: 'user', content: prompt }
-      ],
-      // Disable extended reasoning: with thinking on, this model takes ~110s
-      // for the structured-JSON eval and the gateway intermittently 500s/503s.
-      // Reasoning off returns the same JSON in ~25s, reliably.
-      reasoning_effort: 'none',
-      max_tokens: 8000,
-    }),
+    body: JSON.stringify(buildChatRequestBody(prompt, options)),
   });
 
   if (!response.ok) {
@@ -45,7 +70,40 @@ async function callAI(prompt) {
   }
 
   const data = await response.json();
-  return data.choices[0]?.message?.content || '';
+  const choice = data.choices?.[0] || {};
+  const message = choice.message || {};
+  const rawContent = message.content ?? choice.text ?? message.reasoning_content ?? '';
+  const content = Array.isArray(rawContent)
+    ? rawContent.map(part => typeof part === 'string' ? part : part?.text || part?.content || '').join('')
+    : String(rawContent || '');
+  // An empty 200 response is a transient gateway hiccup — treat it as an error
+  // so the retry loop kicks in instead of returning '' and failing to parse.
+  if (!content.trim()) {
+    const finishReason = choice.finish_reason || choice.finishReason || 'unknown';
+    throw new Error(`OpenCode API returned empty content (finish_reason=${finishReason})`);
+  }
+  return content;
+}
+
+async function callAI(prompt, options = {}) {
+  const apiKey = process.env.AI_API_KEY || process.env.NVIDIA_API_KEY || process.env.OPENCODE_API_KEY;
+  if (!apiKey) {
+    throw new Error('AI_API_KEY, NVIDIA_API_KEY, or OPENCODE_API_KEY environment variable is not set');
+  }
+
+  let lastErr;
+  for (let attempt = 1; attempt <= AI_MAX_ATTEMPTS; attempt++) {
+    try {
+      return await callAIOnce(prompt, apiKey, options);
+    } catch (err) {
+      lastErr = err;
+      if (attempt < AI_MAX_ATTEMPTS) {
+        console.warn(`AI call attempt ${attempt}/${AI_MAX_ATTEMPTS} failed: ${err.message} — retrying`);
+        await sleep(AI_RETRY_DELAY_MS * attempt);
+      }
+    }
+  }
+  throw lastErr;
 }
 
 // ============================================================================
@@ -121,7 +179,10 @@ function normalizeTelcRubric(evaluation, pointsCount) {
     total,
     maxTotal: 20,
     percentage: Math.round((total / 20) * 100),
-    cefrBand: ['B2', 'B1', 'below_B1'].includes(raw.cefrBand) ? raw.cefrBand : telcBand(total),
+    // Always derive the CEFR band from the criterion total so the points and
+    // the band label can never disagree. The model's own cefrBand is ignored
+    // because it sometimes contradicts the points it assigned (e.g. 10/20 → below_B1).
+    cefrBand: telcBand(total),
     offTopic: raw.offTopic === true,
     taskMisunderstood: raw.taskMisunderstood === true,
     examinerSummary: raw.examinerSummary || '',
@@ -152,6 +213,8 @@ function buildEvaluationPrompt(userText, taskDescription, points, register, etiq
     ? `For every error, propose 1–3 B2-level alternatives that are correct, natural, and richer or more precise than the learner's erroneous version. Alternatives may be single words, short phrases, or constructions.`
     : `For every error, propose 1–3 B1-level alternatives that are correct, natural, clear, and exam-safe. Prefer simple phrasing over complex constructions. Alternatives may be single words, short phrases, or constructions.`;
 
+  // Real catalogue of themes the learner is studying, so the AI files each
+  // correction under an EXISTING theme instead of inventing IDs.
   return `Evaluate the following email written by a learner of Polish.
 The learner's native language is ${nativeLabel}.
 All human-readable feedback and comments must be in ${langLabel}.
@@ -175,7 +238,6 @@ ${userText}
 
 Return a JSON object with this exact structure:
 {
-  "score": <number 0-100 derived from telcRubric.total / 20>,
   "telcRubric": {
     "criteria": {
       "content": { "score": <integer 0-5>, "comment": "<TELC-style examiner comment in ${langLabel}>" },
@@ -188,10 +250,6 @@ Return a JSON object with this exact structure:
       "point2": { "rating": "++|+|0", "snippet": "<quote from text or empty>", "comment": "<brief content comment in ${langLabel}>" },
       "point3": { "rating": "++|+|0", "snippet": "<quote from text or empty>", "comment": "<brief content comment in ${langLabel}>" }
     },
-    "total": <integer 0-20>,
-    "maxTotal": 20,
-    "percentage": <integer 0-100>,
-    "cefrBand": "B2|B1|below_B1",
     "offTopic": <true|false>,
     "taskMisunderstood": <true|false>,
     "examinerSummary": "<strict TELC-style summary in ${langLabel}, 1-2 sentences>"
@@ -221,8 +279,7 @@ Return a JSON object with this exact structure:
       "proposedWords": [
         {
           "target": "<the corrected Polish word or short phrase to learn>",
-          "translation": "<translation in ${nativeLabel}>",
-          "suggestedThemeId": "<theme ID like pl_theme10, pl_theme15, or null>"
+        "translation": "<translation in ${nativeLabel}>"
         }
       ],
       "alternatives": [
@@ -248,8 +305,7 @@ Return a JSON object with this exact structure:
 
 IMPORTANT RULES:
 - Score the writing like telc Język polski B1·B2 Szkoła. Use the 4 official writing criteria: I Treść/content, II Kompozycja/composition, III Poprawność/accuracy, IV Słownictwo/vocabulary.
-- Each TELC criterion must be an integer from 0 to 5. telcRubric.total must be the sum of the four criteria, max 20. score must be Math.round(total / 20 * 100).
-- CEFR writing band: 15-20 = B2, 7-14 = B1, 0-6 = below_B1.
+- Each TELC criterion must be an integer from 0 to 5.
 - For telcRubric.pointRatings use TELC content marks: "++" means clear, developed, and task-appropriate; "+" means understandable and task-appropriate but not developed; "0" means missing, unclear, or not task-appropriate.
 - Content score should follow the point ratings strictly: three developed points deserve 5; three merely adequate points are around 3; missing/unclear points must lower the content score substantially.
 - If the text is completely off topic, set offTopic true and give 0 for all four TELC criteria.
@@ -270,6 +326,548 @@ IMPORTANT RULES:
 - Be constructive and encouraging in overallFeedback.
 - Return ONLY the JSON object, no other text, no markdown code fences.`;
 }
+
+// Streaming prompts use strict line-oriented text for providers that do not
+// reliably honor JSON mode. If the model drifts from the requested format, the
+// parsers default missing fields instead of failing the whole evaluation.
+const PLAIN_AI_OPTIONS = {
+  json: false,
+  maxTokens: 2500,
+  systemPrompt: 'You are a Polish language tutor. Return plain text only. Follow the requested line format exactly. Do not use JSON, markdown, bullets, or extra commentary.'
+};
+
+const ERROR_CATEGORIES = ['spelling', 'grammar', 'style', 'vocabulary'];
+
+function taskContext({ userText, taskDescription, points, register, etiquetteHint, nativeLang, targetLevel }) {
+  const nativeLabel = LANG_LABELS[nativeLang] || 'Russian';
+  const level = normalizeTargetLevel(targetLevel);
+  const pointsList = points?.length ? points.map((p, i) => `${i + 1}. ${p}`).join('\n') : 'No specific points required.';
+  return `Learner native language: ${nativeLabel}
+Feedback language: Polish
+Target level: ${level}
+Task: ${taskDescription}
+Mandatory points:
+${pointsList}
+Register: ${register || 'unspecified'}
+Etiquette hint: ${etiquetteHint || 'none'}
+Email:
+<<<EMAIL
+${userText}
+EMAIL`;
+}
+
+function parseBool(value) {
+  return /^(yes|true|tak|1)$/i.test(String(value || '').trim());
+}
+
+function parseScore(value) {
+  return clampTelcScore(String(value || '').match(/\d+/)?.[0]);
+}
+
+function parseKeyLines(text) {
+  const data = {};
+  for (const line of String(text || '').split(/\r?\n/)) {
+    const idx = line.indexOf(':');
+    if (idx <= 0) continue;
+    const key = line.slice(0, idx).trim().toUpperCase();
+    const value = line.slice(idx + 1).trim();
+    if (key) data[key] = value;
+  }
+  return data;
+}
+
+function parseBlocks(text, startMarker, endMarker = 'END') {
+  const blocks = [];
+  let current = null;
+  for (const rawLine of String(text || '').split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (line.toUpperCase() === startMarker) {
+      current = {};
+      continue;
+    }
+    if (line.toUpperCase() === endMarker) {
+      if (current) blocks.push(current);
+      current = null;
+      continue;
+    }
+    if (!current) continue;
+    const idx = rawLine.indexOf(':');
+    if (idx <= 0) continue;
+    const key = rawLine.slice(0, idx).trim().toUpperCase();
+    current[key] = rawLine.slice(idx + 1).trim();
+  }
+  return blocks;
+}
+
+function parsePipeLine(value, fields) {
+  const parts = String(value || '').split('|').map(part => part.trim());
+  return fields.reduce((item, field, idx) => {
+    item[field] = parts[idx] || '';
+    return item;
+  }, {});
+}
+
+function findTextOccurrences(text, needle) {
+  if (!text || !needle) return [];
+  const occurrences = [];
+  let fromIndex = 0;
+  while (fromIndex <= text.length) {
+    const index = text.indexOf(needle, fromIndex);
+    if (index === -1) break;
+    occurrences.push({ startOffset: index, endOffset: index + needle.length });
+    fromIndex = index + Math.max(needle.length, 1);
+  }
+  return occurrences;
+}
+
+function rangesOverlap(a, b) {
+  return a.startOffset < b.endOffset && b.startOffset < a.endOffset;
+}
+
+function resolveErrorSpan(userText, originalText, accepted = []) {
+  const candidates = [originalText, String(originalText || '').trim()]
+    .filter((item, idx, arr) => item && arr.indexOf(item) === idx);
+  for (const candidate of candidates) {
+    for (const occurrence of findTextOccurrences(userText, candidate)) {
+      if (accepted.some(existing => rangesOverlap(existing, occurrence))) continue;
+      return { ...occurrence, originalText: userText.slice(occurrence.startOffset, occurrence.endOffset), resolved: true };
+    }
+  }
+  return { startOffset: -1, endOffset: -1, originalText: String(originalText || '').trim(), resolved: false };
+}
+
+function parseRubricResponse(text, pointsCount) {
+  const data = parseKeyLines(text);
+  const pointRatings = {};
+  for (let i = 1; i <= pointsCount; i++) {
+    const rating = data[`POINT_${i}_RATING`];
+    pointRatings[`point${i}`] = {
+      rating: normalizePointRating(rating, parseBool(data[`POINT_${i}_COVERED`])),
+      covered: parseBool(data[`POINT_${i}_COVERED`]),
+      snippet: data[`POINT_${i}_SNIPPET`] || '',
+      comment: data[`POINT_${i}_COMMENT`] || ''
+    };
+  }
+  return {
+    telcRubric: {
+      criteria: {
+        content: { score: parseScore(data.CONTENT_SCORE), comment: data.CONTENT_COMMENT || '' },
+        composition: { score: parseScore(data.COMPOSITION_SCORE), comment: data.COMPOSITION_COMMENT || '' },
+        accuracy: { score: parseScore(data.ACCURACY_SCORE), comment: data.ACCURACY_COMMENT || '' },
+        vocabulary: { score: parseScore(data.VOCABULARY_SCORE), comment: data.VOCABULARY_COMMENT || '' },
+      },
+      pointRatings,
+      examinerSummary: data.EXAMINER_SUMMARY || ''
+    },
+    taskCoverage: Object.fromEntries(Object.entries(pointRatings).map(([key, value]) => [
+      key,
+      { covered: value.covered, snippet: value.snippet, feedback: value.comment }
+    ])),
+    etiquetteCheck: {
+      greeting: parseBool(data.ETIQUETTE_GREETING),
+      closing: parseBool(data.ETIQUETTE_CLOSING),
+      greetingText: data.GREETING_TEXT || '',
+      closingText: data.CLOSING_TEXT || '',
+      feedback: data.ETIQUETTE_FEEDBACK || ''
+    },
+    registerMatch: parseBool(data.REGISTER_MATCH),
+    overallFeedback: data.OVERALL_FEEDBACK || data.EXAMINER_SUMMARY || '',
+    offTopic: parseBool(data.OFF_TOPIC),
+    taskMisunderstood: parseBool(data.TASK_MISUNDERSTOOD)
+  };
+}
+
+function parseErrorDiscovery(text, category, userText, acceptedRanges) {
+  return parseBlocks(text, 'ERROR').map(block => {
+    const span = resolveErrorSpan(userText, block.TEXT || block.ORIGINAL || '', acceptedRanges);
+    if (span.resolved) acceptedRanges.push(span);
+    return {
+      category,
+      originalText: span.originalText,
+      startOffset: span.startOffset,
+      endOffset: span.endOffset,
+      discoveryNote: block.WHY || '',
+      resolved: span.resolved
+    };
+  });
+}
+
+function parseEnrichment(text, err, nativeLang, targetLevel) {
+  const lines = String(text || '').split(/\r?\n/);
+  const data = parseKeyLines(text);
+  const proposedWords = [];
+  const alternatives = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.toUpperCase().startsWith('PROPOSED:')) {
+      proposedWords.push(parsePipeLine(trimmed.slice(trimmed.indexOf(':') + 1), ['target', 'translation']));
+    }
+    if (trimmed.toUpperCase().startsWith('ALTERNATIVE:')) {
+      alternatives.push(parsePipeLine(trimmed.slice(trimmed.indexOf(':') + 1), ['text', 'type', 'level', 'explanation']));
+    }
+  }
+  const correction = data.CORRECTION || err.originalText;
+  return {
+    ...err,
+    correction,
+    explanation: data.EXPLANATION || err.discoveryNote || '',
+    proposedWords: proposedWords
+      .filter(item => item.target && item.translation)
+      .slice(0, 3),
+    alternatives: alternatives
+      .filter(item => item.text)
+      .slice(0, 3)
+      .map(item => ({
+        text: item.text,
+        type: ['word', 'phrase', 'construction'].includes(item.type) ? item.type : 'phrase',
+        level: EMAIL_TARGET_LEVELS.includes(item.level) ? item.level : normalizeTargetLevel(targetLevel),
+        explanation: item.explanation || ''
+      })),
+    nativeLang
+  };
+}
+
+function parseConstructionResponse(text, targetLevel) {
+  return parseBlocks(text, 'CONSTRUCTION').map(block => ({
+    originalText: block.ORIGINAL || '',
+    suggestedText: block.SUGGESTED || '',
+    originalLevel: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].includes(block.ORIGINAL_LEVEL) ? block.ORIGINAL_LEVEL : 'B1',
+    suggestedLevel: normalizeTargetLevel(targetLevel),
+    explanation: block.EXPLANATION || ''
+  })).filter(item => item.originalText && item.suggestedText).slice(0, 4);
+}
+
+function buildRubricPrompt(context, pointsCount) {
+  const pointLines = Array.from({ length: pointsCount }, (_, idx) => `POINT_${idx + 1}_COVERED: yes|no
+POINT_${idx + 1}_RATING: ++|+|0
+POINT_${idx + 1}_SNIPPET: exact short quote or empty
+POINT_${idx + 1}_COMMENT: Polish comment`).join('\n');
+  return `${context}
+
+Score TELC Polish B1/B2 writing. Return these lines exactly:
+CONTENT_SCORE: 0-5
+CONTENT_COMMENT: Polish comment
+COMPOSITION_SCORE: 0-5
+COMPOSITION_COMMENT: Polish comment
+ACCURACY_SCORE: 0-5
+ACCURACY_COMMENT: Polish comment
+VOCABULARY_SCORE: 0-5
+VOCABULARY_COMMENT: Polish comment
+${pointLines}
+ETIQUETTE_GREETING: yes|no
+GREETING_TEXT: exact greeting or empty
+ETIQUETTE_CLOSING: yes|no
+CLOSING_TEXT: exact closing or empty
+ETIQUETTE_FEEDBACK: Polish comment
+REGISTER_MATCH: yes|no
+OFF_TOPIC: yes|no
+TASK_MISUNDERSTOOD: yes|no
+EXAMINER_SUMMARY: 1-2 Polish sentences
+OVERALL_FEEDBACK: 2-3 constructive Polish sentences`;
+}
+
+function buildErrorDiscoveryPrompt(context, category) {
+  return `${context}
+
+Find only ${category} mistakes. Return no corrections and no offsets.
+For each mistake, use:
+ERROR
+TEXT: exact mistaken fragment copied from the email
+WHY: short Polish reason
+END
+If there are no ${category} mistakes, return exactly:
+NO_ERRORS`;
+}
+
+function buildEnrichmentPrompt(context, err, nativeLang, targetLevel) {
+  const nativeLabel = LANG_LABELS[nativeLang] || 'Russian';
+  const level = normalizeTargetLevel(targetLevel);
+  return `${context}
+
+Enrich this ${err.category} mistake:
+TEXT: ${err.originalText}
+REASON: ${err.discoveryNote || ''}
+
+Return these lines:
+CORRECTION: corrected Polish fragment
+EXPLANATION: short Polish explanation
+PROPOSED: corrected Polish word or short phrase | ${nativeLabel} translation
+Optional up to two more PROPOSED lines.
+ALTERNATIVE: ${level}-level alternative wording | word|phrase|construction | ${level} | short Polish explanation
+Return 1-3 ALTERNATIVE lines.`;
+}
+
+function buildConstructionPrompt(context, targetLevel, errors) {
+  const level = normalizeTargetLevel(targetLevel);
+  const errorTexts = errors.map(err => `- ${err.originalText}`).join('\n') || '(none)';
+  const direction = level === 'B2'
+    ? 'Find correct but too-simple A2/B1 constructions and suggest richer B2 alternatives.'
+    : 'Find correct but over-complex B2/C1 attempts and suggest simpler natural B1 alternatives.';
+  return `${context}
+
+Already handled erroneous fragments:
+${errorTexts}
+
+${direction}
+Do not include fragments that contain actual mistakes.
+Use:
+CONSTRUCTION
+ORIGINAL: exact original phrase
+SUGGESTED: suggested replacement
+ORIGINAL_LEVEL: A1|A2|B1|B2|C1|C2
+EXPLANATION: short Polish explanation
+END
+If none, return exactly:
+NO_CONSTRUCTIONS`;
+}
+
+async function updateEvaluationStep({ attemptId, userId, steps, key, patch, status }) {
+  const nextSteps = {
+    ...steps,
+    [key]: {
+      ...(steps[key] || {}),
+      ...patch
+    }
+  };
+  await pool.query(
+    `UPDATE email_attempt
+     SET evaluation_steps = $3::jsonb,
+         evaluation_status = COALESCE($4, evaluation_status),
+         updated_at = NOW()
+     WHERE id = $1 AND user_id = $2`,
+    [attemptId, userId, JSON.stringify(nextSteps), status || null]
+  );
+  return nextSteps;
+}
+
+function writeStreamEvent(res, type, payload = {}) {
+  res.write(`${JSON.stringify({ type, ...payload })}\n`);
+}
+
+function buildFinalEvaluation({ rubricData, errors, constructionReplacements, pointsCount, targetLevel }) {
+  const evaluationForRubric = {
+    telcRubric: {
+      ...(rubricData.telcRubric || {}),
+      offTopic: rubricData.offTopic,
+      taskMisunderstood: rubricData.taskMisunderstood
+    },
+    taskCoverage: rubricData.taskCoverage,
+  };
+  const telcRubric = normalizeTelcRubric(evaluationForRubric, pointsCount);
+  const finalErrors = errors
+    .filter(err => err.resolved && err.startOffset >= 0 && err.endOffset > err.startOffset)
+    .sort((a, b) => a.startOffset - b.startOffset)
+    .map((err, idx) => ({
+      id: `err_${idx}`,
+      originalText: err.originalText,
+      correction: err.correction || err.originalText,
+      explanation: err.explanation || '',
+      category: ERROR_CATEGORIES.includes(err.category) ? err.category : 'grammar',
+      startOffset: err.startOffset,
+      endOffset: err.endOffset,
+      proposedWords: Array.isArray(err.proposedWords) ? err.proposedWords : [],
+      alternatives: Array.isArray(err.alternatives) ? err.alternatives : []
+    }));
+  return {
+    score: telcRubric.percentage,
+    telcRubric,
+    taskCoverage: rubricData.taskCoverage || {},
+    etiquetteCheck: rubricData.etiquetteCheck || {},
+    registerMatch: rubricData.registerMatch === true,
+    overallFeedback: rubricData.overallFeedback || 'Evaluation completed.',
+    targetLevel: normalizeTargetLevel(targetLevel),
+    errors: finalErrors,
+    constructionReplacements: constructionReplacements || []
+  };
+}
+
+// ============================================================================
+// POST /api/email/evaluate-stream — progressive persisted evaluation
+// ============================================================================
+
+router.post('/evaluate-stream', requireAuth, async (req, res) => {
+  const { userText, taskDescription, nativeLang, points, register, etiquetteHint, targetLevel, themeId, exerciseIdx } = req.body;
+  const userId = req.user.sub;
+
+  if (!userText || !userText.trim()) return res.status(400).json({ error: 'userText is required' });
+  if (!taskDescription || !taskDescription.trim()) return res.status(400).json({ error: 'taskDescription is required' });
+  if (themeId === undefined || exerciseIdx === undefined) return res.status(400).json({ error: 'themeId and exerciseIdx are required' });
+  const parsedExerciseIdx = Number(exerciseIdx);
+  if (!Number.isInteger(parsedExerciseIdx)) return res.status(400).json({ error: 'exerciseIdx must be an integer' });
+
+  const trimmedText = userText.trim();
+  const userNativeLang = nativeLang || 'ru';
+  const normalizedTargetLevel = normalizeTargetLevel(targetLevel);
+  const taskPoints = Array.isArray(points) ? points : [];
+  const context = taskContext({
+    userText: trimmedText,
+    taskDescription,
+    points: taskPoints,
+    register: register || '',
+    etiquetteHint: etiquetteHint || '',
+    nativeLang: userNativeLang,
+    targetLevel: normalizedTargetLevel
+  });
+
+  const { rows } = await pool.query(
+    `INSERT INTO email_attempt
+       (user_id, theme_id, exercise_idx, user_text, evaluation_status, evaluation_steps, updated_at)
+     VALUES ($1, $2, $3, $4, 'running', '{}'::jsonb, NOW())
+     RETURNING id, created_at`,
+    [userId, themeId, parsedExerciseIdx, trimmedText]
+  );
+  const attempt = rows[0];
+  let steps = {};
+
+  res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('X-Accel-Buffering', 'no');
+  writeStreamEvent(res, 'attempt_created', { attemptId: attempt.id, createdAt: attempt.created_at });
+
+  const requestController = new AbortController();
+  const requestTimeout = setTimeout(() => requestController.abort(), EMAIL_EVALUATION_TIMEOUT_MS);
+  const aiOptions = { ...PLAIN_AI_OPTIONS, signal: requestController.signal };
+
+  try {
+    writeStreamEvent(res, 'step_started', { step: 'rubric' });
+    steps = await updateEvaluationStep({ attemptId: attempt.id, userId, steps, key: 'rubric', patch: { status: 'running', startedAt: new Date().toISOString() } });
+    const rubricRaw = await callAI(buildRubricPrompt(context, taskPoints.length), aiOptions);
+    const rubricData = parseRubricResponse(rubricRaw, taskPoints.length);
+    steps = await updateEvaluationStep({
+      attemptId: attempt.id,
+      userId,
+      steps,
+      key: 'rubric',
+      patch: { status: 'complete', completedAt: new Date().toISOString(), raw: rubricRaw, data: rubricData }
+    });
+    writeStreamEvent(res, 'step_completed', { step: 'rubric', data: rubricData });
+
+    const acceptedRanges = [];
+    const discoveredErrors = [];
+    for (const category of ERROR_CATEGORIES) {
+      const step = `errors_${category}`;
+      writeStreamEvent(res, 'step_started', { step });
+      steps = await updateEvaluationStep({ attemptId: attempt.id, userId, steps, key: step, patch: { status: 'running', startedAt: new Date().toISOString() } });
+    }
+
+    const discoveryResults = await Promise.all(
+      ERROR_CATEGORIES.map(async (category) => ({
+        category,
+        step: `errors_${category}`,
+        raw: await callAI(buildErrorDiscoveryPrompt(context, category), aiOptions)
+      }))
+    );
+
+    for (const { category, step, raw } of discoveryResults) {
+      const parsed = parseErrorDiscovery(raw, category, trimmedText, acceptedRanges);
+      discoveredErrors.push(...parsed);
+      steps = await updateEvaluationStep({
+        attemptId: attempt.id,
+        userId,
+        steps,
+        key: step,
+        patch: { status: 'complete', completedAt: new Date().toISOString(), raw, data: parsed }
+      });
+      writeStreamEvent(res, 'step_completed', { step, data: parsed });
+    }
+
+    const enrichmentJobs = [];
+    for (let i = 0; i < discoveredErrors.length; i++) {
+      const err = discoveredErrors[i];
+      const step = `enrichment_${i + 1}`;
+      if (!err.resolved) {
+        steps = await updateEvaluationStep({ attemptId: attempt.id, userId, steps, key: step, patch: { status: 'skipped', data: err } });
+        continue;
+      }
+      writeStreamEvent(res, 'step_started', { step, errorIndex: i });
+      steps = await updateEvaluationStep({ attemptId: attempt.id, userId, steps, key: step, patch: { status: 'running', startedAt: new Date().toISOString(), error: err } });
+      enrichmentJobs.push({
+        index: i,
+        step,
+        err,
+        run: callAI(buildEnrichmentPrompt(context, err, userNativeLang, normalizedTargetLevel), aiOptions)
+      });
+    }
+
+    const enrichedErrors = [];
+    const enrichmentResults = await Promise.allSettled(enrichmentJobs.map(job => job.run));
+    for (let i = 0; i < enrichmentJobs.length; i++) {
+      const { step, err } = enrichmentJobs[i];
+      const result = enrichmentResults[i];
+      if (result.status === 'fulfilled') {
+        const raw = result.value;
+        const enriched = parseEnrichment(raw, err, userNativeLang, normalizedTargetLevel);
+        enrichedErrors.push(enriched);
+        steps = await updateEvaluationStep({
+          attemptId: attempt.id,
+          userId,
+          steps,
+          key: step,
+          patch: { status: 'complete', completedAt: new Date().toISOString(), raw, data: enriched }
+        });
+        writeStreamEvent(res, 'step_completed', { step, data: enriched });
+      } else {
+        const errStep = result.reason;
+        steps = await updateEvaluationStep({
+          attemptId: attempt.id,
+          userId,
+          steps,
+          key: step,
+          patch: { status: 'failed', completedAt: new Date().toISOString(), error: errStep.message, data: err }
+        });
+        writeStreamEvent(res, 'step_failed', { step, error: errStep.message });
+      }
+    }
+
+    writeStreamEvent(res, 'step_started', { step: 'constructionReplacements' });
+    steps = await updateEvaluationStep({ attemptId: attempt.id, userId, steps, key: 'constructionReplacements', patch: { status: 'running', startedAt: new Date().toISOString() } });
+    const constructionRaw = await callAI(buildConstructionPrompt(context, normalizedTargetLevel, enrichedErrors), aiOptions);
+    const constructionReplacements = parseConstructionResponse(constructionRaw, normalizedTargetLevel);
+    steps = await updateEvaluationStep({
+      attemptId: attempt.id,
+      userId,
+      steps,
+      key: 'constructionReplacements',
+      patch: { status: 'complete', completedAt: new Date().toISOString(), raw: constructionRaw, data: constructionReplacements }
+    });
+    writeStreamEvent(res, 'step_completed', { step: 'constructionReplacements', data: constructionReplacements });
+
+    const finalEvaluation = buildFinalEvaluation({
+      rubricData,
+      errors: enrichedErrors,
+      constructionReplacements,
+      pointsCount: taskPoints.length,
+      targetLevel: normalizedTargetLevel
+    });
+    steps = await updateEvaluationStep({ attemptId: attempt.id, userId, steps, key: 'final', patch: { status: 'complete', completedAt: new Date().toISOString(), data: finalEvaluation }, status: 'complete' });
+    await pool.query(
+      `UPDATE email_attempt
+       SET score = $3,
+           ai_evaluation = $4::jsonb,
+           evaluation_error = NULL,
+           updated_at = NOW()
+       WHERE id = $1 AND user_id = $2`,
+      [attempt.id, userId, finalEvaluation.score, JSON.stringify(finalEvaluation)]
+    );
+    const autoAdded = await autoAddCorrectionExercises(userId, attempt.id, finalEvaluation);
+    writeStreamEvent(res, 'evaluation_complete', { attemptId: attempt.id, evaluation: finalEvaluation, autoAdded });
+    clearTimeout(requestTimeout);
+    res.end();
+  } catch (err) {
+    console.error('Progressive email evaluation failed:', err);
+    clearTimeout(requestTimeout);
+    await pool.query(
+      `UPDATE email_attempt
+       SET evaluation_status = 'failed',
+           evaluation_error = $3,
+           updated_at = NOW()
+       WHERE id = $1 AND user_id = $2`,
+      [attempt.id, userId, err.message]
+    );
+    writeStreamEvent(res, 'step_failed', { step: 'evaluation', error: err.message });
+    res.end();
+  }
+});
 
 // ============================================================================
 // POST /api/email/evaluate — evaluate user's email
@@ -364,10 +962,9 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
       startOffset: typeof err.startOffset === 'number' ? err.startOffset : 0,
       endOffset: typeof err.endOffset === 'number' ? err.endOffset : 0,
       proposedWords: Array.isArray(err.proposedWords)
-        ? err.proposedWords.slice(0, 3).map(w => ({
+          ? err.proposedWords.slice(0, 3).map(w => ({
             target: w.target || '',
             translation: w.translation || '',
-            suggestedThemeId: w.suggestedThemeId || null,
           }))
         : [],
       alternatives: Array.isArray(err.alternatives)
@@ -412,6 +1009,95 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
 });
 
 // ============================================================================
+// Auto-add corrections as write_answer drills
+// ============================================================================
+
+// Turn each graded error into a personal write_answer drill, filed under the
+// theme the AI matched it to (falling back to the catch-all). Returns the list
+// of corrected words now in the user's drills (newly added or already present)
+// so the client can mark them as added. Never throws — a drill-creation hiccup
+// must not fail the attempt save.
+async function autoAddCorrectionExercises(userId, attemptId, aiEvaluation) {
+  try {
+    const errors = Array.isArray(aiEvaluation?.errors) ? aiEvaluation.errors : [];
+
+    // One canonical card per error: its primary correction. Extra proposedWords
+    // (related vocab gaps) stay opt-in via the "+" button in the UI.
+    const candidates = [];
+    for (const err of errors) {
+      const pw = Array.isArray(err.proposedWords) ? err.proposedWords[0] : null;
+      const rawTarget = pw?.target || '';
+      const answer = rawTarget.trim();
+      const promptText = (pw?.translation || '').trim();
+      if (!answer || !promptText) continue;
+      candidates.push({
+        // rawTarget is returned verbatim so the client can match it against the
+        // popover's proposedWords[].target (which it keys "added" state by).
+        rawTarget,
+        answer,
+        prompt: promptText,
+        hint: err.explanation ? String(err.explanation).trim() : null,
+        themeId: pw.suggestedThemeId || null,
+      });
+    }
+    if (candidates.length === 0) return [];
+
+    // Resolve every requested theme to a real one in a single round-trip;
+    // unknown/empty/"other" all collapse to the catch-all theme.
+    const requestedIds = [...new Set(candidates.map(c => c.themeId).filter(Boolean))];
+    const knownIds = new Set();
+    if (requestedIds.length > 0) {
+      const { rows } = await pool.query('SELECT id FROM theme WHERE id = ANY($1)', [requestedIds]);
+      rows.forEach(r => knownIds.add(r.id));
+    }
+    const resolveTheme = id => (id && id !== OTHER_THEME_ID && knownIds.has(id) ? id : OTHER_THEME_ID);
+
+    // Collapse duplicates within this attempt by (theme, answer).
+    const byKey = new Map();
+    for (const c of candidates) {
+      const resolvedThemeId = resolveTheme(c.themeId);
+      byKey.set(`${resolvedThemeId} ${c.answer}`, { ...c, resolvedThemeId });
+    }
+    const unique = [...byKey.values()];
+
+    // Skip drills the user already has (same theme + answer), so re-grading the
+    // same email doesn't pile up duplicates.
+    const { rows: existing } = await pool.query(
+      `SELECT theme_id, answer FROM user_write_exercise
+        WHERE user_id = $1 AND source = 'email' AND answer = ANY($2::text[])`,
+      [userId, unique.map(u => u.answer)]
+    );
+    const existingKeys = new Set(existing.map(r => `${r.theme_id} ${r.answer}`));
+
+    // Insert each drill individually so one failure doesn't block the rest.
+    const added = [];
+    for (const u of unique) {
+      const key = `${u.resolvedThemeId} ${u.answer}`;
+      if (existingKeys.has(key)) {
+        added.push(u.rawTarget); // Already present — still report as added.
+        continue;
+      }
+      try {
+        await pool.query(
+          `INSERT INTO user_write_exercise (user_id, theme_id, prompt, answer, hint, attempt_id)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [userId, u.resolvedThemeId, u.prompt, u.answer, u.hint, attemptId || null]
+        );
+        added.push(u.rawTarget);
+      } catch (insertErr) {
+        console.error(`Failed to auto-add drill "${u.answer}" to theme ${u.resolvedThemeId}:`, insertErr.message);
+        // Continue with remaining drills.
+      }
+    }
+
+    return added;
+  } catch (err) {
+    console.error('Auto-add of correction drills failed:', err.message);
+    return [];
+  }
+}
+
+// ============================================================================
 // POST /api/email/save-attempt — save evaluation attempt
 // ============================================================================
 
@@ -431,7 +1117,14 @@ router.post('/save-attempt', requireAuth, async (req, res) => {
       [userId, themeId, exerciseIdx, userText, score ?? null, aiEvaluation ? JSON.stringify(aiEvaluation) : null]
     );
 
-    res.status(201).json(result.rows[0]);
+    const attempt = result.rows[0];
+
+    // Auto-file each correction into its matched theme's write_answer drills.
+    const autoAdded = aiEvaluation
+      ? await autoAddCorrectionExercises(userId, attempt.id, aiEvaluation)
+      : [];
+
+    res.status(201).json({ ...attempt, autoAdded });
   } catch (err) {
     console.error('Error saving email attempt:', err);
     res.status(500).json({ error: 'Failed to save attempt', details: err.message });
@@ -441,9 +1134,6 @@ router.post('/save-attempt', requireAuth, async (req, res) => {
 // ============================================================================
 // POST /api/email/add-exercise — turn a correction into a write_answer drill
 // ============================================================================
-
-// Catch-all theme for corrections the user doesn't attach to a real theme.
-const OTHER_THEME_ID = 'pl_other';
 
 router.post('/add-exercise', requireAuth, async (req, res) => {
   try {

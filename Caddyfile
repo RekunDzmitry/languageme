@@ -1,0 +1,20 @@
+languageme.dpdns.org {
+    encode gzip
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+    }
+
+    # API proxy to Express backend
+    handle /api/* {
+        reverse_proxy api:3000
+    }
+
+    # Serve built React SPA
+    handle {
+        root * /usr/share/caddy
+        try_files {path} /index.html
+        file_server
+    }
+}

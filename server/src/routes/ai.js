@@ -5,9 +5,10 @@ import { config } from '../config.js';
 
 const router = Router();
 
-// OpenCode Go API configuration
-const OPENCODE_BASE_URL = 'https://opencode.ai/zen/go/v1';
-const MODEL_NAME = 'kimi-k2.5';
+// OpenAI-compatible AI API configuration
+const AI_BASE_URL = process.env.AI_BASE_URL || process.env.OPENCODE_BASE_URL || 'https://opencode.ai/zen/go/v1';
+const MODEL_NAME = process.env.AI_MODEL || process.env.OPENCODE_MODEL || 'deepseek-v4-flash';
+const AI_PROVIDER = process.env.AI_PROVIDER || (AI_BASE_URL.includes('nvidia.com') ? 'nvidia-nim' : 'opencode-go');
 
 // System prompt for the language learning assistant
 function buildSystemPrompt(exerciseContext = null) {
@@ -56,13 +57,13 @@ function buildSystemPrompt(exerciseContext = null) {
 // ============================================================================
 
 async function chatWithAI(messages) {
-  const apiKey = process.env.OPENCODE_API_KEY;
+  const apiKey = process.env.AI_API_KEY || process.env.NVIDIA_API_KEY || process.env.OPENCODE_API_KEY;
   
   if (!apiKey) {
-    throw new Error('OPENCODE_API_KEY environment variable is not set');
+    throw new Error('AI_API_KEY, NVIDIA_API_KEY, or OPENCODE_API_KEY environment variable is not set');
   }
 
-  const response = await fetch(`${OPENCODE_BASE_URL}/chat/completions`, {
+  const response = await fetch(`${AI_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -71,8 +72,7 @@ async function chatWithAI(messages) {
     body: JSON.stringify({
       model: MODEL_NAME,
       messages: messages,
-      max_tokens: 2000,
-      // Note: kimi-k2.5 model only accepts temperature: 1
+      max_tokens: 2000
     }),
   });
 
@@ -343,20 +343,20 @@ router.get('/conversations', requireAuth, async (req, res) => {
 
 // Health check endpoint for AI service
 router.get('/status', async (req, res) => {
-  const apiKey = process.env.OPENCODE_API_KEY;
+  const apiKey = process.env.AI_API_KEY || process.env.NVIDIA_API_KEY || process.env.OPENCODE_API_KEY;
   
   if (!apiKey) {
     return res.json({
       status: 'not_configured',
-      message: 'OPENCODE_API_KEY environment variable is not set'
+      message: 'AI_API_KEY, NVIDIA_API_KEY, or OPENCODE_API_KEY environment variable is not set'
     });
   }
 
   res.json({
     status: 'ok',
-    provider: 'opencode-go',
+    provider: AI_PROVIDER,
     model: MODEL_NAME,
-    message: 'OpenCode Go AI is configured and ready'
+    message: `${AI_PROVIDER} AI is configured and ready`
   });
 });
 
