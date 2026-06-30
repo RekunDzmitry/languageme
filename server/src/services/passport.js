@@ -67,9 +67,11 @@ async function oAuthSuccess(res, user, state) {
   const refreshToken = generateRefreshToken();
   await storeRefreshToken(user.id, refreshToken);
 
-  const targetPath = (state && state !== '/') ? state : '';
+  // Only accept same-site paths: single leading slash, not // or /\
+  // Prevents open-redirect attacks like ?redirect=@evil.com or ?redirect=//evil.com
+  const safePath = (typeof state === 'string' && /^\/(?![/\\])/.test(state)) ? state : '';
   res.redirect(
-    `${config.publicUrl}${targetPath}#access_token=${accessToken}&refresh_token=${refreshToken}`
+    `${config.publicUrl}${safePath}#access_token=${accessToken}&refresh_token=${refreshToken}`
   );
 }
 
