@@ -24,7 +24,7 @@ const PL_PRONOUNS = [
 ]
 
 // Themes using negative forms (ne...pas)
-const NEGATIVE_THEMES = ['theme02']
+const NEGATIVE_THEMES = ['fr_theme02']
 
 function getFormType(themeId) {
   return NEGATIVE_THEMES.includes(themeId) ? 'neg' : 'aff'

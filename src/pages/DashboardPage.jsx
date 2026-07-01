@@ -1,14 +1,18 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useT } from '../i18n'
 import { useProgress } from '../stores/UserProgressContext'
 import { useSettings } from '../stores/SettingsContext'
 import { getThemes, getVocab } from '../data/courses'
-import { LESSON_PACKS, filterThemesByPack, getPackRoute } from '../data/lessonPacks'
+import { LESSON_PACKS, filterThemesByPack, openPack } from '../data/lessonPacks'
 import { getConjugationDueCount, getExerciseDueCountByTheme, getVocabDueCount } from '../utils/progress'
 
+// Pack ids use hyphens; i18n keys use underscores. Centralise the mapping.
+const packKey = (packId, slot) => `pack_${packId.replace(/-/g, '_')}_${slot}`
+
 function getPackStats(pack, progress) {
-  const themes = filterThemesByPack(getThemes(pack.targetLang), pack.id, pack.targetLang)
-  const vocab = getVocab(pack.targetLang)
+  const themes = filterThemesByPack(getThemes(pack.langPrefix), pack.id, pack.langPrefix)
+  const vocab = getVocab(pack.langPrefix)
   const themeIds = new Set(themes.map((theme) => theme.id))
   const vocabIds = vocab
     .filter((word) => word.themeIds?.some((themeId) => themeIds.has(themeId)))
@@ -42,26 +46,35 @@ export default function DashboardPage() {
   const progress = useProgress()
   const { settings, updateSettings } = useSettings()
   const navigate = useNavigate()
+  const { t } = useT()
+
+  // Depend on the concrete slices getPackStats actually reads. Depending on
+  // the whole context value used to invalidate this memo on every parent
+  // render because the provider rebuilt the value object each time.
+  const { exerciseCards, cards, conjugationCards } = progress
+  const progressSlice = useMemo(
+    () => ({ exerciseCards, cards, conjugationCards }),
+    [exerciseCards, cards, conjugationCards]
+  )
 
   const packStats = useMemo(() => {
     const stats = {}
-    LESSON_PACKS.forEach((pack) => {
-      stats[pack.id] = getPackStats(pack, progress)
-    })
+    for (const pack of LESSON_PACKS) {
+      stats[pack.id] = getPackStats(pack, progressSlice)
+    }
     return stats
-  }, [progress])
+  }, [progressSlice])
 
-  function openPack(pack) {
-    updateSettings({ activePackId: pack.id, targetLang: pack.targetLang })
-    navigate(getPackRoute(pack))
+  function handleOpenPack(pack) {
+    openPack(pack, { navigate, updateSettings })
   }
 
   return (
     <div className="max-w-5xl mx-auto px-5 py-6">
       <div className="mb-6">
-        <p className="text-sm font-semibold text-accent uppercase tracking-wider">LanguageMe</p>
-        <h1 className="text-3xl font-extrabold text-white mt-1">Что будем учить?</h1>
-        <p className="text-text-muted mt-2">Выберите направление. Переключиться можно в верхнем меню в любой момент.</p>
+        <p className="text-sm font-semibold text-accent uppercase tracking-wider">{t('app_name')}</p>
+        <h1 className="text-3xl font-extrabold text-white mt-1">{t('dashboard_choose_title')}</h1>
+        <p className="text-text-muted mt-2">{t('dashboard_choose_subtitle')}</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -73,7 +86,7 @@ export default function DashboardPage() {
             <button
               key={pack.id}
               type="button"
-              onClick={() => openPack(pack)}
+              onClick={() => handleOpenPack(pack)}
               className={`text-left rounded-xl border p-5 bg-surface hover:bg-surface-hover transition-all ${
                 active ? 'border-accent shadow-lg shadow-purple-900/20' : 'border-border hover:border-accent/40'
               }`}
@@ -81,30 +94,30 @@ export default function DashboardPage() {
               <div className={`h-1.5 rounded-full bg-gradient-to-r ${pack.accentClass} mb-4`} />
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-xl font-extrabold text-white">{pack.title}</h2>
-                  <p className="text-sm text-text-muted mt-1">{pack.subtitle}</p>
+                  <h2 className="text-xl font-extrabold text-white">{t(packKey(pack.id, 'title'))}</h2>
+                  <p className="text-sm text-text-muted mt-1">{t(packKey(pack.id, 'subtitle'))}</p>
                 </div>
-                {active && <span className="text-accent text-sm font-bold">Active</span>}
+                {active && <span className="text-accent text-sm font-bold">{t('pack_active')}</span>}
               </div>
 
               <div className="flex flex-wrap gap-2 mt-4">
-                <span className="px-2 py-1 rounded-lg bg-white/[0.06] text-xs font-semibold text-text-primary">{pack.badge}</span>
-                <span className="px-2 py-1 rounded-lg bg-white/[0.06] text-xs font-semibold text-text-primary">{pack.level}</span>
-                {stats?.due > 0 && <span className="px-2 py-1 rounded-lg bg-orange-500/20 text-orange-200 text-xs font-semibold">{stats.due} due</span>}
+                <span className="px-2 py-1 rounded-lg bg-white/[0.06] text-xs font-semibold text-text-primary">{t(packKey(pack.id, 'badge'))}</span>
+                <span className="px-2 py-1 rounded-lg bg-white/[0.06] text-xs font-semibold text-text-primary">{t(packKey(pack.id, 'level'))}</span>
+                {stats?.due > 0 && <span className="px-2 py-1 rounded-lg bg-orange-500/20 text-orange-200 text-xs font-semibold">{stats.due} {t('pack_stat_due')}</span>}
               </div>
 
               <div className="grid grid-cols-3 gap-2 mt-5 text-center">
                 <div className="rounded-lg bg-bg px-2 py-3">
                   <div className="text-lg font-bold text-white">{stats?.themes || 0}</div>
-                  <div className="text-[11px] text-text-muted">themes</div>
+                  <div className="text-[11px] text-text-muted">{t('pack_stat_themes')}</div>
                 </div>
                 <div className="rounded-lg bg-bg px-2 py-3">
                   <div className="text-lg font-bold text-white">{stats?.vocab || 0}</div>
-                  <div className="text-[11px] text-text-muted">words</div>
+                  <div className="text-[11px] text-text-muted">{t('pack_stat_words')}</div>
                 </div>
                 <div className="rounded-lg bg-bg px-2 py-3">
                   <div className="text-lg font-bold text-white">{(stats?.exercises || 0) + (stats?.emailExercises || 0)}</div>
-                  <div className="text-[11px] text-text-muted">tasks</div>
+                  <div className="text-[11px] text-text-muted">{t('pack_stat_tasks')}</div>
                 </div>
               </div>
             </button>

@@ -13,7 +13,7 @@ export default function ThemePage() {
   const { settings, updateSettings } = useSettings()
   const targetLang = settings.targetLang
   const inferredPack = getPackForThemeId(id)
-  const resolvedTargetLang = inferredPack?.targetLang || targetLang
+  const resolvedTargetLang = inferredPack?.langPrefix || targetLang
   const allThemes = getThemes(resolvedTargetLang)
   const { updateThemeProgress } = useProgress()
   const navigate = useNavigate()
@@ -21,8 +21,8 @@ export default function ThemePage() {
   const theme = allThemes.find(l => l.id === id)
 
   useEffect(() => {
-    if (inferredPack && (settings.activePackId !== inferredPack.id || settings.targetLang !== inferredPack.targetLang)) {
-      updateSettings({ activePackId: inferredPack.id, targetLang: inferredPack.targetLang })
+    if (inferredPack && (settings.activePackId !== inferredPack.id || settings.targetLang !== inferredPack.langPrefix)) {
+      updateSettings({ activePackId: inferredPack.id, targetLang: inferredPack.langPrefix })
     }
     if (theme) {
       updateThemeProgress(theme.id, { started: true })

@@ -283,5 +283,35 @@
   "email_load_error": "Nie udało się załadować",
   "email_delete_attempt": "Usuń próbę",
   "email_clear_history": "Wyczyść historię",
-  "email_clear_confirm": "Usunąć wszystkie próby dla tego zadania?"
+  "email_clear_confirm": "Usunąć wszystkie próby dla tego zadania?",
+
+  "dashboard_choose_title": "Czego będziemy się uczyć?",
+  "dashboard_choose_subtitle": "Wybierz kierunek. W każdej chwili możesz przełączyć w górnym menu.",
+
+  "pack_section_learning": "Kierunek nauki",
+  "pack_section_interface": "Interfejs",
+  "pack_active": "Aktywny",
+
+  "pack_fr_foundations_title": "Francuski",
+  "pack_fr_foundations_subtitle": "Gramatyka, słownictwo i odmiana",
+  "pack_fr_foundations_short": "Francuski",
+  "pack_fr_foundations_badge": "RU → FR",
+  "pack_fr_foundations_level": "A1-B2",
+
+  "pack_pl_a1_a2_title": "Polski A1/A2",
+  "pack_pl_a1_a2_subtitle": "Podstawy, ortografia i początkowe słownictwo",
+  "pack_pl_a1_a2_short": "Polski A1/A2",
+  "pack_pl_a1_a2_badge": "RU → PL",
+  "pack_pl_a1_a2_level": "A1/A2",
+
+  "pack_pl_telc_title": "Polski TELC",
+  "pack_pl_telc_subtitle": "Słownictwo B1/B2, gramatyka i e-maile",
+  "pack_pl_telc_short": "Polski TELC",
+  "pack_pl_telc_badge": "RU → PL",
+  "pack_pl_telc_level": "B1/B2",
+
+  "pack_stat_themes": "tematów",
+  "pack_stat_words": "słów",
+  "pack_stat_tasks": "zadań",
+  "pack_stat_due": "do powtórki"
 }

@@ -225,5 +225,35 @@
   "email_load_error": "Nie udało się załadować",
   "email_delete_attempt": "Usuń próbę",
   "email_clear_history": "Wyczyść historię",
-  "email_clear_confirm": "Usunąć wszystkie próby dla tego zadania?"
+  "email_clear_confirm": "Usunąć wszystkie próby dla tego zadania?",
+
+  "dashboard_choose_title": "Que voulez-vous apprendre ?",
+  "dashboard_choose_subtitle": "Choisissez une direction. Vous pouvez changer à tout moment dans le menu supérieur.",
+
+  "pack_section_learning": "Pack d'apprentissage",
+  "pack_section_interface": "Interface",
+  "pack_active": "Actif",
+
+  "pack_fr_foundations_title": "Français",
+  "pack_fr_foundations_subtitle": "Grammaire, vocabulaire et conjugaisons",
+  "pack_fr_foundations_short": "Français",
+  "pack_fr_foundations_badge": "RU → FR",
+  "pack_fr_foundations_level": "A1-B2",
+
+  "pack_pl_a1_a2_title": "Polonais A1/A2",
+  "pack_pl_a1_a2_subtitle": "Bases, orthographe et vocabulaire",
+  "pack_pl_a1_a2_short": "Polonais A1/A2",
+  "pack_pl_a1_a2_badge": "RU → PL",
+  "pack_pl_a1_a2_level": "A1/A2",
+
+  "pack_pl_telc_title": "Polonais TELC",
+  "pack_pl_telc_subtitle": "Vocabulaire B1/B2, grammaire et courriels",
+  "pack_pl_telc_short": "Polonais TELC",
+  "pack_pl_telc_badge": "RU → PL",
+  "pack_pl_telc_level": "B1/B2",
+
+  "pack_stat_themes": "thèmes",
+  "pack_stat_words": "mots",
+  "pack_stat_tasks": "tâches",
+  "pack_stat_due": "à réviser"
 }

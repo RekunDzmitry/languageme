@@ -4,7 +4,7 @@
 import { stubTheme } from './stubTheme'
 
 const theme01 = {
-  id: 'theme01',
+  id: 'fr_theme01',
   order: 1,
   title: 'Zaimki osobowe i czasowniki I grupy (-er)',
   titleRu: 'Местоимения и глаголы 1-й группы',

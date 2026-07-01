@@ -6,13 +6,13 @@ import { getThemes, getVocab } from '../data/courses'
 import { filterThemesByPack, getPackForThemeId } from '../data/lessonPacks'
 
 // Theme IDs that use negative forms (French)
-const NEGATIVE_THEMES = ['theme02']
+const NEGATIVE_THEMES = ['fr_theme02']
 
 export default function LearnPage() {
   const { themeId } = useParams()
   const { settings } = useSettings()
   const inferredPack = themeId ? getPackForThemeId(themeId) : null
-  const targetLang = inferredPack?.targetLang || settings.targetLang
+  const targetLang = inferredPack?.langPrefix || settings.targetLang
 
   // Polish: fast vocab flashcard session (all vocab, SM-2)
   if (targetLang === 'pl') {

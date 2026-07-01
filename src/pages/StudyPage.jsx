@@ -8,7 +8,7 @@ export default function StudyPage() {
   const { themeId } = useParams()
   const { settings } = useSettings()
   const inferredPack = themeId ? getPackForThemeId(themeId) : null
-  const targetLang = inferredPack?.targetLang || settings.targetLang
+  const targetLang = inferredPack?.langPrefix || settings.targetLang
   const VOCAB = getVocab(targetLang)
 
   let themeVocab = null

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { storage } from '../utils/storage'
 import { sm2, createCard } from '../utils/sm2'
 import { useAuth } from './AuthContext'
@@ -414,36 +414,71 @@ export function UserProgressProvider({ children }) {
     }))
   }, [])
 
+  // Memo the context value so consumers (e.g. DashboardPage's packStats
+  // useMemo, or any selector that compares a slice of progress) get a stable
+  // reference unless the underlying data actually changed. Without this the
+  // value object is rebuilt every render, which forced downstream useMemo
+  // deps that include the whole context to invalidate on every parent render.
+  const value = useMemo(() => ({
+    cards: progress.srsCards,
+    conjugationCards: progress.conjugationCards,
+    exerciseCards: progress.exerciseCards,
+    exerciseNotes: progress.exerciseNotes,
+    vocabNotes: progress.vocabNotes,
+    themeProgress: progress.themeProgress,
+    userMnemonics: progress.userMnemonics,
+    stats: progress.stats,
+    themeUnlockStatus: progress.themeUnlockStatus,
+    isProgressLoading,
+    notification,
+    showNotification,
+    rateCard,
+    rateConjugation,
+    rateExercise,
+    updateThemeProgress,
+    saveMnemonic,
+    clearMnemonic,
+    saveExerciseNote,
+    clearExerciseNote,
+    saveVocabNote,
+    clearVocabNote,
+    resetCard,
+    updateCard,
+    incrementStreak,
+    importConjugationCards,
+    refreshProgress: fetchProgress,
+  }), [
+    progress.srsCards,
+    progress.conjugationCards,
+    progress.exerciseCards,
+    progress.exerciseNotes,
+    progress.vocabNotes,
+    progress.themeProgress,
+    progress.userMnemonics,
+    progress.stats,
+    progress.themeUnlockStatus,
+    isProgressLoading,
+    notification,
+    showNotification,
+    rateCard,
+    rateConjugation,
+    rateExercise,
+    updateThemeProgress,
+    saveMnemonic,
+    clearMnemonic,
+    saveExerciseNote,
+    clearExerciseNote,
+    saveVocabNote,
+    clearVocabNote,
+    resetCard,
+    updateCard,
+    incrementStreak,
+    importConjugationCards,
+    fetchProgress,
+  ])
+
   return (
-    <UserProgressContext.Provider value={{
-      cards: progress.srsCards,
-      conjugationCards: progress.conjugationCards,
-      exerciseCards: progress.exerciseCards,
-      exerciseNotes: progress.exerciseNotes,
-      vocabNotes: progress.vocabNotes,
-      themeProgress: progress.themeProgress,
-      userMnemonics: progress.userMnemonics,
-      stats: progress.stats,
-      themeUnlockStatus: progress.themeUnlockStatus,
-      isProgressLoading,
-      notification,
-      showNotification,
-      rateCard,
-      rateConjugation,
-      rateExercise,
-      updateThemeProgress,
-      saveMnemonic,
-      clearMnemonic,
-      saveExerciseNote,
-      clearExerciseNote,
-      saveVocabNote,
-      clearVocabNote,
-      resetCard,
-      updateCard,
-      incrementStreak,
-      importConjugationCards,
-      refreshProgress: fetchProgress,
-    }}>
+    <UserProgressContext.Provider value={value}>
       {children}
     </UserProgressContext.Provider>
   )

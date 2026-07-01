@@ -283,5 +283,35 @@
   "email_load_error": "Nie udało się załadować",
   "email_delete_attempt": "Usuń próbę",
   "email_clear_history": "Wyczyść historię",
-  "email_clear_confirm": "Usunąć wszystkie próby dla tego zadania?"
+  "email_clear_confirm": "Usunąć wszystkie próby dla tego zadania?",
+
+  "dashboard_choose_title": "Что будем учить?",
+  "dashboard_choose_subtitle": "Выберите направление. Переключиться можно в верхнем меню в любой момент.",
+
+  "pack_section_learning": "Направление",
+  "pack_section_interface": "Интерфейс",
+  "pack_active": "Активный",
+
+  "pack_fr_foundations_title": "Французский",
+  "pack_fr_foundations_subtitle": "Грамматика, словарь и спряжения",
+  "pack_fr_foundations_short": "Французский",
+  "pack_fr_foundations_badge": "RU → FR",
+  "pack_fr_foundations_level": "A1-B2",
+
+  "pack_pl_a1_a2_title": "Польский A1/A2",
+  "pack_pl_a1_a2_subtitle": "Основы, орфография и начальный словарь",
+  "pack_pl_a1_a2_short": "Польский A1/A2",
+  "pack_pl_a1_a2_badge": "RU → PL",
+  "pack_pl_a1_a2_level": "A1/A2",
+
+  "pack_pl_telc_title": "Польский TELC",
+  "pack_pl_telc_subtitle": "B1/B2 словарь, грамматика и письма",
+  "pack_pl_telc_short": "Польский TELC",
+  "pack_pl_telc_badge": "RU → PL",
+  "pack_pl_telc_level": "B1/B2",
+
+  "pack_stat_themes": "тем",
+  "pack_stat_words": "слов",
+  "pack_stat_tasks": "заданий",
+  "pack_stat_due": "к повторению"
 }
