@@ -3,82 +3,127 @@ import { useNavigate } from 'react-router-dom'
 import { useT } from '../i18n'
 import { useProgress } from '../stores/UserProgressContext'
 import { useSettings } from '../stores/SettingsContext'
-import { getThemes } from '../data/courses'
-import { getConjugationDueCount } from '../utils/progress'
+import { getThemes, getVocab } from '../data/courses'
+import { LESSON_PACKS, filterThemesByPack, openPack } from '../data/lessonPacks'
+import { getConjugationDueCount, getExerciseDueCountByTheme, getVocabDueCount } from '../utils/progress'
+
+// Pack ids use hyphens; i18n keys use underscores. Centralise the mapping.
+const packKey = (packId, slot) => `pack_${packId.replace(/-/g, '_')}_${slot}`
+
+function getPackStats(pack, progress) {
+  const themes = filterThemesByPack(getThemes(pack.langPrefix), pack.id, pack.langPrefix)
+  const vocab = getVocab(pack.langPrefix)
+  const themeIds = new Set(themes.map((theme) => theme.id))
+  const vocabIds = vocab
+    .filter((word) => word.themeIds?.some((themeId) => themeIds.has(themeId)))
+    .map((word) => word.id)
+
+  const verbs = themes.flatMap((theme) => theme.verbList || [])
+  const exercises = themes.reduce((total, theme) => {
+    const exerciseSection = theme.sections?.find((section) => section.type === 'exercises')
+    return total + (exerciseSection?.exercises?.length || 0)
+  }, 0)
+  const emailExercises = themes.reduce((total, theme) => {
+    const emailSection = theme.sections?.find((section) => section.type === 'email_writing')
+    return total + (emailSection?.exercises?.length || 0)
+  }, 0)
+
+  const exerciseDue = themes.reduce((total, theme) => {
+    const exerciseSection = theme.sections?.find((section) => section.type === 'exercises')
+    return total + getExerciseDueCountByTheme(progress.exerciseCards, theme.id, exerciseSection?.exercises?.length || 0)
+  }, 0)
+
+  return {
+    themes: themes.length,
+    vocab: vocabIds.length,
+    exercises,
+    emailExercises,
+    due: getVocabDueCount(progress.cards, vocabIds) + getConjugationDueCount(progress.conjugationCards, verbs) + exerciseDue,
+  }
+}
 
 export default function DashboardPage() {
-  const { conjugationCards } = useProgress()
-  const { settings } = useSettings()
-  const targetLang = settings.targetLang
-  const themes = getThemes(targetLang)
-  const { t } = useT()
+  const progress = useProgress()
+  const { settings, updateSettings } = useSettings()
   const navigate = useNavigate()
+  const { t } = useT()
 
-  const allVerbs = useMemo(() => {
-    const verbs = []
-    for (const theme of themes) {
-      if (theme.verbList?.length > 0) {
-        verbs.push(...theme.verbList)
-      }
-    }
-    return verbs
-  }, [])
-
-  const dueCount = useMemo(
-    () => getConjugationDueCount(conjugationCards, allVerbs),
-    [conjugationCards, allVerbs]
+  // Depend on the concrete slices getPackStats actually reads. Depending on
+  // the whole context value used to invalidate this memo on every parent
+  // render because the provider rebuilt the value object each time.
+  const { exerciseCards, cards, conjugationCards } = progress
+  const progressSlice = useMemo(
+    () => ({ exerciseCards, cards, conjugationCards }),
+    [exerciseCards, cards, conjugationCards]
   )
 
+  const packStats = useMemo(() => {
+    const stats = {}
+    for (const pack of LESSON_PACKS) {
+      stats[pack.id] = getPackStats(pack, progressSlice)
+    }
+    return stats
+  }, [progressSlice])
+
+  function handleOpenPack(pack) {
+    openPack(pack, { navigate, updateSettings })
+  }
+
   return (
-    <div className="max-w-4xl mx-auto px-5 py-6">
-      {/* GO Circle */}
-      <div className="flex flex-col items-center py-10 mb-8">
-        <button
-          onClick={() => navigate('/learn')}
-          className="group relative w-40 h-40 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 border-none cursor-pointer flex items-center justify-center shadow-[0_0_40px_rgba(139,92,246,0.3)] hover:shadow-[0_0_60px_rgba(139,92,246,0.5)] transition-shadow"
-        >
-          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 animate-pulse opacity-30" />
-          <span className="text-white text-5xl font-extrabold tracking-wider relative z-10 group-hover:scale-110 transition-transform">GO</span>
-        </button>
-        <div className="mt-4 text-lg font-bold text-white">{t('start_learning')}</div>
-        {dueCount > 0 && (
-          <div className="text-accent text-sm mt-1">{dueCount} {t('due_for_review')}</div>
-        )}
+    <div className="max-w-5xl mx-auto px-5 py-6">
+      <div className="mb-6">
+        <p className="text-sm font-semibold text-accent uppercase tracking-wider">{t('app_name')}</p>
+        <h1 className="text-3xl font-extrabold text-white mt-1">{t('dashboard_choose_title')}</h1>
+        <p className="text-text-muted mt-2">{t('dashboard_choose_subtitle')}</p>
       </div>
 
-      {/* Quick link to Training */}
-      <button
-        onClick={() => navigate('/training')}
-        className="w-full bg-surface border border-border rounded-xl p-4 hover:bg-surface-hover transition-colors cursor-pointer text-left"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">💪</span>
-            <div>
-              <div className="font-bold text-white">{t('nav_training')}</div>
-              <div className="text-xs text-text-muted">{t('theme_progress')}</div>
-            </div>
-          </div>
-          <span className="text-text-muted text-lg">→</span>
-        </div>
-      </button>
+      <div className="grid gap-4 md:grid-cols-3">
+        {LESSON_PACKS.map((pack) => {
+          const stats = packStats[pack.id]
+          const active = settings.activePackId === pack.id
 
-      {/* Quick link to Email Writing */}
-      <button
-        onClick={() => navigate('/email')}
-        className="w-full bg-surface border border-border rounded-xl p-4 hover:bg-surface-hover transition-colors cursor-pointer text-left mt-3"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">📧</span>
-            <div>
-              <div className="font-bold text-white">{t('email_title')}</div>
-              <div className="text-xs text-text-muted">{t('email_subtitle')}</div>
-            </div>
-          </div>
-          <span className="text-text-muted text-lg">→</span>
-        </div>
-      </button>
+          return (
+            <button
+              key={pack.id}
+              type="button"
+              onClick={() => handleOpenPack(pack)}
+              className={`text-left rounded-xl border p-5 bg-surface hover:bg-surface-hover transition-all ${
+                active ? 'border-accent shadow-lg shadow-purple-900/20' : 'border-border hover:border-accent/40'
+              }`}
+            >
+              <div className={`h-1.5 rounded-full bg-gradient-to-r ${pack.accentClass} mb-4`} />
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-extrabold text-white">{t(packKey(pack.id, 'title'))}</h2>
+                  <p className="text-sm text-text-muted mt-1">{t(packKey(pack.id, 'subtitle'))}</p>
+                </div>
+                {active && <span className="text-accent text-sm font-bold">{t('pack_active')}</span>}
+              </div>
+
+              <div className="flex flex-wrap gap-2 mt-4">
+                <span className="px-2 py-1 rounded-lg bg-white/[0.06] text-xs font-semibold text-text-primary">{t(packKey(pack.id, 'badge'))}</span>
+                <span className="px-2 py-1 rounded-lg bg-white/[0.06] text-xs font-semibold text-text-primary">{t(packKey(pack.id, 'level'))}</span>
+                {stats?.due > 0 && <span className="px-2 py-1 rounded-lg bg-orange-500/20 text-orange-200 text-xs font-semibold">{stats.due} {t('pack_stat_due')}</span>}
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 mt-5 text-center">
+                <div className="rounded-lg bg-bg px-2 py-3">
+                  <div className="text-lg font-bold text-white">{stats?.themes || 0}</div>
+                  <div className="text-[11px] text-text-muted">{t('pack_stat_themes')}</div>
+                </div>
+                <div className="rounded-lg bg-bg px-2 py-3">
+                  <div className="text-lg font-bold text-white">{stats?.vocab || 0}</div>
+                  <div className="text-[11px] text-text-muted">{t('pack_stat_words')}</div>
+                </div>
+                <div className="rounded-lg bg-bg px-2 py-3">
+                  <div className="text-lg font-bold text-white">{(stats?.exercises || 0) + (stats?.emailExercises || 0)}</div>
+                  <div className="text-[11px] text-text-muted">{t('pack_stat_tasks')}</div>
+                </div>
+              </div>
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }

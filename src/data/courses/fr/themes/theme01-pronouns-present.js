@@ -2,7 +2,7 @@
 // Themes 1-7 have full content; 8-31 are stubs to be expanded
 
 const theme01 = {
-  id: 'theme01',
+  id: 'fr_theme01',
   order: 1,
   title: 'Pronouns & 1st Group Verbs (-er)',
   titleRu: 'Местоимения и глаголы 1-й группы (-er)',
@@ -267,13 +267,13 @@ const theme01 = {
 }
 
 const theme02 = {
-  id: 'theme02',
+  id: 'fr_theme02',
   order: 2,
   title: 'Negative Form',
   titleRu: 'Отрицательная форма',
   description: 'Learn to negate sentences with ne...pas',
   descriptionRu: 'Отрицание с ne...pas',
-  unlockCondition: { type: 'theme_complete', themeId: 'theme01', minScore: 60 },
+  unlockCondition: { type: 'theme_complete', themeId: 'fr_theme01', minScore: 60 },
   vocabIds: ['fr_004', 'fr_008', 'fr_016'],
   sections: [
     {
@@ -465,13 +465,13 @@ const theme02 = {
 }
 
 const theme03 = {
-  id: 'theme03',
+  id: 'fr_theme03',
   order: 3,
   title: 'Questions',
   titleRu: 'Вопросительная форма',
   description: 'Learn to ask questions in French',
   descriptionRu: 'Учимся задавать вопросы по-французски',
-  unlockCondition: { type: 'theme_complete', themeId: 'theme02', minScore: 60 },
+  unlockCondition: { type: 'theme_complete', themeId: 'fr_theme02', minScore: 60 },
   vocabIds: ['fr_042', 'fr_043'],
   sections: [
     {
@@ -501,13 +501,13 @@ const theme03 = {
 }
 
 const theme04 = {
-  id: 'theme04',
+  id: 'fr_theme04',
   order: 4,
   title: 'Etiquette Phrases',
   titleRu: 'Фразы этикета',
   description: 'Essential polite expressions for everyday French',
   descriptionRu: 'Основные вежливые выражения на каждый день',
-  unlockCondition: { type: 'theme_complete', themeId: 'theme03', minScore: 60 },
+  unlockCondition: { type: 'theme_complete', themeId: 'fr_theme03', minScore: 60 },
   vocabIds: ['fr_001', 'fr_002'],
   sections: [
     {
@@ -553,13 +553,13 @@ const theme04 = {
 }
 
 const theme05 = {
-  id: 'theme05',
+  id: 'fr_theme05',
   order: 5,
   title: 'Verb "avoir"',
   titleRu: 'Глагол «avoir» (иметь)',
   description: 'Master the essential irregular verb "avoir"',
   descriptionRu: 'Неправильный глагол «avoir» — один из самых важных',
-  unlockCondition: { type: 'theme_complete', themeId: 'theme04', minScore: 60 },
+  unlockCondition: { type: 'theme_complete', themeId: 'fr_theme04', minScore: 60 },
   vocabIds: ['fr_001', 'fr_008'],
   sections: [
     {
@@ -609,13 +609,13 @@ const theme05 = {
 }
 
 const themeEtre = {
-  id: 'theme06',
+  id: 'fr_theme06',
   order: 6,
   title: 'Verb "être"',
   titleRu: 'Глагол «être» (быть)',
   description: 'Master the essential irregular verb "être"',
   descriptionRu: 'Неправильный глагол «être» — один из самых важных',
-  unlockCondition: { type: 'theme_complete', themeId: 'theme05', minScore: 60 },
+  unlockCondition: { type: 'theme_complete', themeId: 'fr_theme05', minScore: 60 },
   vocabIds: ['fr_001', 'fr_008'],
   sections: [
     {
@@ -714,13 +714,13 @@ const themeEtre = {
 }
 
 const theme06 = {
-  id: 'theme07',
+  id: 'fr_theme07',
   order: 7,
   title: 'Past Tense (passé composé)',
   titleRu: 'Прошедшее время (passé composé)',
   description: 'Learn the most common past tense',
   descriptionRu: 'Самое употребительное прошедшее время',
-  unlockCondition: { type: 'theme_complete', themeId: 'theme06', minScore: 60 },
+  unlockCondition: { type: 'theme_complete', themeId: 'fr_theme06', minScore: 60 },
   vocabIds: [],
   sections: [
     {
@@ -885,13 +885,13 @@ const theme06 = {
 }
 
 const theme08 = {
-  id: 'theme08',
+  id: 'fr_theme08',
   order: 8,
   title: 'Past Tense: Negative & Questions',
   titleRu: 'Прошедшее время: отрицание и вопросы',
   description: 'Negative and question forms in past tense',
   descriptionRu: 'Отрицательная и вопросительная формы прошедшего времени',
-  unlockCondition: { type: 'theme_complete', themeId: 'theme07', minScore: 60 },
+  unlockCondition: { type: 'theme_complete', themeId: 'fr_theme07', minScore: 60 },
   vocabIds: [],
   sections: [
     {
@@ -1102,27 +1102,27 @@ export const themes = [
   themeEtre,
   theme06,
   theme08,
-  stubTheme('theme09', 9, 'Irregular Verbs I', 'Неправильные глаголы I', 'Aller, faire, pouvoir, vouloir', 'Aller, faire, pouvoir, vouloir', 'theme08'),
-  stubTheme('theme10', 10, 'Future Tense', 'Будущее время', 'Express future actions', 'Выражение будущего времени', 'theme09'),
-  stubTheme('theme11', 11, 'Question Words', 'Вопросительные слова', 'Qui, que, où, quand, comment, pourquoi', 'Кто, что, где, когда, как, почему', 'theme10'),
-  stubTheme('theme12', 12, 'Talking About Yourself', 'Рассказ о себе', 'Hobbies, profession, interests', 'Хобби, профессия, интересы', 'theme11'),
-  stubTheme('theme13', 13, 'Masculine Nouns & Articles', 'Существительные м.р. и артикли', 'Masculine nouns, singular and plural', 'Существительные мужского рода, ед. и мн. число', 'theme12'),
-  stubTheme('theme14', 14, 'Adverbs', 'Наречия', 'Tout, rien, quelqu\'un, toujours, jamais...', 'Всё, ничего, кто-то, всегда, никогда...', 'theme13'),
-  stubTheme('theme15', 15, 'Feminine Gender', 'Женский род', 'Feminine forms of nouns and adjectives', 'Женский род существительных и прилагательных', 'theme14'),
-  stubTheme('theme16', 16, 'Time Expressions', 'Выражения времени', 'Talking about time, dates, duration', 'Время, даты, длительность', 'theme15'),
-  stubTheme('theme17', 17, 'Pronoun Declension', 'Склонение местоимений', 'Object pronouns: me, te, le, la, lui...', 'Объектные местоимения', 'theme16'),
-  stubTheme('theme18', 18, 'Conjunctions', 'Союзы', 'Mais, ou, et, donc, car, pourtant...', 'Но, или, и, значит, так как, однако...', 'theme17'),
-  stubTheme('theme19', 19, 'Prepositions', 'Предлоги', 'À, de, en, dans, sur, sous, avec...', 'Основные предлоги места и направления', 'theme18'),
-  stubTheme('theme20', 20, 'Possessive Pronouns', 'Притяжательные местоимения', 'Mon, ton, son, notre, votre, leur', 'Мой, твой, его, наш, ваш, их', 'theme19'),
-  stubTheme('theme21', 21, 'Days, Months, Directions', 'Дни недели, месяцы, стороны света', 'Calendar vocabulary and cardinal directions', 'Календарь и стороны света', 'theme20'),
-  stubTheme('theme22', 22, 'Cardinal Numbers', 'Количественные числительные', 'Numbers from 0 to 1000+', 'Числа от 0 до 1000+', 'theme21'),
-  stubTheme('theme23', 23, 'Family & Home', 'Семья и дом', 'Family members and household vocabulary', 'Члены семьи и домашний быт', 'theme22'),
-  stubTheme('theme24', 24, 'Partitive Article', 'Частичный артикль', 'Du, de la, des — expressing quantities', 'Выражение количества', 'theme23'),
-  stubTheme('theme25', 25, 'At Restaurant & Shop', 'В ресторане и магазине', 'Ordering food, shopping phrases', 'Заказ еды, фразы для покупок', 'theme24'),
-  stubTheme('theme26', 26, 'Free Conversation', 'Свободная беседа', 'Practice speaking on chosen topics', 'Практика разговора на выбранные темы', 'theme25'),
-  stubTheme('theme27', 27, 'Ordinal Numbers', 'Порядковые числительные', 'Premier, deuxième, troisième...', 'Первый, второй, третий...', 'theme26'),
-  stubTheme('theme28', 28, 'Adjectives', 'Прилагательные', 'Agreement, position, common adjectives', 'Согласование, позиция, частые прилагательные', 'theme27'),
-  stubTheme('theme29', 29, 'Imperative Mood', 'Повелительное наклонение', 'Giving commands and instructions', 'Приказы и инструкции', 'theme28'),
-  stubTheme('theme30', 30, 'Comparatives & Superlatives', 'Степени сравнения', 'Plus...que, moins...que, le plus...', 'Больше чем, меньше чем, самый...', 'theme29'),
-  stubTheme('theme31', 31, 'Reflexive Verbs', 'Возвратные глаголы', 'Se lever, se coucher, s\'appeler...', 'Подниматься, ложиться, зваться...', 'theme30'),
+  stubTheme('fr_theme09', 9, 'Irregular Verbs I', 'Неправильные глаголы I', 'Aller, faire, pouvoir, vouloir', 'Aller, faire, pouvoir, vouloir', 'fr_theme08'),
+  stubTheme('fr_theme10', 10, 'Future Tense', 'Будущее время', 'Express future actions', 'Выражение будущего времени', 'fr_theme09'),
+  stubTheme('fr_theme11', 11, 'Question Words', 'Вопросительные слова', 'Qui, que, où, quand, comment, pourquoi', 'Кто, что, где, когда, как, почему', 'fr_theme10'),
+  stubTheme('fr_theme12', 12, 'Talking About Yourself', 'Рассказ о себе', 'Hobbies, profession, interests', 'Хобби, профессия, интересы', 'fr_theme11'),
+  stubTheme('fr_theme13', 13, 'Masculine Nouns & Articles', 'Существительные м.р. и артикли', 'Masculine nouns, singular and plural', 'Существительные мужского рода, ед. и мн. число', 'fr_theme12'),
+  stubTheme('fr_theme14', 14, 'Adverbs', 'Наречия', 'Tout, rien, quelqu\'un, toujours, jamais...', 'Всё, ничего, кто-то, всегда, никогда...', 'fr_theme13'),
+  stubTheme('fr_theme15', 15, 'Feminine Gender', 'Женский род', 'Feminine forms of nouns and adjectives', 'Женский род существительных и прилагательных', 'fr_theme14'),
+  stubTheme('fr_theme16', 16, 'Time Expressions', 'Выражения времени', 'Talking about time, dates, duration', 'Время, даты, длительность', 'fr_theme15'),
+  stubTheme('fr_theme17', 17, 'Pronoun Declension', 'Склонение местоимений', 'Object pronouns: me, te, le, la, lui...', 'Объектные местоимения', 'fr_theme16'),
+  stubTheme('fr_theme18', 18, 'Conjunctions', 'Союзы', 'Mais, ou, et, donc, car, pourtant...', 'Но, или, и, значит, так как, однако...', 'fr_theme17'),
+  stubTheme('fr_theme19', 19, 'Prepositions', 'Предлоги', 'À, de, en, dans, sur, sous, avec...', 'Основные предлоги места и направления', 'fr_theme18'),
+  stubTheme('fr_theme20', 20, 'Possessive Pronouns', 'Притяжательные местоимения', 'Mon, ton, son, notre, votre, leur', 'Мой, твой, его, наш, ваш, их', 'fr_theme19'),
+  stubTheme('fr_theme21', 21, 'Days, Months, Directions', 'Дни недели, месяцы, стороны света', 'Calendar vocabulary and cardinal directions', 'Календарь и стороны света', 'fr_theme20'),
+  stubTheme('fr_theme22', 22, 'Cardinal Numbers', 'Количественные числительные', 'Numbers from 0 to 1000+', 'Числа от 0 до 1000+', 'fr_theme21'),
+  stubTheme('fr_theme23', 23, 'Family & Home', 'Семья и дом', 'Family members and household vocabulary', 'Члены семьи и домашний быт', 'fr_theme22'),
+  stubTheme('fr_theme24', 24, 'Partitive Article', 'Частичный артикль', 'Du, de la, des — expressing quantities', 'Выражение количества', 'fr_theme23'),
+  stubTheme('fr_theme25', 25, 'At Restaurant & Shop', 'В ресторане и магазине', 'Ordering food, shopping phrases', 'Заказ еды, фразы для покупок', 'fr_theme24'),
+  stubTheme('fr_theme26', 26, 'Free Conversation', 'Свободная беседа', 'Practice speaking on chosen topics', 'Практика разговора на выбранные темы', 'fr_theme25'),
+  stubTheme('fr_theme27', 27, 'Ordinal Numbers', 'Порядковые числительные', 'Premier, deuxième, troisième...', 'Первый, второй, третий...', 'fr_theme26'),
+  stubTheme('fr_theme28', 28, 'Adjectives', 'Прилагательные', 'Agreement, position, common adjectives', 'Согласование, позиция, частые прилагательные', 'fr_theme27'),
+  stubTheme('fr_theme29', 29, 'Imperative Mood', 'Повелительное наклонение', 'Giving commands and instructions', 'Приказы и инструкции', 'fr_theme28'),
+  stubTheme('fr_theme30', 30, 'Comparatives & Superlatives', 'Степени сравнения', 'Plus...que, moins...que, le plus...', 'Больше чем, меньше чем, самый...', 'fr_theme29'),
+  stubTheme('fr_theme31', 31, 'Reflexive Verbs', 'Возвратные глаголы', 'Se lever, se coucher, s\'appeler...', 'Подниматься, ложиться, зваться...', 'fr_theme30'),
 ]

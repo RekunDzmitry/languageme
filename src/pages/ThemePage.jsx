@@ -4,24 +4,30 @@ import { useT } from '../i18n'
 import { useProgress } from '../stores/UserProgressContext'
 import { useSettings } from '../stores/SettingsContext'
 import { getThemes, getThemeTitle } from '../data/courses'
+import { getPackForThemeId } from '../data/lessonPacks'
 import ThemeView from '../components/themes/ThemeView'
 
 export default function ThemePage() {
   const { id } = useParams()
   const { t } = useT()
-  const { settings } = useSettings()
+  const { settings, updateSettings } = useSettings()
   const targetLang = settings.targetLang
-  const allThemes = getThemes(targetLang)
+  const inferredPack = getPackForThemeId(id)
+  const resolvedTargetLang = inferredPack?.langPrefix || targetLang
+  const allThemes = getThemes(resolvedTargetLang)
   const { updateThemeProgress } = useProgress()
   const navigate = useNavigate()
 
   const theme = allThemes.find(l => l.id === id)
 
   useEffect(() => {
+    if (inferredPack && (settings.activePackId !== inferredPack.id || settings.targetLang !== inferredPack.langPrefix)) {
+      updateSettings({ activePackId: inferredPack.id, targetLang: inferredPack.langPrefix })
+    }
     if (theme) {
       updateThemeProgress(theme.id, { started: true })
     }
-  }, [theme, updateThemeProgress])
+  }, [inferredPack, settings.activePackId, settings.targetLang, theme, updateSettings, updateThemeProgress])
 
   if (!theme) {
     return (
@@ -43,7 +49,7 @@ export default function ThemePage() {
       <div className="flex items-center gap-3 mb-5">
         <button onClick={() => navigate('/themes')} className="text-text-muted hover:text-text-primary bg-transparent border-none cursor-pointer text-lg">←</button>
         <div>
-          <h2 className="text-xl font-extrabold text-white">{getThemeTitle(theme, targetLang)}</h2>
+          <h2 className="text-xl font-extrabold text-white">{getThemeTitle(theme, resolvedTargetLang)}</h2>
           <p className="text-sm text-text-muted">{theme.descriptionRu || theme.description}</p>
         </div>
       </div>

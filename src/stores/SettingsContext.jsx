@@ -1,13 +1,21 @@
-import { createContext, useContext, useState, useCallback } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo } from 'react'
+import { getDefaultPackId } from '../data/lessonPacks'
 
 const SettingsContext = createContext()
 
-// Native language (what the learner already knows) - Russian only
+// Native language (what the learner already knows) - Russian only.
+// TODO(multilang): when the multilang phase lands, surface this in a
+// onboarding picker and let users pick from any language we have a course for.
+// Until then, hard-coded to ru so callers can rely on the shape.
 export const NATIVE_LANGUAGES = {
   ru: { name: 'Русский', flag: '🇷🇺' },
 }
 
-// Target languages (what the learner is studying)
+// Target languages (what the learner is studying).
+// TODO(multilang): drive this from the list of courses that actually have
+// theme content (fr, pl, ge, esp, …). The list grows as new course bundles
+// are added; consumers should not import this directly once the data is
+// derived. For now it mirrors the lang prefixes used in lessonPacks.js.
 export const TARGET_LANGUAGES = {
   fr: { name: 'Français', flag: '🇫🇷' },
   pl: { name: 'Polski', flag: '🇵🇱' },
@@ -22,7 +30,7 @@ export const CEFR_LEVELS = {
   C1: { name: 'C1', desc: 'Zaawansowany' },
 }
 
-// UI languages (interface display)
+// UI languages (interface display). Sourced from i18n/locales.
 export const UI_LANGUAGES = {
   ru: { name: 'Русский', flag: '🇷🇺' },
   pl: { name: 'Polski', flag: '🇵🇱' },
@@ -32,12 +40,16 @@ export const UI_LANGUAGES = {
 export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState(() => {
     const saved = localStorage.getItem('lm_settings')
-    return saved ? JSON.parse(saved) : {
+    const parsed = saved ? JSON.parse(saved) : {
       nativeLang: 'ru',
       targetLang: 'fr',
       uiLang: 'ru',
       targetLevel: 'B1',
       autoPlayAudio: true,
+    }
+    return {
+      ...parsed,
+      activePackId: parsed.activePackId || getDefaultPackId(parsed.targetLang),
     }
   })
 
@@ -49,8 +61,15 @@ export function SettingsProvider({ children }) {
     })
   }, [])
 
+  // Memo the context value so consumers (e.g. DashboardPage's packStats
+  // useMemo) get a stable reference unless settings actually change. Without
+  // this the value object is rebuilt every render, which previously caused
+  // downstream useMemo deps that include the whole context to invalidate on
+  // every parent render.
+  const value = useMemo(() => ({ settings, updateSettings }), [settings, updateSettings])
+
   return (
-    <SettingsContext.Provider value={{ settings, updateSettings }}>
+    <SettingsContext.Provider value={value}>
       {children}
     </SettingsContext.Provider>
   )

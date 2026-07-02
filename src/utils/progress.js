@@ -18,13 +18,14 @@ export function isThemeUnlocked(theme, themeProgress) {
   // Themes with unlockCondition: null are always unlocked
   if (theme.unlockCondition === null) return true
   // Theme 1 is always unlocked
-  if (theme.id === 'theme01') return true
-  // Extract previous theme number
+  if (theme.id === 'fr_theme01') return true
+  // Extract previous theme number (only for un-prefixed legacy IDs; lang-prefixed
+  // themes use the unlockCondition object instead of positional chain).
   const match = theme.id.match(/^theme(\d+)$/)
   if (!match) return true
   const num = parseInt(match[1], 10)
   if (num <= 1) return true
-  const prevId = `theme${String(num - 1).padStart(2, '0')}`
+  const prevId = `fr_theme${String(num - 1).padStart(2, '0')}`
   const prev = themeProgress[prevId]
   return prev && prev.bestScore >= 60
 }
