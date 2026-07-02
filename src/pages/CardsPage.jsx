@@ -234,7 +234,7 @@ export default function CardsPage() {
                     {t(`cards_filter_${item.status}`)}
                   </span>
                 </div>
-                <div className="text-text-muted text-sm">{item.translations?.[nativeLang] || item.translations?.ru}</div>
+                <div className="text-text-muted text-sm">{item.translations?.[settings.nativeLang] || item.translations?.ru}</div>
                 <div className="flex items-center justify-between text-xs text-text-muted">
                   <span>{t('cards_reps')}: {item.card.reps}</span>
                   <span>{t('cards_ease')}: {item.card.ease.toFixed(1)}</span>
