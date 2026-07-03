@@ -46,9 +46,9 @@ async function findOrCreateOAuthUser(profile) {
 
   // 3. Create new user
   const { rows: [user] } = await pool.query(
-    'INSERT INTO "user" (email, display_name, google_id, avatar_url, email_verified)
+    `INSERT INTO "user" (email, display_name, google_id, avatar_url, email_verified)
      VALUES ($1, $2, $3, $4, true)
-     RETURNING id, email, is_admin',
+     RETURNING id, email, is_admin`,
     [email, displayName, googleId, avatarUrl]
   );
   return { user, isNew: true };
