@@ -65,7 +65,7 @@ function ConjugationDialog({ verb, onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative bg-surface border border-border rounded-2xl w-full max-w-sm overflow-hidden animate-fade-in"
+        className="relative bg-surface border border-border rounded-2xl w-full sm:max-w-sm overflow-hidden animate-fade-in"
         onClick={e => e.stopPropagation()}
       >
         <div className="px-5 py-3 bg-accent-glow border-b border-border flex items-center justify-between">
@@ -184,7 +184,7 @@ export default function VerbListSection({ verbs }) {
           {isPasseCompose ? 'Глаголы в passé composé' : 'Глаголы 1-й группы (-er)'}
         </h3>
         <p className="text-xs text-text-muted mb-3">Нажмите на глагол, чтобы увидеть спряжение</p>
-        <div className="max-h-[28rem] overflow-y-auto pr-1 -mr-1 space-y-4">
+        <div className="md:max-h-[28rem] overflow-y-auto pr-1 -mr-1 space-y-4">
           {groups.map(group => (
             <div key={group.name}>
               <h4 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5 px-1">{group.name}</h4>

@@ -127,7 +127,7 @@ export default function ConjugationSession({ themeId = null, formType = 'aff' })
           </h2>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 mb-8">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-8">
           <div className="bg-surface border border-border rounded-xl p-4 text-center">
             <div className="text-2xl font-bold text-white">{dueCount}</div>
             <div className="text-xs text-text-muted mt-1">{t('due_for_review')}</div>

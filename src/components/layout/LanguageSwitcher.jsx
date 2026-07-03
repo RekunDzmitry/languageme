@@ -39,7 +39,7 @@ export default function LanguageSwitcher() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-72 bg-surface border border-border rounded-xl shadow-xl z-50 p-2">
+        <div className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-1.5rem)] bg-surface border border-border rounded-xl shadow-xl z-50 p-2">
           <div className="text-[11px] font-bold text-text-muted uppercase tracking-wider px-2 py-1">
             {t('pack_section_learning')}
           </div>

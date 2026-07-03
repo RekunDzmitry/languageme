@@ -43,7 +43,7 @@ function formatDueShort(ts) {
 function ExerciseGrid({ themeId, exercises, exerciseCards, exerciseNotes, t, onNoteClick }) {
   return (
     <div className="mt-3">
-      <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2">
+      <div className="grid grid-cols-4 sm:grid-cols-8 md:grid-cols-10 gap-2">
         {exercises.map((ex, idx) => {
           const key = `${themeId}:${idx}`
           const card = exerciseCards[key]
@@ -109,7 +109,7 @@ function VocabGrid({ vocabIds, vocab, cards, vocabNotes, t, nativeLang, onNoteCl
 
   return (
     <div className="mt-3">
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
         {vocabIds.map((id) => {
           const word = wordsById[id]
           const card = cards[id]
