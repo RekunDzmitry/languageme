@@ -124,7 +124,7 @@ export default function AIChatModal({ exerciseKey, exerciseType, verb, prompt, a
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-surface border border-border rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl">
+      <div className="bg-surface border border-border rounded-2xl w-full sm:max-w-lg max-h-[85vh] flex flex-col shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2">

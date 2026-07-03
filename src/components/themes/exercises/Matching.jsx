@@ -42,7 +42,7 @@ export default function Matching({ exercise, onAnswer }) {
   return (
     <div className="bg-surface border border-border rounded-xl p-5">
       <div className="text-sm text-text-muted mb-3 uppercase tracking-wide">Соединить пары</div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4">
         <div className="space-y-2">
           {pairs.map((pair, i) => (
             <button

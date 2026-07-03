@@ -123,7 +123,7 @@ export default function UserMenu() {
         </button>
 
         {open && (
-          <div className="absolute right-0 top-full mt-1 w-48 bg-surface border border-border rounded-lg shadow-lg py-1 z-50">
+          <div className="absolute right-0 top-full mt-1 w-48 max-w-[calc(100vw-1.5rem)] bg-surface border border-border rounded-lg shadow-lg py-1 z-50">
             <button
               onClick={handleExport}
               className="w-full text-left px-4 py-2 text-sm text-text-primary hover:bg-surface-hover transition-colors"

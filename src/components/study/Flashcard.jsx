@@ -87,28 +87,28 @@ export default function Flashcard({ word, flipped, onFlip, userMnemonic, vocabNo
           </div>
 
           <div className="text-sm text-text-muted mt-2">{t('study_how_well')}</div>
-          <div className="flex gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
             <button
               onClick={() => onRate(3)}
-              className="px-8 py-3 rounded-xl font-bold text-green-400 border border-green-400/40 hover:bg-green-400/10 transition-colors"
+              className="px-2 sm:px-8 py-3 rounded-xl font-bold text-green-400 border border-green-400/40 hover:bg-green-400/10 transition-colors"
             >
               {t('rating_easy')}
             </button>
             <button
               onClick={() => onRate(2)}
-              className="px-8 py-3 rounded-xl font-bold text-blue-400 border border-blue-400/40 hover:bg-blue-400/10 transition-colors"
+              className="px-2 sm:px-8 py-3 rounded-xl font-bold text-blue-400 border border-blue-400/40 hover:bg-blue-400/10 transition-colors"
             >
               {t('rating_good')}
             </button>
             <button
               onClick={() => onRate(1)}
-              className="px-8 py-3 rounded-xl font-bold text-orange-400 border border-orange-400/40 hover:bg-orange-400/10 transition-colors"
+              className="px-2 sm:px-8 py-3 rounded-xl font-bold text-orange-400 border border-orange-400/40 hover:bg-orange-400/10 transition-colors"
             >
               {t('rating_hard')}
             </button>
             <button
               onClick={() => onRate(0)}
-              className="px-8 py-3 rounded-xl font-bold text-red-400 border border-red-400/40 hover:bg-red-400/10 transition-colors"
+              className="px-2 sm:px-8 py-3 rounded-xl font-bold text-red-400 border border-red-400/40 hover:bg-red-400/10 transition-colors"
             >
               {t('rating_again')}
             </button>

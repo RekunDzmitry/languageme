@@ -11,7 +11,7 @@ export default function VocabSection({ section }) {
   }
 
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2.5">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2.5">
       {words.map(word => (
         <VocabCard key={word.id} word={word} card={cards[word.id]} />
       ))}
