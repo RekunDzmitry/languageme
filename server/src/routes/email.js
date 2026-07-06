@@ -45,7 +45,11 @@ function buildChatRequestBody(prompt, options = {}) {
     temperature: 0.2,
     top_p: 0.9,
     max_tokens: maxTokens,
-    ...(json ? { response_format: { type: 'json_object' } } : {}),
+    // NVIDIA NIM (Nemotron) rejects `response_format: {type: "json_object"}` with a 500
+    // ("invalid type: unit variant, expected newtype variant" — Rust serde deserialization).
+    // The system prompt already demands JSON-only output and the parser at /api/email/evaluate
+    // tolerates code-fenced JSON, so we skip the OpenAI JSON-mode field for NVIDIA.
+    ...(json && !USE_NVIDIA_NIM ? { response_format: { type: 'json_object' } } : {}),
     ...(USE_NVIDIA_NIM ? {
       chat_template_kwargs: { enable_thinking: false },
       reasoning_budget: 0
