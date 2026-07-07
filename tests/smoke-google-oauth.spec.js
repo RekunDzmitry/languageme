@@ -36,7 +36,7 @@ test('Google login button redirects to accounts.google.com with the local callba
   expect(url.host, 'should hit accounts.google.com').toBe('accounts.google.com')
   expect(url.pathname, 'should hit /o/oauth2/v2/auth').toBe('/o/oauth2/v2/auth')
   expect(url.searchParams.get('client_id')).toBe('710696264208-peogjllgo7m777r4aa7nnc7fro5j4qu4.apps.googleusercontent.com')
-  expect(url.searchParams.get('redirect_uri')).toBe('http://localhost:5173/api/auth/google/callback')
+  expect(url.searchParams.get('redirect_uri')).toBe('http://127.0.0.1:5173/api/auth/google/callback')
   expect(url.searchParams.get('scope')).toContain('email')
   expect(url.searchParams.get('response_type')).toBe('code')
 

@@ -15,7 +15,7 @@ services:
       - "3000:3000"
     environment:
       DATABASE_URL: postgres://lm_user:lm_pass@postgres:5432/languageme
-      PUBLIC_URL: http://localhost:5173
+      PUBLIC_URL: http://127.0.0.1:5173
       PORT: 3000
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
