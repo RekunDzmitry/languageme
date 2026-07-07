@@ -151,6 +151,24 @@ export const aiApi = {
     api.delete(`/api/ai/notes/${noteId}`),
 }
 
+// Admin API (observability + AI sandbox)
+export const adminApi = {
+  listLogs: ({ limit = 50, offset = 0, userId, isSandbox, q } = {}) => {
+    const params = new URLSearchParams();
+    params.set('limit', String(limit));
+    params.set('offset', String(offset));
+    if (userId) params.set('userId', userId);
+    if (isSandbox === true) params.set('isSandbox', 'true');
+    else if (isSandbox === false) params.set('isSandbox', 'false');
+    if (q) params.set('q', q);
+    return api.get(`/api/admin/ai-logs?${params.toString()}`);
+  },
+  getLog: (id) => api.get(`/api/admin/ai-logs/${id}`),
+  getLogsSummary: () => api.get('/api/admin/ai-logs-summary'),
+  runSandbox: ({ systemPrompt, exerciseContext, message, history }) =>
+    api.post('/api/admin/ai-sandbox', { systemPrompt, exerciseContext, message, history }),
+}
+
 // Exercise Notes API (user-authored notes on WriteAnswer exercises)
 export const exerciseNoteApi = {
   // Get notes, optionally filtered by theme
