@@ -1,89 +1,10 @@
 import { Router } from 'express';
 import { pool } from '../db/pool.js';
 import { authenticate as requireAuth } from '../middleware/auth.js';
-import { config } from '../config.js';
+import { logAIRequest } from '../middleware/aiLog.js';
+import { buildSystemPrompt, runAICall, getAIConfig } from '../services/ai.js';
 
 const router = Router();
-
-// OpenAI-compatible AI API configuration
-const AI_BASE_URL = process.env.AI_BASE_URL || process.env.OPENCODE_BASE_URL || 'https://opencode.ai/zen/go/v1';
-const MODEL_NAME = process.env.AI_MODEL || process.env.OPENCODE_MODEL || 'deepseek-v4-flash';
-const AI_PROVIDER = process.env.AI_PROVIDER || (AI_BASE_URL.includes('nvidia.com') ? 'nvidia-nim' : 'opencode-go');
-
-// System prompt for the language learning assistant
-function buildSystemPrompt(exerciseContext = null) {
-  let contextInfo = '';
-  
-  if (exerciseContext) {
-    if (exerciseContext.verb) {
-      contextInfo += '\n\n📚 КОНТЕКСТ УПРАЖНЕНИЯ:\n';
-      contextInfo += `Глагол: ${exerciseContext.verb.infinitive}\n`;
-      contextInfo += `Значение: ${exerciseContext.verb.meaning}\n`;
-      if (exerciseContext.verb.group) {
-        contextInfo += `Группа: ${exerciseContext.verb.group}\n`;
-      }
-    }
-    
-    if (exerciseContext.prompt) {
-      contextInfo += `Задание (на русском): ${exerciseContext.prompt}\n`;
-    }
-    
-    if (exerciseContext.answer) {
-      contextInfo += `Правильный ответ (на французском): ${exerciseContext.answer}\n`;
-    }
-    
-    if (contextInfo) {
-      contextInfo = `Пользователь сейчас выполняет упражнение на спряжение глагола. ${contextInfo}`;
-    }
-  }
-  
-  return `Ты дружелюбный помощник для изучения французского языка в приложении LanguageMe.
-Отвечай на русском, но можешь смешивать с французским для примеров.
-Будь краток, полезен и используй примеры из реальной жизни.
-
-Когда пользователь спрашивает о слове или глаголе, объясняй:
-1. Точное значение и оттенки
-2. Контекст использования (формальный/неформальный)
-3. Примеры предложений
-4. Синонимы и антонимы если есть
-
-Если спрашивают о спряжении - давай полную таблицу спряжения.
-
-Будь особенно внимателен к контексту упражнения, о котором спрашивает пользователь.${contextInfo}`;
-}
-
-// ============================================================================
-// OpenAI-Compatible API Call
-// ============================================================================
-
-async function chatWithAI(messages) {
-  const apiKey = process.env.AI_API_KEY || process.env.NVIDIA_API_KEY || process.env.OPENCODE_API_KEY;
-  
-  if (!apiKey) {
-    throw new Error('AI_API_KEY, NVIDIA_API_KEY, or OPENCODE_API_KEY environment variable is not set');
-  }
-
-  const response = await fetch(`${AI_BASE_URL}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: MODEL_NAME,
-      messages: messages,
-      max_tokens: 2000
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenCode API error: ${response.status} - ${errorText}`);
-  }
-
-  const data = await response.json();
-  return data.choices[0]?.message?.content || '';
-}
 
 // ============================================================================
 // API Routes
@@ -92,8 +13,8 @@ async function chatWithAI(messages) {
 // Get or create conversation for an exercise
 async function getOrCreateConversation(userId, exerciseKey, exerciseType) {
   const existing = await pool.query(
-    `SELECT id FROM ai_conversation 
-     WHERE user_id = $1 AND exercise_key = $2 
+    `SELECT id FROM ai_conversation
+     WHERE user_id = $1 AND exercise_key = $2
      ORDER BY updated_at DESC LIMIT 1`,
     [userId, exerciseKey]
   );
@@ -119,7 +40,7 @@ router.get('/conversations/:exerciseKey', requireAuth, async (req, res) => {
 
     const conv = await pool.query(
       `SELECT id, exercise_key, exercise_type, created_at, updated_at
-       FROM ai_conversation 
+       FROM ai_conversation
        WHERE user_id = $1 AND exercise_key = $2
        ORDER BY updated_at DESC LIMIT 1`,
       [userId, exerciseKey]
@@ -182,8 +103,26 @@ router.post('/chat', requireAuth, async (req, res) => {
       { role: 'user', content: message }
     ];
 
-    // Call OpenCode API
-    const assistantMessage = await chatWithAI(messages);
+    // Call AI provider. logAIRequest is fire-and-forget so a logging failure
+    // never breaks a user request, and we still log the call once we have a
+    // result (success or error).
+    let result;
+    try {
+      result = await runAICall({ messages });
+    } catch (err) {
+      logAIRequest({
+        userId,
+        source: 'chat',
+        exerciseKey,
+        exerciseType,
+        systemPrompt,
+        messages,
+        error: { message: err.message, code: err.code, httpStatus: err.httpStatus, durationMs: err.durationMs },
+      });
+      throw err;
+    }
+
+    const assistantMessage = result.content;
 
     // Save user message
     await pool.query(
@@ -202,6 +141,16 @@ router.post('/chat', requireAuth, async (req, res) => {
       `UPDATE ai_conversation SET updated_at = NOW() WHERE id = $1`,
       [conversationId]
     );
+
+    logAIRequest({
+      userId,
+      source: 'chat',
+      exerciseKey,
+      exerciseType,
+      systemPrompt,
+      messages,
+      result,
+    });
 
     res.json({
       message: assistantMessage,
@@ -344,7 +293,7 @@ router.get('/conversations', requireAuth, async (req, res) => {
 // Health check endpoint for AI service
 router.get('/status', async (req, res) => {
   const apiKey = process.env.AI_API_KEY || process.env.NVIDIA_API_KEY || process.env.OPENCODE_API_KEY;
-  
+
   if (!apiKey) {
     return res.json({
       status: 'not_configured',
@@ -352,11 +301,12 @@ router.get('/status', async (req, res) => {
     });
   }
 
+  const { provider, model } = getAIConfig();
   res.json({
     status: 'ok',
-    provider: AI_PROVIDER,
-    model: MODEL_NAME,
-    message: `${AI_PROVIDER} AI is configured and ready`
+    provider,
+    model,
+    message: `${provider} AI is configured and ready`
   });
 });
 

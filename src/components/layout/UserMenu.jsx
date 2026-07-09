@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useT } from '../../i18n'
 import { useAuth } from '../../stores/AuthContext'
 import { useProgress } from '../../stores/UserProgressContext'
@@ -6,7 +7,7 @@ import { api } from '../../api/client'
 
 export default function UserMenu() {
   const { t } = useT()
-  const { user, logout } = useAuth()
+  const { user, logout, isAdmin } = useAuth()
   const { conjugationCards, refreshProgress, importConjugationCards } = useProgress()
   const [open, setOpen] = useState(false)
   const [toast, setToast] = useState(null)
@@ -136,6 +137,18 @@ export default function UserMenu() {
             >
               {t('user_menu_import')}
             </button>
+            {isAdmin && (
+              <>
+                <div className="border-t border-border my-1" />
+                <Link
+                  to="/admin"
+                  onClick={() => setOpen(false)}
+                  className="block px-4 py-2 text-sm text-text-primary hover:bg-surface-hover transition-colors no-underline"
+                >
+                  {t('nav_admin')}
+                </Link>
+              </>
+            )}
             <div className="border-t border-border my-1" />
             <button
               onClick={() => { setOpen(false); logout() }}
