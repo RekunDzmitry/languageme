@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { pool } from '../db/pool.js';
 import { authenticate as requireAuth } from '../middleware/auth.js';
+import { logAIRequest } from '../middleware/aiLog.js';
 import { buildSystemPrompt, runAICall, getAIConfig } from '../services/ai.js';
 
 const router = Router();
