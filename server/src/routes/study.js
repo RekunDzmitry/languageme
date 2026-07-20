@@ -9,15 +9,20 @@ const router = Router();
 // Derive target_lang from a vocab_id. System cards (fr_/pl_) are decided
 // by the prefix; user cards (usr_) need a user_vocab lookup because the
 // prefix is identical across languages. Returns null if the id is
-// malformed (caller decides how to handle — review() raises 400).
-async function resolveTargetLang(client, vocabId) {
+// malformed OR if the usr_ row doesn't belong to userId (caller decides
+// how to handle — review() raises 400). The ownership filter is load-
+// bearing: without it, anyone who learns another user's usr_<uuid> can
+// create srs_card + review rows on that user's behalf, breaking the
+// private-card ownership model.
+async function resolveTargetLang(client, vocabId, userId) {
   if (typeof vocabId !== 'string' || !vocabId) return null;
   if (vocabId.startsWith('fr_')) return 'fr';
   if (vocabId.startsWith('pl_')) return 'pl';
   if (vocabId.startsWith('usr_')) {
+    if (!userId) return null;
     const { rows: [row] } = await client.query(
-      'SELECT target_lang FROM user_vocab WHERE id = $1',
-      [vocabId]
+      'SELECT target_lang FROM user_vocab WHERE id = $1 AND user_id = $2',
+      [vocabId, userId]
     );
     return row?.target_lang || null;
   }
@@ -108,7 +113,7 @@ router.post('/review', authenticate,
         // First review of a new card. target_lang is NOT NULL on srs_card
         // (set up in migration 025); derive it from the vocab_id prefix
         // for system cards or look it up in user_vocab for user cards.
-        const targetLang = await resolveTargetLang(client, vocabId);
+        const targetLang = await resolveTargetLang(client, vocabId, userId);
         if (!targetLang) {
           await client.query('ROLLBACK');
           return res.status(400).json({ error: 'Unknown vocabId' });
@@ -129,7 +134,7 @@ router.post('/review', authenticate,
       );
 
       // Insert review record (also needs target_lang)
-      const reviewLang = card.target_lang || await resolveTargetLang(client, vocabId);
+      const reviewLang = card.target_lang || await resolveTargetLang(client, vocabId, userId);
       if (reviewLang) {
         await client.query(
           'INSERT INTO review (user_id, vocab_id, target_lang, quality) VALUES ($1, $2, $3, $4)',

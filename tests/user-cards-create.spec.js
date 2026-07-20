@@ -193,6 +193,64 @@ test('user card is isolated to the pack it was filed under', async ({ page, requ
   await page.waitForLoadState('networkidle')
   // The pl-telc_other study session should be empty (no user cards
   // filed under it, and no static cards either). The "all caught up"
-  // empty state is rendered.
   await expect(page.getByText(/Всё повторено|Занятие окончено/).first()).toBeVisible({ timeout: 8000 })
+
+  // /cards view must also be pack-scoped. The A1/A2 card was filed
+  // under pl-a1-a2_other; switching the active pack to pl-telc on
+  // /cards should hide the A1/A2 card. Without the userVocab pack
+  // filter, the card would still appear in the list (and inflate
+  // the stats) even when the user is studying TELC.
+  await page.goto('/cards')
+  await page.waitForLoadState('networkidle')
+  await page.evaluate(() => {
+    const settings = JSON.parse(localStorage.getItem('lm_settings') || '{}')
+    settings.activePackId = 'pl-telc'
+    localStorage.setItem('lm_settings', JSON.stringify(settings))
+  })
+  await page.reload()
+  await page.waitForLoadState('networkidle')
+  await expect(page.locator('text=a1-word')).toHaveCount(0)
+})
+
+// Cross-user ownership on /review: a user who knows another user's
+// usr_<uuid> must NOT be able to create srs_card + review rows on
+// that user's behalf. The resolveTargetLang helper scopes the
+// user_vocab lookup to the caller, so a foreign id is treated as
+// "Unknown vocabId" and the route returns 400.
+test('user cannot review another user\'s private usr_ card', async ({ request }) => {
+  // Owner creates a card.
+  const ownerEmail = `ucards-owner-${Date.now()}@test.local`
+  const ownerReg = await request.post('http://localhost:3000/api/auth/register', {
+    data: { email: ownerEmail, password: 'testpass123' },
+  })
+  const owner = await ownerReg.json()
+  const created = await (await request.post('http://localhost:3000/api/user-cards', {
+    headers: { Authorization: `Bearer ${owner.accessToken}` },
+    data: { targetLang: 'fr', target: 'private-word', translation: 'private', themeId: 'fr-foundations_other' },
+  })).json()
+  const cardId = created.id
+  expect(cardId).toMatch(/^usr_[0-9a-f]{32}$/)
+
+  // Attacker registers and tries to review the owner's card.
+  const attackerEmail = `ucards-attacker-${Date.now()}@test.local`
+  const attackerReg = await request.post('http://localhost:3000/api/auth/register', {
+    data: { email: attackerEmail, password: 'testpass123' },
+  })
+  const attacker = await attackerReg.json()
+
+  const reviewRes = await request.post('http://localhost:3000/api/study/review', {
+    headers: { Authorization: `Bearer ${attacker.accessToken}` },
+    data: { vocabId: cardId, quality: 2 },
+  })
+  expect(reviewRes.status()).toBe(400)
+  expect((await reviewRes.json()).error).toBe('Unknown vocabId')
+
+  // The owner's srs_card must be untouched (the attacker may have
+  // tried quality=2 but the lookup should have returned 400 before
+  // any INSERT).
+  const srsRows = await (await request.get('http://localhost:3000/api/study/cards?target=fr', {
+    headers: { Authorization: `Bearer ${owner.accessToken}` },
+  })).json()
+  const ownerRow = srsRows.find((r) => r.vocab_id === cardId)
+  expect(ownerRow.reps).toBe(0)  // never advanced
 })

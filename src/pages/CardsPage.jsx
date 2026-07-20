@@ -70,16 +70,27 @@ const LEGACY_OTHER_THEME_IDS = {
   // Enrich + concat. Static cards first (they drive the count stats)
   // followed by user cards. Each row carries `source: 'user'` so the
   // list can render the edit/delete affordances.
+  //
+  // The user-card half is scoped to the active pack so a card filed
+  // under pl-a1-a2_other doesn't bleed into the pl-telc pack's
+  // /cards view (or its stats). Without this filter, switching
+  // packs would still surface every user card for the lang.
   const enrichedCards = useMemo(() => {
     const attachCard = (word) => {
       const card = cards[word.id] || { ease: 2.5, interval: 1, reps: 0, due: Date.now(), lastReviewed: null }
       return { ...word, card, status: getCardStatus(card) }
     }
     const staticRows = staticVocab.map(attachCard)
-    const userRows = Object.values(userVocab).map(attachCard)
+    const userScopeIds = new Set([
+      ...activeThemeIds,
+      packCatchAll,
+      LEGACY_OTHER_THEME_IDS[targetLang],
+    ].filter(Boolean))
+    const userRows = Object.values(userVocab)
+      .filter((v) => Array.isArray(v.themeIds) && v.themeIds.some((id) => userScopeIds.has(id)))
+      .map(attachCard)
     return [...staticRows, ...userRows]
-  }, [staticVocab, userVocab, cards])
-
+  }, [staticVocab, userVocab, cards, activeThemeIds, packCatchAll, targetLang])
   // Stats
   const stats = useMemo(() => {
     const s = { total: enrichedCards.length, due: 0, mastered: 0, learning: 0, new: 0 }
