@@ -3,7 +3,7 @@ import { storage } from '../utils/storage'
 import { sm2, createCard } from '../utils/sm2'
 import { useAuth } from './AuthContext'
 import { useSettings } from './SettingsContext'
-import { api, exerciseApi, exerciseNoteApi, vocabNoteApi } from '../api/client'
+import { api, exerciseApi, exerciseNoteApi, vocabNoteApi, userCardsApi } from '../api/client'
 
 const UserProgressContext = createContext()
 
@@ -21,6 +21,7 @@ const defaultProgress = {
   exerciseCards: {},      // SRS cards for Polish spelling exercises
   exerciseNotes: {},      // user-authored notes keyed by exerciseKey
   vocabNotes: {},         // user-authored notes keyed by vocabId
+  userVocab: {},          // user-authored flashcards keyed by usr_<uuid>
   themeProgress: {},
   userMnemonics: {},
   stats: { streak: 0, totalReviewed: 0, lastStudyDate: null, reviewHistory: [] },
@@ -44,10 +45,11 @@ export function UserProgressProvider({ children }) {
       exerciseCards: saved?.exerciseCards || {},
       exerciseNotes: {},
       vocabNotes: {},
+      userVocab: {},
       themeProgress: saved?.themeProgress || {},
       userMnemonics: saved?.userMnemonics || {},
       stats: saved?.stats || defaultProgress.stats,
-    }
+     }
   })
 
   const [isProgressLoading, setIsProgressLoading] = useState(isAuthenticated)
@@ -79,7 +81,8 @@ export function UserProgressProvider({ children }) {
       api.get('/api/study/exercises').catch(() => null),  // Exercise cards for Polish
       api.get('/api/exercise-notes').catch(() => null),  // Exercise notes
       api.get('/api/vocab-notes').catch(() => null),  // Vocabulary notes
-    ]).then(([statsData, themesData, mnemonicsData, cardsData, conjCardsData, unlockData, exCardsData, exNotesData, vocabNotesData]) => {
+      api.get(`/api/user-cards?target=${targetLang}`).catch(() => null),  // User-authored cards
+    ]).then(([statsData, themesData, mnemonicsData, cardsData, conjCardsData, unlockData, exCardsData, exNotesData, vocabNotesData, userCardsData]) => {
       setProgress(prev => {
         const next = { ...prev }
 
@@ -160,6 +163,27 @@ export function UserProgressProvider({ children }) {
               content: n.content,
               createdAt: n.created_at,
               updatedAt: n.updated_at,
+            }
+          })
+        }
+        // userCards: shape them so they slot into the same vocab
+        // rendering path as seed cards. id stays the server's
+        // `usr_<uuid>` — srsCards is keyed by the same id because the
+        // backend wrote an srs_card row with that vocab_id at create
+        // time. translations[ru] is populated from the user's native
+        // lang (the only one supported today) so Flashcard's
+        // `word.translations?.[nativeLang]` lookup hits.
+        if (Array.isArray(userCardsData)) {
+          next.userVocab = {}
+          userCardsData.forEach(c => {
+            next.userVocab[c.id] = {
+              id: c.id,
+              target: c.target,
+              translation: c.translation,
+              hint: c.hint || null,
+              themeIds: [c.themeId],
+              translations: { [settings.nativeLang]: c.translation },
+              source: 'user',
             }
           })
         }
@@ -400,6 +424,66 @@ export function UserProgressProvider({ children }) {
     }
   }, [isAuthenticated])
 
+  // === User-authored flashcards ===
+  // Source of truth is PostgreSQL; we keep a local mirror so the cards
+  // list renders optimistically and the study loop can key srsCards by
+  // the server-assigned usr_<uuid>. createUserCard also creates an
+  // srs_card row on the server (default SM-2 values); the next
+  // refreshProgress() pulls it into srsCards, but in the meantime
+  // StudySession.getStudyableCards treats missing srsCards entries as
+  // "new" — so a freshly created card is immediately studyable.
+  const createUserCard = useCallback(async (data) => {
+    if (!isAuthenticated) throw new Error('Not authenticated')
+    const created = await userCardsApi.create(data)
+    setProgress(prev => {
+      const next = { ...prev.userVocab }
+      next[created.id] = {
+        id: created.id,
+        target: created.target,
+        translation: created.translation,
+        hint: created.hint || null,
+        themeIds: [created.themeId],
+        translations: { [settings.nativeLang]: created.translation },
+        source: 'user',
+      }
+      return { ...prev, userVocab: next }
+    })
+    return created
+  }, [isAuthenticated, settings.nativeLang])
+
+  const updateUserCard = useCallback(async (id, data) => {
+    if (!isAuthenticated) throw new Error('Not authenticated')
+    const updated = await userCardsApi.update(id, data)
+    setProgress(prev => {
+      const next = { ...prev.userVocab }
+      next[updated.id] = {
+        ...next[updated.id],
+        target: updated.target,
+        translation: updated.translation,
+        hint: updated.hint || null,
+        themeIds: [updated.themeId],
+        translations: { [settings.nativeLang]: updated.translation },
+      }
+      return { ...prev, userVocab: next }
+    })
+    return updated
+  }, [isAuthenticated, settings.nativeLang])
+
+  const deleteUserCard = useCallback(async (id) => {
+    if (!isAuthenticated) throw new Error('Not authenticated')
+    await userCardsApi.remove(id)
+    setProgress(prev => {
+      const nextUserVocab = { ...prev.userVocab }
+      delete nextUserVocab[id]
+      // Also drop the local srsCard entry if the server already wrote one.
+      // srsCards is keyed by the same id (usr_<uuid>), so the lookup is
+      // a single string match.
+      const nextSrsCards = { ...(prev.srsCards || {}) }
+      delete nextSrsCards[id]
+      return { ...prev, userVocab: nextUserVocab, srsCards: nextSrsCards }
+    })
+  }, [isAuthenticated])
+
   const incrementStreak = useCallback(() => {
     setProgress(prev => ({
       ...prev,
@@ -425,6 +509,7 @@ export function UserProgressProvider({ children }) {
     exerciseCards: progress.exerciseCards,
     exerciseNotes: progress.exerciseNotes,
     vocabNotes: progress.vocabNotes,
+    userVocab: progress.userVocab,
     themeProgress: progress.themeProgress,
     userMnemonics: progress.userMnemonics,
     stats: progress.stats,
@@ -442,6 +527,9 @@ export function UserProgressProvider({ children }) {
     clearExerciseNote,
     saveVocabNote,
     clearVocabNote,
+    createUserCard,
+    updateUserCard,
+    deleteUserCard,
     resetCard,
     updateCard,
     incrementStreak,
@@ -453,6 +541,7 @@ export function UserProgressProvider({ children }) {
     progress.exerciseCards,
     progress.exerciseNotes,
     progress.vocabNotes,
+    progress.userVocab,
     progress.themeProgress,
     progress.userMnemonics,
     progress.stats,
@@ -470,6 +559,9 @@ export function UserProgressProvider({ children }) {
     clearExerciseNote,
     saveVocabNote,
     clearVocabNote,
+    createUserCard,
+    updateUserCard,
+    deleteUserCard,
     resetCard,
     updateCard,
     incrementStreak,

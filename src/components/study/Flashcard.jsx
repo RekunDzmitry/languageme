@@ -13,7 +13,7 @@ export default function Flashcard({ word, flipped, onFlip, userMnemonic, vocabNo
   const nativeLang = settings.nativeLang
   const targetLang = settings.targetLang
   const hints = getHintsByLang(nativeLang)
-  const hint = userMnemonic || hints[word.id] || ''
+  const hint = userMnemonic || word.hint || hints[word.id] || ''
   const translation =
     word.translations?.[nativeLang] || word.translations?.ru || word.translations?.en || ''
 

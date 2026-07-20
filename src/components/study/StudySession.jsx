@@ -42,6 +42,23 @@ export default function StudySession({ themeVocab = null }) {
   const currentWordRef = useRef(null)
 
   useEffect(() => { currentWordRef.current = queue[0] || null })
+  // The lazy useState init above only runs once, so it captures
+  // themeVocab at mount time. For pages that load user-authored cards
+  // asynchronously (e.g. /study/<catch-all-theme> right after the user
+  // creates a card), the pool arrives AFTER the queue is already empty.
+  // Refill the queue whenever the pool changes AND the queue is empty —
+  // this is exactly the "all words studied" state where the user is
+  // waiting for more content, not the "mid-session" state where a
+  // re-render would be disruptive.
+  useEffect(() => {
+    if (queue.length > 0) return
+    if (sessionComplete) return
+    const pool = themeVocab || VOCAB
+    const next = getStudyableCards(pool, cards, seenIdsRef.current).slice(0, BATCH_SIZE)
+    if (next.length === 0) return
+    next.forEach(w => seenIdsRef.current.add(w.id))
+    setQueue(next)
+  }, [themeVocab, cards, queue.length, sessionComplete])
 
   const handleRate = useCallback((quality) => {
     if (!currentWordRef.current) return

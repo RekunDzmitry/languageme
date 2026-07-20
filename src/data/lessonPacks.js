@@ -86,6 +86,10 @@ export function getOrderFromThemeId(themeId) {
  */
 export function isThemeInPack(themeId, pack) {
   if (!pack || !themeId) return false
+  // Pack-scoped catch-all: "<pack.id>_other" (e.g. "pl-a1-a2_other"
+  // belongs to the pl-a1-a2 pack). Checked before the regular theme
+  // pattern because these ids don't match `^<lang>_theme\d+$`.
+  if (themeId === `${pack.id}_other`) return true
   const lang = getLangFromThemeId(themeId)
   if (lang !== pack.langPrefix) return false
   const order = getOrderFromThemeId(themeId)

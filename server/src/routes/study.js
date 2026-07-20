@@ -6,14 +6,37 @@ import { sm2 } from '../services/sm2.js';
 
 const router = Router();
 
+// Derive target_lang from a vocab_id. System cards (fr_/pl_) are decided
+// by the prefix; user cards (usr_) need a user_vocab lookup because the
+// prefix is identical across languages. Returns null if the id is
+// malformed (caller decides how to handle — review() raises 400).
+async function resolveTargetLang(client, vocabId) {
+  if (typeof vocabId !== 'string' || !vocabId) return null;
+  if (vocabId.startsWith('fr_')) return 'fr';
+  if (vocabId.startsWith('pl_')) return 'pl';
+  if (vocabId.startsWith('usr_')) {
+    const { rows: [row] } = await client.query(
+      'SELECT target_lang FROM user_vocab WHERE id = $1',
+      [vocabId]
+    );
+    return row?.target_lang || null;
+  }
+  return null;
+}
+
 // All user's SRS cards (optionally filtered by target language)
 router.get('/cards', authenticate, async (req, res, next) => {
   try {
     const target = req.query.target || 'fr';
-    // Filter by vocab_id prefix (fr_xxx, pl_xxx)
+    if (target !== 'fr' && target !== 'pl') {
+      return res.status(400).json({ error: 'target must be "fr" or "pl"' });
+    }
+    // Filter on target_lang (NOT NULL since migration 025) rather than
+    // parsing the vocab_id prefix. User cards and seed cards are now
+    // both selected uniformly.
     const { rows } = await pool.query(
-      'SELECT vocab_id, ease, interval_days, reps, due, last_reviewed FROM srs_card WHERE user_id = $1 AND vocab_id LIKE $2',
-      [req.user.sub, `${target}_%`]
+      'SELECT vocab_id, ease, interval_days, reps, due, last_reviewed FROM srs_card WHERE user_id = $1 AND target_lang = $2',
+      [req.user.sub, target]
     );
     res.json(rows);
   } catch (err) { next(err); }
@@ -82,9 +105,17 @@ router.post('/review', authenticate,
       );
 
       if (!card) {
+        // First review of a new card. target_lang is NOT NULL on srs_card
+        // (set up in migration 025); derive it from the vocab_id prefix
+        // for system cards or look it up in user_vocab for user cards.
+        const targetLang = await resolveTargetLang(client, vocabId);
+        if (!targetLang) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: 'Unknown vocabId' });
+        }
         const { rows: [newCard] } = await client.query(
-          'INSERT INTO srs_card (user_id, vocab_id) VALUES ($1, $2) RETURNING *',
-          [userId, vocabId]
+          'INSERT INTO srs_card (user_id, vocab_id, target_lang) VALUES ($1, $2, $3) RETURNING *',
+          [userId, vocabId, targetLang]
         );
         card = newCard;
       }
@@ -97,11 +128,19 @@ router.post('/review', authenticate,
         [updated.ease, updated.interval_days, updated.reps, updated.due, updated.last_reviewed, userId, vocabId]
       );
 
-      // Insert review record
-      await client.query(
-        'INSERT INTO review (user_id, vocab_id, quality) VALUES ($1, $2, $3)',
-        [userId, vocabId, quality]
-      );
+      // Insert review record (also needs target_lang)
+      const reviewLang = card.target_lang || await resolveTargetLang(client, vocabId);
+      if (reviewLang) {
+        await client.query(
+          'INSERT INTO review (user_id, vocab_id, target_lang, quality) VALUES ($1, $2, $3, $4)',
+          [userId, vocabId, reviewLang, quality]
+        );
+      } else {
+        await client.query(
+          'INSERT INTO review (user_id, vocab_id, quality) VALUES ($1, $2, $3)',
+          [userId, vocabId, quality]
+        );
+      }
 
       // Upsert daily stat
       const isCorrect = quality >= 2 ? 1 : 0;

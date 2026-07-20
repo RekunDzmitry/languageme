@@ -23,6 +23,7 @@ import exportRoutes from './routes/export.js';
 import importRoutes from './routes/import.js';
 import exerciseNotesRoutes from './routes/exerciseNotes.js';
 import vocabNotesRoutes from './routes/vocabNotes.js';
+import userCardsRoutes from './routes/userCards.js';
 import emailRoutes from './routes/email.js';
 
 const app = express();
@@ -56,6 +57,7 @@ app.use('/api/export', exportRoutes);
 app.use('/api/import', importRoutes);
 app.use('/api/exercise-notes', exerciseNotesRoutes);
 app.use('/api/vocab-notes', vocabNotesRoutes);
+app.use('/api/user-cards', userCardsRoutes);
 app.use('/api/email', emailRoutes);
 
 // Health check

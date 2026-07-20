@@ -348,3 +348,15 @@ export const vocabNoteApi = {
   delete: (vocabId) =>
     api.delete(`/api/vocab-notes/${encodeURIComponent(vocabId)}`),
 }
+
+// User-authored flashcards API. Mirrors the shape of vocabNoteApi:
+// camelCase methods, no manual token plumbing. The id is the server's
+// `usr_<uuid>` — never a seed id, so it can't collide with fr_/pl_
+// srs_card lookups in the study loop.
+export const userCardsApi = {
+  list: (targetLang) =>
+    api.get(`/api/user-cards${targetLang ? `?target=${encodeURIComponent(targetLang)}` : ''}`),
+  create: (data) => api.post('/api/user-cards', data),
+  update: (id, data) => api.patch(`/api/user-cards/${encodeURIComponent(id)}`, data),
+  remove: (id) => api.delete(`/api/user-cards/${encodeURIComponent(id)}`),
+}
