@@ -69,6 +69,7 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
       // it (position >= 10 in due+newC).
       const poolUsrCount = pool.filter((w) => w.id?.startsWith?.('usr_')).length
       const userVocabCount = userVocab ? Object.keys(userVocab).length : 0
+      const cardsCount = cards ? Object.keys(cards).length : 0
       studyApi.sessionStart({
         route,
         themeId,
