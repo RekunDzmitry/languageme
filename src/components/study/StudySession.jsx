@@ -12,7 +12,7 @@ import VocabNoteModal from '../themes/exercises/VocabNoteModal'
 const BATCH_SIZE = 10
 
 export default function StudySession({ themeVocab = null, route = 'learn', themeId = null }) {
-  const { cards, isProgressLoading, rateCard, userMnemonics, vocabNotes, saveVocabNote, clearVocabNote, showNotification, incrementStreak } = useProgress()
+  const { cards, isProgressLoading, userVocab, rateCard, userMnemonics, vocabNotes, saveVocabNote, clearVocabNote, showNotification, incrementStreak } = useProgress()
   const { settings } = useSettings()
   const { t } = useT()
   const targetLang = settings.targetLang
@@ -55,9 +55,21 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
       // shows exactly what the client built from the pool+cards,
       // not the BATCH_SIZE-sliced queue. The refill effect may have
       // already prepended user cards by this point, so the
-      // recomputation reflects the post-refill pool.
       const pool = themeVocab || VOCAB
       const { due, newC, queue: allQueue } = getStudyableCardsDetailed(pool, cards, seenIdsRef.current)
+      // Diagnostic stats so the server log can pinpoint where the
+      // user card is being filtered out: userVocabCount = how many
+      // user cards the React context has after fetchProgress;
+      // poolUsrCount = how many of those actually made it into
+      // the pool (i.e. matched the scope filter); cardsCount = how
+      // many srs_card rows the client has. If userVocabCount > 0
+      // but poolUsrCount === 0, the scope filter is dropping the
+      // card (themeId mismatch). If poolUsrCount > 0 but the user
+      // card is missing from queue, the BATCH_SIZE slice dropped
+      // it (position >= 10 in due+newC).
+      const poolUsrCount = pool.filter((w) => w.id?.startsWith?.('usr_')).length
+      const userVocabCount = userVocab ? Object.keys(userVocab).length : 0
+      const cardsCount = cards ? Object.keys(cards).length : 0
       studyApi.sessionStart({
         route,
         themeId,
@@ -66,6 +78,9 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
         due: due.map(w => w.id),
         newC: newC.map(w => w.id),
         poolSize: allQueue.length,
+        userVocabCount,
+        poolUsrCount,
+        cardsCount,
       }).catch(() => {})
     }, 500)
     return () => clearTimeout(timer)

@@ -196,7 +196,7 @@ router.post('/review', authenticate,
 // break the session.
 router.post('/session-start', authenticate, async (req, res, next) => {
   try {
-    const { route, themeId, targetLang, queue, due, newC, poolSize } = req.body || {};
+    const { route, themeId, targetLang, queue, due, newC, poolSize, userVocabCount, poolUsrCount, cardsCount } = req.body || {};
     if (route !== 'learn' && route !== 'study') {
       return res.status(400).json({ error: 'route must be "learn" or "study"' });
     }
@@ -219,6 +219,20 @@ router.post('/session-start', authenticate, async (req, res, next) => {
       due: Array.isArray(due) ? due : null,
       newC: Array.isArray(newC) ? newC : null,
       poolSize: typeof poolSize === 'number' ? poolSize : null,
+      // Diagnostic counters that pinpoint where the user card is
+      // being dropped: userVocabCount = user cards in the React
+      // context after fetchProgress; poolUsrCount = how many of
+      // those made it past the scope filter into themeVocab;
+      // cardsCount = srs_card rows the client has.
+      //   userVocabCount > 0 && poolUsrCount === 0
+      //     → scope filter dropped the card (themeId mismatch)
+      //   poolUsrCount > 0 && user card missing from queue
+      //     → BATCH_SIZE slice dropped it (position >= 10)
+      //   userVocabCount === 0
+      //     → fetchProgress didn't load it (race with createUserCard)
+      userVocabCount: typeof userVocabCount === 'number' ? userVocabCount : null,
+      poolUsrCount: typeof poolUsrCount === 'number' ? poolUsrCount : null,
+      cardsCount: typeof cardsCount === 'number' ? cardsCount : null,
     });
     res.json({ ok: true });
   } catch (err) { next(err); }
