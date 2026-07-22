@@ -35,22 +35,49 @@ export default function StudySession({ themeVocab = null }) {
 
   useEffect(() => { currentWordRef.current = queue[0] || null })
   // The lazy useState init above only runs once, so it captures
-  // themeVocab at mount time. For pages that load user-authored cards
-  // asynchronously (e.g. /study/<catch-all-theme> right after the user
-  // creates a card), the pool arrives AFTER the queue is already empty.
-  // Refill the queue whenever the pool changes AND the queue is empty —
-  // this is exactly the "all words studied" state where the user is
-  // waiting for more content, not the "mid-session" state where a
-  // re-render would be disruptive.
+  // themeVocab at mount time. For pages that load user-authored
+  // cards asynchronously (e.g. /learn for a pack whose user cards
+  // load after the static pool, or /study/<catch-all-theme> right
+  // after the user creates a card), the pool arrives AFTER the
+  // queue is already populated with seed cards. Without this
+  // effect, the user card never reaches the queue. Whenever the
+  // pool changes, prepend any missing cards (up to the batch
+  // room). The user-first tiebreaker in getStudyableCards means
+  // a newly-arrived user card is prepended, so the learner
+  // sees their own card first without waiting for the next
+  // manual refresh. This is a no-op for the steady-state case
+  // (pool unchanged, queue has all available cards) and for
+  // the mid-session case (the pool doesn't grow while a user
+  // is studying, so `missing` stays empty).
   useEffect(() => {
-    if (queue.length > 0) return
     if (sessionComplete) return
     const pool = themeVocab || VOCAB
-    const next = getStudyableCards(pool, cards, seenIdsRef.current).slice(0, BATCH_SIZE)
-    if (next.length === 0) return
-    next.forEach(w => seenIdsRef.current.add(w.id))
-    setQueue(next)
-  }, [themeVocab, cards, queue.length, sessionComplete])
+    const allAvailable = getStudyableCards(pool, cards, seenIdsRef.current)
+    const inQueue = new Set(queue.map((w) => w.id))
+    const missing = allAvailable.filter((w) => !inQueue.has(w.id))
+    if (missing.length === 0) return
+    // Make room at the tail if the initial batch of seed cards
+    // already filled BATCH_SIZE — a newly-arrived user card must
+    // still be prepended (user-first priority) even at the cost
+    // of dropping the last seed card from the current batch.
+    // Cap overflow at queue.length: missing can be much larger
+    // than the batch (all the unqueued seed cards), but we only
+    // ever drop from the existing tail.
+    const overflow = Math.min(
+      queue.length,
+      Math.max(0, queue.length + missing.length - BATCH_SIZE)
+    )
+    if (overflow > 0) {
+      for (let i = 0; i < overflow; i++) {
+        seenIdsRef.current.delete(queue[queue.length - 1 - i].id)
+      }
+    }
+    const roomAfterDrop = BATCH_SIZE - (queue.length - overflow)
+    const toAdd = missing.slice(0, roomAfterDrop)
+    if (toAdd.length === 0) return
+    toAdd.forEach((w) => seenIdsRef.current.add(w.id))
+    setQueue((prev) => [...toAdd, ...prev.slice(0, prev.length - overflow)])
+  }, [themeVocab, cards, sessionComplete])
 
   const handleRate = useCallback((quality) => {
     if (!currentWordRef.current) return
