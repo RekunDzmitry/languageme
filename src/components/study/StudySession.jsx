@@ -12,7 +12,7 @@ import VocabNoteModal from '../themes/exercises/VocabNoteModal'
 const BATCH_SIZE = 10
 
 export default function StudySession({ themeVocab = null, route = 'learn', themeId = null }) {
-  const { cards, rateCard, userMnemonics, vocabNotes, saveVocabNote, clearVocabNote, showNotification, incrementStreak } = useProgress()
+  const { cards, isProgressLoading, rateCard, userMnemonics, vocabNotes, saveVocabNote, clearVocabNote, showNotification, incrementStreak } = useProgress()
   const { settings } = useSettings()
   const { t } = useT()
   const targetLang = settings.targetLang
@@ -35,14 +35,19 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
   // Fire sessionStart AFTER the queue stabilizes. The lazy useState
   // init above runs before fetchProgress completes (cards is still
   // null), so the initial queue doesn't include user cards that load
-  // asynchronously. The refill effect below prepends those cards
-  // when themeVocab/cards change. Debouncing by 500ms gives the
-  // async progress fetch + refill a chance to settle, so the
-  // logged queue is the one the study session actually shows
-  // the user. If the queue changes again before the timer fires
-  // (e.g. the user rates a card), the timer resets.
+  // Fire sessionStart AFTER the queue stabilizes. Three conditions
+  // must hold: (1) the progress fetch has completed (isProgressLoading
+  // flipped to false) so userVocab is populated from the database,
+  // (2) the queue has been built from the lazy init, and (3) the
+  // 500ms debounce has elapsed so any async refill of missing
+  // cards (from a freshly-loaded userVocab) has settled. Without
+  // the isProgressLoading guard, the timer fires while fetchProgress
+  // is still in flight — userVocab is {} so the pool is static-only
+  // and a user card filed seconds earlier is silently absent from
+  // the logged queue.
   useEffect(() => {
     if (sessionStartFiredRef.current) return
+    if (isProgressLoading) return
     const timer = setTimeout(() => {
       if (sessionStartFiredRef.current) return
       sessionStartFiredRef.current = true
@@ -54,7 +59,7 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
       }).catch(() => {})
     }, 500)
     return () => clearTimeout(timer)
-  }, [queue, route, themeId, targetLang])
+  }, [isProgressLoading, queue, route, themeId, targetLang])
   const [flipped, setFlipped] = useState(false)
   const [sessionStats, setSessionStats] = useState({ correct: 0, total: 0 })
   const [sessionComplete, setSessionComplete] = useState(false)
