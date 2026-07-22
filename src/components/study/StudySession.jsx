@@ -3,7 +3,7 @@ import { useProgress } from '../../stores/UserProgressContext'
 import { useSettings } from '../../stores/SettingsContext'
 import { useT } from '../../i18n'
 import { getVocab } from '../../data/courses'
-import { getStudyableCards } from './studyQueue'
+import { getStudyableCards, getStudyableCardsDetailed } from './studyQueue'
 import { stopSpeaking } from '../../utils/audio'
 import { studyApi } from '../../api/client'
 import Flashcard from './Flashcard'
@@ -51,11 +51,21 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
     const timer = setTimeout(() => {
       if (sessionStartFiredRef.current) return
       sessionStartFiredRef.current = true
+      // Recompute the due/newC halves at fire-time so the server log
+      // shows exactly what the client built from the pool+cards,
+      // not the BATCH_SIZE-sliced queue. The refill effect may have
+      // already prepended user cards by this point, so the
+      // recomputation reflects the post-refill pool.
+      const pool = themeVocab || VOCAB
+      const { due, newC, queue: allQueue } = getStudyableCardsDetailed(pool, cards, seenIdsRef.current)
       studyApi.sessionStart({
         route,
         themeId,
         targetLang,
         queue: queue.map(w => w.id),
+        due: due.map(w => w.id),
+        newC: newC.map(w => w.id),
+        poolSize: allQueue.length,
       }).catch(() => {})
     }, 500)
     return () => clearTimeout(timer)

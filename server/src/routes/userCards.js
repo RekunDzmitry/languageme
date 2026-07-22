@@ -53,6 +53,17 @@ router.get('/', authenticate, async (req, res, next) => {
         ORDER BY updated_at DESC`,
       [req.user.sub, target]
     );
+    console.log('[user_cards] db_fetch', {
+      userId: req.user.sub,
+      target,
+      count: rows.length,
+      cards: rows.map((r) => ({
+        id: r.id,
+        themeId: r.theme_id,
+        target: r.target,
+        translation: r.translation,
+      })),
+    });
     res.json(rows.map((r) => ({
       id: r.id,
       targetLang: r.target_lang,
