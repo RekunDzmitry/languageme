@@ -29,6 +29,12 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
     const pool = themeVocab || VOCAB
     const initial = getStudyableCards(pool, cards, seenIdsRef.current).slice(0, BATCH_SIZE)
     initial.forEach(w => seenIdsRef.current.add(w.id))
+    console.log('[StudySession] lazy_init', {
+      poolSize: pool.length,
+      poolUsrCount: pool.filter(w => w.id?.startsWith?.('usr_')).length,
+      initialIds: initial.map(w => w.id),
+      seenIdsAfter: [...seenIdsRef.current],
+    })
     return initial
   })
 
@@ -122,28 +128,54 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
     const allAvailable = getStudyableCards(pool, cards, seenIdsRef.current)
     const inQueue = new Set(queue.map((w) => w.id))
     const missing = allAvailable.filter((w) => !inQueue.has(w.id))
+    console.log('[StudySession] refill_run', {
+      queueBefore: queue.map(w => w.id),
+      poolSize: pool.length,
+      poolUsrCount: pool.filter(w => w.id?.startsWith?.('usr_')).length,
+      allAvailableIds: allAvailable.map(w => w.id),
+      missingIds: missing.map(w => w.id),
+      missingUsrFirst: missing.filter(w => w.id?.startsWith?.('usr_')).map(w => w.id),
+    })
     if (missing.length === 0) return
-    // Make room at the tail if the initial batch of seed cards
-    // already filled BATCH_SIZE — a newly-arrived user card must
-    // still be prepended (user-first priority) even at the cost
-    // of dropping the last seed card from the current batch.
-    // Cap overflow at queue.length: missing can be much larger
-    // than the batch (all the unqueued seed cards), but we only
-    // ever drop from the existing tail.
+    // Only refill if there are USER cards in `missing`. The lazy
+    // init already built a correct queue from the current pool;
+    // if the user card was in the pool at mount time it's already
+    // at position 0. Without this guard, the overflow loop below
+    // would walk back from queue.length-1 to 0, deleting the
+    // user card from seenIdsRef AND replacing the entire queue
+    // (including the user card) with seed cards from `missing`.
+    // The visible symptom: the user card flashes for ~50ms then
+    // disappears, replaced by a seed card.
+    const missingUsr = missing.filter((w) => w.id?.startsWith?.('usr_'))
+    if (missingUsr.length === 0) return
+    // Make room for the user cards by dropping seed cards from the
+    // tail. Never drop a user card that's already in the queue.
+    const seedInQueue = queue.length - queue.filter((w) => w.id?.startsWith?.('usr_')).length
     const overflow = Math.min(
-      queue.length,
-      Math.max(0, queue.length + missing.length - BATCH_SIZE)
+      seedInQueue,
+      Math.max(0, queue.length + missingUsr.length - BATCH_SIZE)
     )
-    if (overflow > 0) {
-      for (let i = 0; i < overflow; i++) {
-        seenIdsRef.current.delete(queue[queue.length - 1 - i].id)
-      }
+    // Walk the tail and drop seed cards only, skipping user cards.
+    let dropped = 0
+    for (let i = queue.length - 1; i >= 0 && dropped < overflow; i--) {
+      if (queue[i].id?.startsWith?.('usr_')) continue
+      seenIdsRef.current.delete(queue[i].id)
+      dropped++
     }
-    const roomAfterDrop = BATCH_SIZE - (queue.length - overflow)
-    const toAdd = missing.slice(0, roomAfterDrop)
+    const roomAfterDrop = BATCH_SIZE - (queue.length - dropped)
+    const toAdd = missingUsr.slice(0, roomAfterDrop)
     if (toAdd.length === 0) return
     toAdd.forEach((w) => seenIdsRef.current.add(w.id))
-    setQueue((prev) => [...toAdd, ...prev.slice(0, prev.length - overflow)])
+    setQueue((prev) => {
+      const kept = prev.filter((w) => seenIdsRef.current.has(w.id))
+      return [...toAdd, ...kept]
+    })
+    console.log('[StudySession] refill_setQueue', {
+      toAddIds: toAdd.map(w => w.id),
+      overflow,
+      dropped,
+      queueAfter: [...toAdd, ...queue.filter((w) => seenIdsRef.current.has(w.id))].map(w => w.id),
+    })
   }, [themeVocab, cards, sessionComplete])
 
   const handleRate = useCallback((quality) => {
@@ -155,6 +187,12 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
     // log. Mirrors the setQueue logic exactly to avoid drift.
     const remainingForLog = queue.slice(1)
     if (quality === 0) remainingForLog.push(queue[0])
+    console.log('[StudySession] handleRate', {
+      ratedId: word.id,
+      quality,
+      queueBefore: queue.map(w => w.id),
+      remainingForLog: remainingForLog.map(w => w.id),
+    })
     rateCard(word.id, quality, remainingForLog.map(w => w.id))
 
     setQueue(prev => {
@@ -184,6 +222,12 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
   }, [sessionComplete]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const currentWord = queue[0] || null
+  console.log('[StudySession] render', {
+    queueIds: queue.map(w => w.id),
+    currentWordId: currentWord?.id,
+    flipped,
+    sessionComplete,
+  })
   const accuracy = sessionStats.total > 0 ? Math.round((sessionStats.correct / sessionStats.total) * 100) : 0
 
   if (!currentWord) {
