@@ -20,21 +20,41 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
   const seenIdsRef = useRef(new Set())
   const cardsRef = useRef(cards)
   useEffect(() => { cardsRef.current = cards }, [cards])
+  // Guard against React 18 StrictMode double-invoke. The ref
+  // persists across the two render passes (same component instance)
+  // so the guard fires sessionStart exactly once.
+  const sessionStartFiredRef = useRef(false)
 
   const [queue, setQueue] = useState(() => {
     const pool = themeVocab || VOCAB
     const initial = getStudyableCards(pool, cards, seenIdsRef.current).slice(0, BATCH_SIZE)
     initial.forEach(w => seenIdsRef.current.add(w.id))
-    // Fire-and-forget analytics: tell the server the initial queue
-    // for this session so the "click on Учить" event is reconstructable
-    studyApi.sessionStart({
-      route,
-      themeId,
-      targetLang,
-      queue: initial.map(w => w.id),
-    }).catch(() => {})
     return initial
   })
+
+  // Fire sessionStart AFTER the queue stabilizes. The lazy useState
+  // init above runs before fetchProgress completes (cards is still
+  // null), so the initial queue doesn't include user cards that load
+  // asynchronously. The refill effect below prepends those cards
+  // when themeVocab/cards change. Debouncing by 500ms gives the
+  // async progress fetch + refill a chance to settle, so the
+  // logged queue is the one the study session actually shows
+  // the user. If the queue changes again before the timer fires
+  // (e.g. the user rates a card), the timer resets.
+  useEffect(() => {
+    if (sessionStartFiredRef.current) return
+    const timer = setTimeout(() => {
+      if (sessionStartFiredRef.current) return
+      sessionStartFiredRef.current = true
+      studyApi.sessionStart({
+        route,
+        themeId,
+        targetLang,
+        queue: queue.map(w => w.id),
+      }).catch(() => {})
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [queue, route, themeId, targetLang])
   const [flipped, setFlipped] = useState(false)
   const [sessionStats, setSessionStats] = useState({ correct: 0, total: 0 })
   const [sessionComplete, setSessionComplete] = useState(false)
