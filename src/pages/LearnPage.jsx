@@ -54,7 +54,7 @@ export default function LearnPage() {
       )
       return [...staticVocab, ...userForScope]
     }, [themeId, targetLang, VOCAB, userVocab, settings.activePackId])
-    return <StudySession themeVocab={themeVocab} />
+    return <StudySession themeVocab={themeVocab} route="learn" themeId={settings.activePackId} />
   }
 
   const formType = themeId && NEGATIVE_THEMES.includes(themeId) ? 'neg' : 'aff'

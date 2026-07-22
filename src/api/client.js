@@ -119,6 +119,14 @@ export const exerciseApi = {
   // User-authored write_answer drills (created from email corrections)
   getUserExercises: () => api.get('/api/study/write-exercises'),
 }
+// Study session analytics endpoints. These are fire-and-forget
+// for the frontend — failures must not break the study session.
+// See server/src/routes/study.js for the server-side handlers.
+export const studyApi = {
+  // Log the initial queue when the user enters /learn or /study/<themeId>.
+  sessionStart: (data) => api.post('/api/study/session-start', data),
+}
+
 
 // AI Assistant API
 export const aiApi = {

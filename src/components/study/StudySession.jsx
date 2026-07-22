@@ -5,12 +5,13 @@ import { useT } from '../../i18n'
 import { getVocab } from '../../data/courses'
 import { getStudyableCards } from './studyQueue'
 import { stopSpeaking } from '../../utils/audio'
+import { studyApi } from '../../api/client'
 import Flashcard from './Flashcard'
 import VocabNoteModal from '../themes/exercises/VocabNoteModal'
 
 const BATCH_SIZE = 10
 
-export default function StudySession({ themeVocab = null }) {
+export default function StudySession({ themeVocab = null, route = 'learn', themeId = null }) {
   const { cards, rateCard, userMnemonics, vocabNotes, saveVocabNote, clearVocabNote, showNotification, incrementStreak } = useProgress()
   const { settings } = useSettings()
   const { t } = useT()
@@ -24,6 +25,14 @@ export default function StudySession({ themeVocab = null }) {
     const pool = themeVocab || VOCAB
     const initial = getStudyableCards(pool, cards, seenIdsRef.current).slice(0, BATCH_SIZE)
     initial.forEach(w => seenIdsRef.current.add(w.id))
+    // Fire-and-forget analytics: tell the server the initial queue
+    // for this session so the "click on Учить" event is reconstructable
+    studyApi.sessionStart({
+      route,
+      themeId,
+      targetLang,
+      queue: initial.map(w => w.id),
+    }).catch(() => {})
     return initial
   })
   const [flipped, setFlipped] = useState(false)
@@ -83,10 +92,12 @@ export default function StudySession({ themeVocab = null }) {
     if (!currentWordRef.current) return
     stopSpeaking()
     const word = currentWordRef.current
-    rateCard(word.id, quality)
-
-    const correct = quality >= 2
-    setSessionStats(s => ({ correct: s.correct + (correct ? 1 : 0), total: s.total + 1 }))
+    // Compute the remaining queue the same way the setQueue updater
+    // below does, so we can pass it to rateCard for the analytics
+    // log. Mirrors the setQueue logic exactly to avoid drift.
+    const remainingForLog = queue.slice(1)
+    if (quality === 0) remainingForLog.push(queue[0])
+    rateCard(word.id, quality, remainingForLog.map(w => w.id))
 
     setQueue(prev => {
       const remaining = prev.slice(1)
@@ -105,7 +116,7 @@ export default function StudySession({ themeVocab = null }) {
       return remaining
     })
     setFlipped(false)
-  }, [rateCard, themeVocab])
+  }, [rateCard, themeVocab, queue])
 
   // Handle session completion notification
   useEffect(() => {

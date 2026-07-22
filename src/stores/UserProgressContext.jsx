@@ -216,7 +216,7 @@ export function UserProgressProvider({ children }) {
     setTimeout(() => setNotification(null), 3000)
   }, [])
 
-  const rateCard = useCallback((wordId, quality) => {
+  const rateCard = useCallback((wordId, quality, queue = null) => {
     if (isAuthenticated) {
       // Optimistic local update
       setProgress(prev => {
@@ -232,7 +232,7 @@ export function UserProgressProvider({ children }) {
           },
         }
       })
-      api.post('/api/study/review', { vocabId: wordId, quality }).catch(err => {
+      api.post('/api/study/review', { vocabId: wordId, quality, queue }).catch(err => {
         console.error('Review sync failed:', err)
       })
       return

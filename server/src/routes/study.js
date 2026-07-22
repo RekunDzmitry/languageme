@@ -94,12 +94,13 @@ router.post('/review', authenticate,
   validate({
     vocabId: { required: true },
     quality: { required: true, type: 'number', min: 0, max: 3 },
+    queue: {}, // optional: the remaining queue after this click, for analytics
   }),
   async (req, res, next) => {
     const client = await pool.connect();
     try {
-      const { vocabId, quality } = req.body;
-      const userId = req.user.sub;
+    const { vocabId, quality, queue } = req.body;
+    const userId = req.user.sub;
 
       await client.query('BEGIN');
 
@@ -159,6 +160,13 @@ router.post('/review', authenticate,
 
       await client.query('COMMIT');
 
+      console.log('[study] rate', {
+        userId,
+        vocabId,
+        quality,
+        queue: Array.isArray(queue) ? queue : null,
+      });
+
       res.json({ ...card, ...updated });
     } catch (err) {
       await client.query('ROLLBACK');
@@ -168,6 +176,28 @@ router.post('/review', authenticate,
     }
   }
 );
+
+// Log a study session start with the initial queue. The queue is
+// built client-side (StudySession lazy useState init) so the server
+// has no other visibility into it. Fire-and-forget: this is an
+// analytics endpoint, not a study primitive — failures must not
+// break the session.
+router.post('/session-start', authenticate, async (req, res, next) => {
+  try {
+    const { route, themeId, targetLang, queue } = req.body || {};
+    if (route !== 'learn' && route !== 'study') {
+      return res.status(400).json({ error: 'route must be "learn" or "study"' });
+    }
+    console.log('[study] session_start', {
+      userId: req.user.sub,
+      route,
+      themeId: themeId || null,
+      targetLang: targetLang || null,
+      queue: Array.isArray(queue) ? queue : [],
+    });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
 
 // User-authored write_answer drills (created from email corrections)
 router.get('/write-exercises', authenticate, async (req, res, next) => {
