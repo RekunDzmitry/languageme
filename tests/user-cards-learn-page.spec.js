@@ -61,4 +61,41 @@ test('user-authored card surfaces first in /learn for the active pack (pl)', asy
   await expect(page.getByText(/нажмите, чтобы открыть/).first()).toBeVisible({ timeout: 8000 })
   const front = await page.textContent('body')
   expect(front, 'first card front should be the user card translation').toContain('тест')
+
+  // Step 4: delete the card. The CardsPage delete button uses
+  // window.confirm; auto-accept it. Then assert the row is gone
+  // and the srs_card row is also gone (plan §Verification item 5).
+  await page.goto('/cards')
+  await page.waitForLoadState('networkidle')
+  // /cards renders rows as <div class="grid"> (not <tr>). Find the
+  // delete button in the same grid row as the word 'test'.
+  const deleteBtn = page.getByRole('button', { name: 'Удалить' }).first()
+  await expect(deleteBtn, 'user card delete button should be visible on /cards before delete').toBeVisible({ timeout: 5000 })
+  // Confirm the row also contains the user card word.
+  await expect(page.getByText('test', { exact: true }).first()).toBeVisible({ timeout: 5000 })
+  // Capture srs_card count before delete for the regression check
+  const srsBefore = await request.get('http://localhost:3000/api/study/cards?target=pl', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  const srsBeforeRows = await srsBefore.json()
+  const userCardSrsCount = srsBeforeRows.filter((r) => r.vocab_id?.startsWith('usr_')).length
+  expect(userCardSrsCount, 'user card should have an srs_card row before delete').toBeGreaterThan(0)
+
+  page.once('dialog', (d) => d.accept())
+  await deleteBtn.click()
+  await expect(page.getByRole('button', { name: 'Удалить' }), 'delete button should disappear after delete').toHaveCount(0, { timeout: 5000 })
+  await expect(page.getByText('test', { exact: true }), 'user card word should disappear after delete').toHaveCount(0, { timeout: 5000 })
+
+  const listAfter = await request.get('http://localhost:3000/api/user-cards?target=pl', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  const cardsAfter = await listAfter.json()
+  expect(cardsAfter, 'GET /api/user-cards should be empty after delete').toEqual([])
+
+  const srsAfter = await request.get('http://localhost:3000/api/study/cards?target=pl', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  const srsAfterRows = await srsAfter.json()
+  const userCardSrsAfter = srsAfterRows.filter((r) => r.vocab_id?.startsWith('usr_')).length
+  expect(userCardSrsAfter, 'srs_card row for the user card should be gone after delete').toBe(0)
 })
