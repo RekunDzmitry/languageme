@@ -69,14 +69,21 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
       // it (position >= 10 in due+newC).
       const poolUsrCount = pool.filter((w) => w.id?.startsWith?.('usr_')).length
       const userVocabCount = userVocab ? Object.keys(userVocab).length : 0
-      const cardsCount = cards ? Object.keys(cards).length : 0
       studyApi.sessionStart({
         route,
         themeId,
         targetLang,
-        queue: queue.map(w => w.id),
-        due: due.map(w => w.id),
-        newC: newC.map(w => w.id),
+        // CRITICAL: send the fire-time queue (allQueue sliced to
+        // BATCH_SIZE), not the React state `queue`. The React state
+        // was captured by the lazy useState init on mount, BEFORE
+        // fetchProgress populated userVocab — so it predates the
+        // user card landing in the pool. The refill effect prepends
+        // the user card via setQueue, but this effect's closure still
+        // holds the pre-refill snapshot. allQueue is recomputed here
+        // from the current pool+cards and is consistent with due/newC.
+        queue: allQueue.slice(0, BATCH_SIZE).map((w) => w.id),
+        due: due.map((w) => w.id),
+        newC: newC.map((w) => w.id),
         poolSize: allQueue.length,
         userVocabCount,
         poolUsrCount,
