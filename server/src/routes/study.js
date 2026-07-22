@@ -39,6 +39,7 @@ router.get('/cards', authenticate, async (req, res, next) => {
     // Filter on target_lang (NOT NULL since migration 025) rather than
     // parsing the vocab_id prefix. User cards and seed cards are now
     // both selected uniformly.
+    const userId = req.user.sub;
     const { rows } = await pool.query(
       'SELECT vocab_id, ease, interval_days, reps, due, last_reviewed FROM srs_card WHERE user_id = $1 AND target_lang = $2',
       [userId, target]
@@ -54,6 +55,7 @@ router.get('/cards', authenticate, async (req, res, next) => {
         due: r.due,
       })),
     });
+    res.json(rows);
   } catch (err) { next(err); }
 });
 
