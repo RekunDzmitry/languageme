@@ -95,8 +95,6 @@
   "theme_progress": "Прогресс по темам",
   "ru_to_fr": "RU → FR",
   "type_answer": "Введите ответ...",
-  "correct": "Правильно!",
-  "incorrect": "Неправильно",
   "correct_answer": "Правильный ответ",
   "session_complete": "Занятие завершено!",
   "accuracy": "Точность",
@@ -227,7 +225,6 @@
   "correct_answer_is": "Правильный ответ:",
   "all_caught_up": "Всё пройдено!",
   "come_back_later": "Возвращайтесь, когда карточки снова будут готовы к повторению.",
-
   "email_title": "Pisanie e-maili",
   "email_subtitle": "Ćwiczymy pisanie e-maili po polsku",
   "email_exercise": "E-mail",
@@ -287,37 +284,30 @@
   "email_delete_attempt": "Usuń próbę",
   "email_clear_history": "Wyczyść historię",
   "email_clear_confirm": "Usunąć wszystkie próby dla tego zadania?",
-
   "dashboard_choose_title": "Что будем учить?",
   "dashboard_choose_subtitle": "Выберите направление. Переключиться можно в верхнем меню в любой момент.",
-
   "pack_section_learning": "Направление",
   "pack_section_interface": "Интерфейс",
   "pack_active": "Активный",
-
   "pack_fr_foundations_title": "Французский",
   "pack_fr_foundations_subtitle": "Грамматика, словарь и спряжения",
   "pack_fr_foundations_short": "Французский",
   "pack_fr_foundations_badge": "RU → FR",
   "pack_fr_foundations_level": "A1-B2",
-
   "pack_pl_a1_a2_title": "Польский A1/A2",
   "pack_pl_a1_a2_subtitle": "Основы, орфография и начальный словарь",
   "pack_pl_a1_a2_short": "Польский A1/A2",
   "pack_pl_a1_a2_badge": "RU → PL",
   "pack_pl_a1_a2_level": "A1/A2",
-
   "pack_pl_telc_title": "Польский TELC",
   "pack_pl_telc_subtitle": "B1/B2 словарь, грамматика и письма",
   "pack_pl_telc_short": "Польский TELC",
   "pack_pl_telc_badge": "RU → PL",
   "pack_pl_telc_level": "B1/B2",
-
   "pack_stat_themes": "тем",
   "pack_stat_words": "слов",
   "pack_stat_tasks": "заданий",
   "pack_stat_due": "к повторению",
-
   "nav_admin": "Админ",
   "admin_title": "Панель администратора",
   "admin_tab_logs": "AI логи",
@@ -364,6 +354,7 @@
   "user_card_delete_confirm": "Удалить карточку?",
   "user_card_edit": "Изменить",
   "user_card_delete": "Удалить",
+  "user_card_badge": "своя",
   "theme_other": "Мои карточки",
   "optional": "необязательно",
   "saving": "Сохранение...",

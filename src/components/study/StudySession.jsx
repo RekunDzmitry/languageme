@@ -3,20 +3,12 @@ import { useProgress } from '../../stores/UserProgressContext'
 import { useSettings } from '../../stores/SettingsContext'
 import { useT } from '../../i18n'
 import { getVocab } from '../../data/courses'
-// getDueCards/getNewCards replaced by inline getStudyableCards
+import { getStudyableCards } from './studyQueue'
 import { stopSpeaking } from '../../utils/audio'
 import Flashcard from './Flashcard'
 import VocabNoteModal from '../themes/exercises/VocabNoteModal'
 
 const BATCH_SIZE = 10
-
-function getStudyableCards(pool, cards, excludeIds) {
-  const now = Date.now()
-  const due = pool.filter(w => !excludeIds.has(w.id) && cards[w.id]?.due <= now)
-  const newC = pool.filter(w => !excludeIds.has(w.id) && (!cards[w.id] || (cards[w.id].reps === 0 && !cards[w.id].lastReviewed)))
-    .filter(c => !due.find(d => d.id === c.id))
-  return [...due, ...newC]
-}
 
 export default function StudySession({ themeVocab = null }) {
   const { cards, rateCard, userMnemonics, vocabNotes, saveVocabNote, clearVocabNote, showNotification, incrementStreak } = useProgress()
