@@ -60,3 +60,25 @@ test('multiple user cards keep their relative order via the secondary due sort',
   expect(result[0].id).toBe('usr_first')
   expect(result[1].id).toBe('usr_second')
 })
+
+test('user-authored card wins the new-card priority when neither card has a due', () => {
+  // No srs_card entries for either card → both land in the
+  // `newC` list (the `due` list is empty). A freshly created
+  // user card is normally in `due` (its srs_card.due is NOW at
+  // creation time), but the user-first priority should hold
+  // consistently regardless of which list a card lands in —
+  // otherwise a card whose srs_card is missing or reset to
+  // `reps === 0 && !lastReviewed` would silently lose the
+  // priority. The contract: a user-authored card always wins
+  // the priority, in `due` and in `newC`.
+  const cards = {} // no srs_card entries at all
+  const pool = [
+    { id: 'fr_001', target: 'bonjour' },
+    { id: 'usr_abc', target: 'hi' },
+  ]
+  const result = getStudyableCards(pool, cards, new Set())
+  expect(result).toHaveLength(2)
+  expect(result[0].id).toBe('usr_abc')
+  expect(result[1].id).toBe('fr_001')
+})
+

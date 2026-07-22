@@ -9,7 +9,11 @@
 // Within the due list, user-authored cards (`usr_…` ids) get a
 // tiebreaker priority over seed cards with the same `due` timestamp
 // — the user expects their own cards to surface first when both
-// classes are due at once. The new-card list keeps the source order.
+// classes are due at once. The same priority applies to the new-card
+// list: a user card with no srs_card (or `reps === 0 && !lastReviewed`)
+// wins the tie over a seed card in the same state. The priority is
+// consistent across both lists so a user card never silently loses
+// its precedence because of which list it landed in.
 export function getStudyableCards(pool, cards, excludeIds) {
   const now = Date.now()
   const dueRank = (w) => (w.id?.startsWith?.('usr_') ? 0 : 1)
@@ -33,5 +37,11 @@ export function getStudyableCards(pool, cards, excludeIds) {
         (!cards[w.id] || (cards[w.id].reps === 0 && !cards[w.id].lastReviewed))
     )
     .filter((c) => !due.find((d) => d.id === c.id))
+    // User-first priority in the new list too. Without this
+    // sort the order is source-array order (static rows first),
+    // and a user card in the new state (no srs_card, or just
+    // created with reps=0) loses the priority silently.
+    .slice()
+    .sort((a, b) => dueRank(a) - dueRank(b))
   return [...due, ...newC]
 }
