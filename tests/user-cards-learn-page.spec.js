@@ -17,6 +17,7 @@ test('user-authored card surfaces first in /learn for the active pack (pl)', asy
   const reg = await request.post('http://localhost:3000/api/auth/register', {
     data: { email, password },
   })
+  expect(reg.ok()).toBe(true)
   const { accessToken, refreshToken } = await reg.json()
 
   // Pin the active pack so the pack-scoped catch-all is the one
@@ -41,15 +42,12 @@ test('user-authored card surfaces first in /learn for the active pack (pl)', asy
   await page.getByRole('button', { name: /\+ Новая карточка/i }).click()
   const dialog = page.getByRole('dialog')
   await expect(dialog).toBeVisible({ timeout: 5000 })
-  // Use positional locators instead of placeholder text — the
-  // placeholders differ by targetLang (pl uses "Słowo / fraza",
-  // fr uses "bonjour, merci…"), so the first two `<input>`s in
-  // the modal are language-agnostic.
   await dialog.locator('input').first().fill('test')
   await dialog.locator('input').nth(1).fill('тест')
   await dialog.getByRole('combobox').selectOption({ label: 'Мои карточки' })
   await dialog.getByRole('button', { name: 'Сохранить' }).click()
   await expect(dialog).not.toBeVisible({ timeout: 5000 })
+  await expect(page.locator('text=test').first()).toBeVisible({ timeout: 5000 })
 
   // Navigate to the un-scoped /learn route for the active pack.
   // With the bug, the user card is not in the pool and the first
@@ -98,4 +96,133 @@ test('user-authored card surfaces first in /learn for the active pack (pl)', asy
   const srsAfterRows = await srsAfter.json()
   const userCardSrsAfter = srsAfterRows.filter((r) => r.vocab_id?.startsWith('usr_')).length
   expect(userCardSrsAfter, 'srs_card row for the user card should be gone after delete').toBe(0)
+})
+
+// Regression for commit ee9160b: the refill effect was dropping
+// the user card off the tail of the queue when userVocab was
+// already loaded at lazy_init time (poolUsrCount > 0 at mount).
+// The overflow calculation used queue.length as the cap and the
+// tail-drop loop walked from queue[queue.length-1] back to
+// queue[0], removing the user card from seenIdsRef and replacing
+// the entire queue with seed cards from `missing`. The user card
+// flashed for ~50ms then disappeared.
+//
+// The fix: early-return when no user cards in `missing`, and
+// skip user cards in the tail-drop loop. This test catches
+// the regression by:
+//   1. Creating the user card via the UI (so createUserCard's
+//      optimistic update populates userVocab in the context
+//      before the lazy_init on /learn — this is the scenario
+//      where the bug manifested).
+//   2. Waiting long enough for the refill effect to run and
+//      re-render (2s covers the useEffect + re-render).
+//   3. Asserting the user card is still the first card after
+//      the refill effect has had time to run.
+// Regression for commit ee9160b: the refill effect was dropping
+// the user card off the tail of the queue when userVocab was
+// already loaded at lazy_init time (poolUsrCount > 0 at mount).
+// The overflow calculation used queue.length as the cap and the
+// tail-drop loop walked from queue[queue.length-1] back to
+// queue[0], removing the user card from seenIdsRef and replacing
+// the entire queue with seed cards from `missing`. The user card
+// flashed for ~50ms then disappeared.
+//
+// The fix: early-return when no user cards in `missing`, and
+// skip user cards in the tail-drop loop. Without the merge
+// fix in fetchProgress, the test can't reproduce the bug
+// scenario because the StudySession mounts with userVocab empty
+// (the API response lands AFTER the StudySession's lazy_init).
+// With the merge fix (next.userVocab = { ...prev.userVocab }),
+// the API response can't clobber optimistic userVocab entries,
+// and the test can wait for fetchProgress to populate userVocab
+// before navigating to /learn.
+test('refill effect preserves the user card when userVocab is loaded at mount (regression for ee9160b)', async ({ page, request }) => {
+  const email = `refill-bug-${Date.now()}@test.local`
+  const password = 'testpass123'
+
+  const reg = await request.post('http://localhost:3000/api/auth/register', {
+    data: { email, password },
+  })
+  expect(reg.ok()).toBe(true)
+  const { accessToken, refreshToken } = await reg.json()
+
+  await page.goto('/')
+  await page.evaluate(({ accessToken, refreshToken }) => {
+    localStorage.setItem('lm_access_token', accessToken)
+    localStorage.setItem('lm_refresh_token', refreshToken)
+    localStorage.setItem('lm_settings', JSON.stringify({
+      nativeLang: 'ru',
+      targetLang: 'pl',
+      uiLang: 'ru',
+      autoPlayAudio: false,
+      activePackId: 'pl-a1-a2',
+    }))
+  }, { accessToken, refreshToken })
+
+  // Create the user card via the API. With the merge fix in
+  // fetchProgress, the next refresh populates userVocab with
+  // this card without overwriting any optimistic entries.
+  const createRes = await request.post('http://localhost:3000/api/user-cards', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    data: { targetLang: 'pl', target: 'refillbug', translation: 'рефилбаг', themeId: 'pl-a1-a2_other' },
+  })
+  expect(createRes.ok()).toBe(true)
+  const created = await createRes.json()
+  expect(created.id).toMatch(/^usr_[0-9a-f]{32}$/)
+
+  // Navigate to / to trigger fetchProgress on a fresh mount.
+  // Wait for it to complete (userVocab now includes the user
+  // card from the API).
+  await page.goto('/')
+  await page.waitForLoadState('networkidle')
+  await page.waitForFunction(
+    () => window.__userProgressIsProgressLoading === false,
+    null,
+    { timeout: 10000 }
+  )
+
+  // Navigate to /learn. The full page reload resets React state,
+  // so fetchProgress runs again on the new mount. Wait for it
+  // to complete so the StudySession's lazy_init runs with
+  // userVocab populated (poolUsrCount > 0), placing the user
+  // card at position 0 of the initial queue. This is the exact
+  // scenario where the bug manifested: the refill effect then
+  // ran, computed `missing` (all seed cards not in the queue,
+  // user card NOT in missing because it's already there), and
+  // the overflow loop walked from queue[9] back to queue[0],
+  // deleting the user card from seenIdsRef and replacing the
+  // entire queue with seed cards.
+  await page.goto('/learn')
+  await page.waitForLoadState('networkidle')
+  await page.waitForFunction(
+    () => window.__userProgressIsProgressLoading === false,
+    null,
+    { timeout: 10000 }
+  )
+  await expect(page.getByText(/нажмите, чтобы открыть/).first()).toBeVisible({ timeout: 8000 })
+
+  // Initial render: user card is first because userVocab was
+  // loaded at lazy_init time. Use a specific selector for the
+  // first card's translation (not body text, which could
+  // contain the user card's translation from other elements).
+  const firstCardSelector = '.text-3xl.font-extrabold'
+  await expect(page.locator(firstCardSelector).first()).toBeVisible({ timeout: 5000 })
+  const firstCardInitial = (await page.locator(firstCardSelector).first().textContent()) ?? ''
+  expect(firstCardInitial, 'first card should be the user card after initial render').toContain('рефилбаг')
+
+  // Wait for the refill effect to run and re-render. The
+  // refill effect fires in a useEffect with deps
+  // [themeVocab, cards, sessionComplete]; it runs once on
+  // mount with the initial values. 2s is enough for the
+  // useEffect + re-render to settle.
+  await page.waitForTimeout(2000)
+
+  // After the refill effect has run, the user card should
+  // STILL be the first card. With the bug, the refill effect
+  // would have dropped it from the tail and replaced the queue
+  // with seed cards, so the first card's translation would be
+  // a seed card's translation (e.g., "да") instead of
+  // "рефилбаг".
+  const firstCardAfter = (await page.locator(firstCardSelector).first().textContent()) ?? ''
+  expect(firstCardAfter, 'user card should still be first after refill effect runs (was dropped by overflow in ee9160b)').toContain('рефилбаг')
 })
