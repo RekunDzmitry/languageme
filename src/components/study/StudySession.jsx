@@ -29,18 +29,9 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
     const pool = themeVocab || VOCAB
     const initial = getStudyableCards(pool, cards, seenIdsRef.current).slice(0, BATCH_SIZE)
     initial.forEach(w => seenIdsRef.current.add(w.id))
-    console.log('[StudySession] lazy_init', {
-      poolSize: pool.length,
-      poolUsrCount: pool.filter(w => w.id?.startsWith?.('usr_')).length,
-      initialIds: initial.map(w => w.id),
-      seenIdsAfter: [...seenIdsRef.current],
-    })
     return initial
   })
 
-  // Fire sessionStart AFTER the queue stabilizes. The lazy useState
-  // init above runs before fetchProgress completes (cards is still
-  // null), so the initial queue doesn't include user cards that load
   // Fire sessionStart AFTER the queue stabilizes. Three conditions
   // must hold: (1) the progress fetch has completed (isProgressLoading
   // flipped to false) so userVocab is populated from the database,
@@ -128,14 +119,7 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
     const allAvailable = getStudyableCards(pool, cards, seenIdsRef.current)
     const inQueue = new Set(queue.map((w) => w.id))
     const missing = allAvailable.filter((w) => !inQueue.has(w.id))
-    console.log('[StudySession] refill_run', {
-      queueBefore: queue.map(w => w.id),
-      poolSize: pool.length,
-      poolUsrCount: pool.filter(w => w.id?.startsWith?.('usr_')).length,
-      allAvailableIds: allAvailable.map(w => w.id),
-      missingIds: missing.map(w => w.id),
-      missingUsrFirst: missing.filter(w => w.id?.startsWith?.('usr_')).map(w => w.id),
-    })
+
     if (missing.length === 0) return
     // Only refill if there are USER cards in `missing`. The lazy
     // init already built a correct queue from the current pool;
@@ -170,12 +154,7 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
       const kept = prev.filter((w) => seenIdsRef.current.has(w.id))
       return [...toAdd, ...kept]
     })
-    console.log('[StudySession] refill_setQueue', {
-      toAddIds: toAdd.map(w => w.id),
-      overflow,
-      dropped,
-      queueAfter: [...toAdd, ...queue.filter((w) => seenIdsRef.current.has(w.id))].map(w => w.id),
-    })
+
   }, [themeVocab, cards, sessionComplete])
 
   const handleRate = useCallback((quality) => {
@@ -187,12 +166,7 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
     // log. Mirrors the setQueue logic exactly to avoid drift.
     const remainingForLog = queue.slice(1)
     if (quality === 0) remainingForLog.push(queue[0])
-    console.log('[StudySession] handleRate', {
-      ratedId: word.id,
-      quality,
-      queueBefore: queue.map(w => w.id),
-      remainingForLog: remainingForLog.map(w => w.id),
-    })
+
     rateCard(word.id, quality, remainingForLog.map(w => w.id))
 
     setQueue(prev => {
@@ -222,12 +196,7 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
   }, [sessionComplete]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const currentWord = queue[0] || null
-  console.log('[StudySession] render', {
-    queueIds: queue.map(w => w.id),
-    currentWordId: currentWord?.id,
-    flipped,
-    sessionComplete,
-  })
+
   const accuracy = sessionStats.total > 0 ? Math.round((sessionStats.correct / sessionStats.total) * 100) : 0
 
   if (!currentWord) {

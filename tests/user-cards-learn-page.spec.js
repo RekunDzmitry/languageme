@@ -97,27 +97,6 @@ test('user-authored card surfaces first in /learn for the active pack (pl)', asy
   const userCardSrsAfter = srsAfterRows.filter((r) => r.vocab_id?.startsWith('usr_')).length
   expect(userCardSrsAfter, 'srs_card row for the user card should be gone after delete').toBe(0)
 })
-
-// Regression for commit ee9160b: the refill effect was dropping
-// the user card off the tail of the queue when userVocab was
-// already loaded at lazy_init time (poolUsrCount > 0 at mount).
-// The overflow calculation used queue.length as the cap and the
-// tail-drop loop walked from queue[queue.length-1] back to
-// queue[0], removing the user card from seenIdsRef and replacing
-// the entire queue with seed cards from `missing`. The user card
-// flashed for ~50ms then disappeared.
-//
-// The fix: early-return when no user cards in `missing`, and
-// skip user cards in the tail-drop loop. This test catches
-// the regression by:
-//   1. Creating the user card via the UI (so createUserCard's
-//      optimistic update populates userVocab in the context
-//      before the lazy_init on /learn — this is the scenario
-//      where the bug manifested).
-//   2. Waiting long enough for the refill effect to run and
-//      re-render (2s covers the useEffect + re-render).
-//   3. Asserting the user card is still the first card after
-//      the refill effect has had time to run.
 // Regression for commit ee9160b: the refill effect was dropping
 // the user card off the tail of the queue when userVocab was
 // already loaded at lazy_init time (poolUsrCount > 0 at mount).
