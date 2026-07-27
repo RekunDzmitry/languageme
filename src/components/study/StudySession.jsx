@@ -47,13 +47,19 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
     if (isProgressLoading) return
     const timer = setTimeout(() => {
       if (sessionStartFiredRef.current) return
-      sessionStartFiredRef.current = true
-      // Recompute the due/newC halves at fire-time so the server log
-      // shows exactly what the client built from the pool+cards,
-      // not the BATCH_SIZE-sliced queue. The refill effect may have
-      // already prepended user cards by this point, so the
+      // Recompute due/newC at fire-time so the server log shows
+      // the full studyable halves for the current pool+cards. The
+      // queue field is the settled React state directly. Earlier
+      // versions passed `seenIdsRef.current` as the exclude set,
+      // but that ref already holds the cards in the visible queue
+      // (lazy init and refill add them as soon as they're queued),
+      // so the recomputed `due`/`newC`/`allQueue` described the
+      // NEXT eligible batch, not the first batch the user sees.
+      // Since this endpoint exists to compare the server log with
+      // the client-visible queue, log the React `queue` state and
+      // compute the halves from the full pool (no exclusion).
       const pool = themeVocab || VOCAB
-      const { due, newC, queue: allQueue } = getStudyableCardsDetailed(pool, cards, seenIdsRef.current)
+      const { due, newC } = getStudyableCardsDetailed(pool, cards, new Set())
       // Diagnostic stats so the server log can pinpoint where the
       // user card is being filtered out: userVocabCount = how many
       // user cards the React context has after fetchProgress;
@@ -71,18 +77,10 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
         route,
         themeId,
         targetLang,
-        // CRITICAL: send the fire-time queue (allQueue sliced to
-        // BATCH_SIZE), not the React state `queue`. The React state
-        // was captured by the lazy useState init on mount, BEFORE
-        // fetchProgress populated userVocab — so it predates the
-        // user card landing in the pool. The refill effect prepends
-        // the user card via setQueue, but this effect's closure still
-        // holds the pre-refill snapshot. allQueue is recomputed here
-        // from the current pool+cards and is consistent with due/newC.
-        queue: allQueue.slice(0, BATCH_SIZE).map((w) => w.id),
+        queue: queue.slice(0, BATCH_SIZE).map((w) => w.id),
         due: due.map((w) => w.id),
         newC: newC.map((w) => w.id),
-        poolSize: allQueue.length,
+        poolSize: pool.length,
         userVocabCount,
         poolUsrCount,
         cardsCount,

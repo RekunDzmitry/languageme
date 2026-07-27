@@ -217,3 +217,73 @@ test('refill effect preserves the user card when userVocab is loaded at mount (r
   const firstCardAfter = (await page.locator(firstCardSelector).first().textContent()) ?? ''
   expect(firstCardAfter, 'user card should still be first after refill effect runs (was dropped by overflow in ee9160b)').toContain('рефилбаг')
 })
+
+// Regression for PR #26 review (5th comment): the sessionStart
+// analytics payload used `seenIdsRef.current` as the exclude set
+// for `getStudyableCardsDetailed`, but that ref already contains
+// the cards in the visible queue (lazy init and refill add them
+// as soon as they're queued). So the recomputed `due`/`newC`/
+// `queue` described the NEXT eligible batch, not the first batch
+// the user actually sees — defeating the endpoint's purpose of
+// comparing the server log with the client-visible queue. The
+// fix uses the React `queue` state directly and computes the
+// halves from the full pool without exclusion.
+test('sessionStart payload queue matches the visible React queue (PR #26 review)', async ({ page, request }) => {
+  const email = `sessionstart-${Date.now()}@test.local`
+  const password = 'testpass123'
+
+  const reg = await request.post('http://localhost:3000/api/auth/register', {
+    data: { email, password },
+  })
+  expect(reg.ok()).toBe(true)
+  const { accessToken, refreshToken } = await reg.json()
+
+  await page.goto('/')
+  await page.evaluate(({ accessToken, refreshToken }) => {
+    localStorage.setItem('lm_access_token', accessToken)
+    localStorage.setItem('lm_refresh_token', refreshToken)
+    localStorage.setItem('lm_settings', JSON.stringify({
+      nativeLang: 'ru',
+      targetLang: 'pl',
+      uiLang: 'ru',
+      autoPlayAudio: false,
+      activePackId: 'pl-a1-a2',
+    }))
+  }, { accessToken, refreshToken })
+
+  // Create the user card via the API. With the merge fix in
+  // fetchProgress, the next refresh populates userVocab with
+  // this card without overwriting any optimistic entries.
+  const createRes = await request.post('http://localhost:3000/api/user-cards', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    data: { targetLang: 'pl', target: 'sesstest', translation: 'сессест', themeId: 'pl-a1-a2_other' },
+  })
+  expect(createRes.ok()).toBe(true)
+  const created = await createRes.json()
+  expect(created.id).toMatch(/^usr_[0-9a-f]{32}$/)
+
+  // Capture the sessionStart payload via request interception.
+  // The client fires it 500ms after fetchProgress completes and
+  // the queue stabilises, so we set up the route BEFORE the
+  // navigation that triggers the StudySession mount.
+  let sessionStartPayload = null
+  await page.route('**/api/study/session-start', async (route) => {
+    try {
+      const req = route.request()
+      sessionStartPayload = JSON.parse(req.postData() || '{}')
+    } catch {}
+    await route.continue()
+  })
+
+  await page.goto('/learn')
+  await page.waitForLoadState('networkidle')
+  // Wait for the sessionStart POST to fire (500ms debounce +
+  // network round-trip). Polling is fine — the payload is
+  // captured synchronously by the route handler.
+  await expect.poll(() => sessionStartPayload, { timeout: 10000 }).not.toBeNull()
+  // The user card must be in the FIRST BATCH (the visible
+  // React queue), not somewhere in the NEXT eligible batch
+  // after the visible queue. With the bug, the queue field
+  // excluded the visible queue and the user card was absent.
+  expect(sessionStartPayload.queue, 'sessionStart.queue must include the user card').toContain(created.id)
+})
