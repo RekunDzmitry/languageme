@@ -56,10 +56,22 @@ test('user-authored card surfaces first in /learn for the active pack (pl)', asy
   // card's front shows 'тест'.
   await page.goto('/learn')
   await page.waitForLoadState('networkidle')
-  await expect(page.getByText(/нажмите, чтобы открыть/).first()).toBeVisible({ timeout: 8000 })
+  // Verify the user card is first (before any rating advances the queue).
   const front = await page.textContent('body')
   expect(front, 'first card front should be the user card translation').toContain('тест')
-
+  // Regression for review comment on PR #26: rate a card and
+  // verify the session-stats counter advances. Earlier versions
+  // of this PR dropped the setSessionStats call from handleRate,
+  // so the progress bar, done count, accuracy, completion copy
+  // and completion notification all stayed at 0 for the whole
+  // session even after many ratings.
+  const doneBefore = await page.textContent('body')
+  expect(doneBefore, 'done count should be 0 before any rating').toMatch(/0\s+сделано/)
+  await page.getByText(/нажмите, чтобы открыть/).first().click()
+  // Playwright auto-waits for the button to be visible/clickable.
+  await page.getByRole('button', { name: 'Хорошо' }).click()
+  // After the rating, the done count must reflect the new total.
+  await expect(page.getByText(/1\s+сделано/)).toBeVisible({ timeout: 5000 })
   // Step 4: delete the card. The CardsPage delete button uses
   // window.confirm; auto-accept it. Then assert the row is gone
   // and the srs_card row is also gone (plan §Verification item 5).

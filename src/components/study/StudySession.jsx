@@ -166,7 +166,8 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
     // log. Mirrors the setQueue logic exactly to avoid drift.
     const remainingForLog = queue.slice(1)
     if (quality === 0) remainingForLog.push(queue[0])
-
+    const correct = quality >= 2
+    setSessionStats(s => ({ correct: s.correct + (correct ? 1 : 0), total: s.total + 1 }))
     rateCard(word.id, quality, remainingForLog.map(w => w.id))
 
     setQueue(prev => {
@@ -188,7 +189,6 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
     setFlipped(false)
   }, [rateCard, themeVocab, queue])
 
-  // Handle session completion notification
   useEffect(() => {
     if (!sessionComplete) return
     incrementStreak()
