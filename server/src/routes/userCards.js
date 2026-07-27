@@ -53,6 +53,17 @@ router.get('/', authenticate, async (req, res, next) => {
         ORDER BY updated_at DESC`,
       [req.user.sub, target]
     );
+    console.log('[user_cards] db_fetch', {
+      userId: req.user.sub,
+      target,
+      count: rows.length,
+      cards: rows.map((r) => ({
+        id: r.id,
+        themeId: r.theme_id,
+        target: r.target,
+        translation: r.translation,
+      })),
+    });
     res.json(rows.map((r) => ({
       id: r.id,
       targetLang: r.target_lang,
@@ -120,6 +131,14 @@ router.post('/', authenticate,
 
       await client.query('COMMIT');
 
+      console.log('[user_cards] created', {
+        userId: req.user.sub,
+        cardId: vocab.id,
+        targetLang: vocab.target_lang,
+        target: vocab.target,
+        translation: vocab.translation,
+        themeId: vocab.theme_id,
+      });
       res.status(201).json({
         id: vocab.id,
         targetLang: vocab.target_lang,
@@ -261,8 +280,8 @@ router.delete('/:id', authenticate, async (req, res, next) => {
       'DELETE FROM user_vocab WHERE id = $1 AND user_id = $2',
       [id, req.user.sub]
     );
-
     await client.query('COMMIT');
+    console.log('[user_cards] deleted', { userId: req.user.sub, cardId: id });
     res.json({ ok: true });
   } catch (err) {
     await client.query('ROLLBACK');

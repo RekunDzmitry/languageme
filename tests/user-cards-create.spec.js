@@ -114,10 +114,10 @@ test('user can create, edit, study, and delete a personal flashcard, tied to the
   expect(srsAfter.reps).toBe(1)
 
   // ---- DELETE ----
+  // The confirm dialog from handleDelete() needs to be accepted.
+  page.on('dialog', (d) => d.accept())
   await page.goto('/cards')
   await page.waitForLoadState('networkidle')
-
-  page.on('dialog', (d) => d.accept())
   await page.getByRole('button', { name: 'Удалить' }).first().click()
 
   await expect(page.locator('text=подсказка для теста')).toHaveCount(0, { timeout: 5000 })
@@ -210,6 +210,61 @@ test('user card is isolated to the pack it was filed under', async ({ page, requ
   await page.reload()
   await page.waitForLoadState('networkidle')
   await expect(page.locator('text=a1-word')).toHaveCount(0)
+})
+
+// Regression guard for bug 5: clicking a card word on /cards
+// surfaces the row's expander. Pre-fix, the click handler evaluated
+// `EXAMPLES[item.id]` in CardsPage and threw a ReferenceError,
+// unmounting the whole page. The create test above never exercises
+// the click-to-expand path, so this dedicated test pins the
+// contract.
+test('regression: clicking a card word on /cards does not crash the page', async ({ page, request }) => {
+  const email = `ucards-click-${Date.now()}@test.local`
+  const password = 'testpass123'
+
+  const res = await request.post('http://localhost:3000/api/auth/register', {
+    data: { email, password },
+  })
+  const { accessToken, refreshToken } = await res.json()
+
+  await page.goto('/')
+  await page.evaluate(({ accessToken, refreshToken }) => {
+    localStorage.setItem('lm_access_token', accessToken)
+    localStorage.setItem('lm_refresh_token', refreshToken)
+    localStorage.setItem('lm_settings', JSON.stringify({
+      nativeLang: 'ru',
+      targetLang: 'fr',
+      uiLang: 'ru',
+      autoPlayAudio: false,
+      activePackId: 'fr-foundations',
+    }))
+  }, { accessToken, refreshToken })
+
+  // File a card so the row exists.
+  await page.goto('/cards')
+  await page.waitForLoadState('networkidle')
+  await page.getByRole('button', { name: /\+ Новая карточка/i }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible({ timeout: 5000 })
+  await dialog.getByPlaceholder(/bonjour, merci/i).fill('clickable')
+  await dialog.getByPlaceholder(/привет, спасибо/i).fill('клик')
+  await dialog.getByRole('combobox').selectOption({ label: 'Мои карточки' })
+  await dialog.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(dialog).not.toBeVisible({ timeout: 5000 })
+
+  // Re-navigate to /cards (the modal closed on the cards page) and
+  // click the target word. Pre-fix, the EXAMPLES lookup throws and
+  // the page unmounts; the h1 disappears and a pageerror fires.
+  const pageErrors = []
+  page.on('pageerror', (err) => pageErrors.push(err))
+  await page.goto('/cards')
+  await page.waitForLoadState('networkidle')
+  const h1 = page.locator('h1', { hasText: /Мои карточки|Карточки/ })
+  await expect(h1).toBeVisible()
+  await page.locator('text=clickable').first().click()
+  await page.waitForTimeout(300)
+  expect(pageErrors, `page errors: ${pageErrors.map((e) => e.message).join(' | ')}`).toHaveLength(0)
+  await expect(h1).toBeVisible()
 })
 
 // Cross-user ownership on /review: a user who knows another user's

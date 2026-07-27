@@ -4,6 +4,7 @@
 import { COURSE as FR_COURSE, VOCAB as FR_VOCAB, THEMES as FR_THEMES, getHints } from './fr/index.js'
 import { COURSE as PL_COURSE, VOCAB as PL_VOCAB, THEMES as PL_THEMES } from './pl/index.js'
 import { hints as ruHints } from './fr/hints/ru'
+import { EXAMPLES as FR_EXAMPLES } from './fr/examples.js'
 
 // Course registry by target language
 export const COURSES = {
@@ -44,6 +45,15 @@ export function getThemeTitle(theme, targetLang) {
   // Prefer Russian translation for Russian native speakers
   if (theme.titleRu) return theme.titleRu
   return theme.title
+}
+
+// Per-language EXAMPLES map for the card-row expander. Only `fr`
+// ships an examples module today; `pl` returns an empty object so
+// the lookups in CardsPage stay safe (the expander short-circuits
+// to the "Нет деталей" placeholder when no content is found).
+export function getExamples(targetLang) {
+  if (targetLang === 'fr') return FR_EXAMPLES
+  return {}
 }
 
 // Re-export everything from fr (default French course)

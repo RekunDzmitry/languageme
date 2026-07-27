@@ -49,5 +49,5 @@ export default function StudyPage() {
     return [...staticVocab, ...userForScope]
   }, [themeId, targetLang, VOCAB, userVocab, settings.activePackId])
 
-  return <StudySession themeVocab={themeVocab} />
+  return <StudySession themeVocab={themeVocab} route="study" themeId={themeId} />
 }

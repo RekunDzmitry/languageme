@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useT } from '../i18n'
 import { useProgress } from '../stores/UserProgressContext'
 import { useSettings } from '../stores/SettingsContext'
-import { getVocab, getHintsByLang, getThemes, getThemeTitle } from '../data/courses'
+import { getVocab, getHintsByLang, getThemes, getThemeTitle, getExamples } from '../data/courses'
 import { filterThemesByPack } from '../data/lessonPacks'
 import { getCardStatus, formatDueDate, STATUS_COLORS } from '../utils/cardStatus'
 import UserCardModal from '../components/cards/UserCardModal'
@@ -26,6 +26,7 @@ const LEGACY_OTHER_THEME_IDS = {
    const targetLang = settings.targetLang
    const hints = getHintsByLang(settings.nativeLang)
    const allThemes = getThemes(targetLang)
+  const examples = getExamples(targetLang)
    const themes = useMemo(
      () => filterThemesByPack(allThemes, settings.activePackId, targetLang),
      [allThemes, settings.activePackId, targetLang]
@@ -263,7 +264,7 @@ const LEGACY_OTHER_THEME_IDS = {
       ) : (
         <div className="space-y-2">
           {/* Desktop header */}
-          <div className="hidden md:grid grid-cols-[1fr_1fr_auto_auto_auto_auto_auto_auto] gap-3 px-4 py-2 text-xs text-text-muted font-medium">
+          <div className="hidden md:grid grid-cols-[1fr_1fr_auto_auto_auto_auto_auto_auto_auto] gap-3 px-4 py-2 text-xs text-text-muted font-medium">
             <span>{targetLang.toUpperCase()}</span>
             <span>{settings.nativeLang.toUpperCase()}</span>
             <span>{t('cards_status', 'Статус')}</span>
@@ -277,7 +278,7 @@ const LEGACY_OTHER_THEME_IDS = {
           {filtered.map(item => (
             <div key={item.id} className="bg-surface border border-border rounded-xl overflow-hidden">
               {/* Main row — desktop */}
-              <div className="hidden md:grid grid-cols-[1fr_1fr_auto_auto_auto_auto_auto_auto] gap-3 items-center px-4 py-3">
+              <div className="hidden md:grid grid-cols-[1fr_1fr_auto_auto_auto_auto_auto_auto_auto] gap-3 items-center px-4 py-3">
                 <div
                   className="cursor-pointer"
                   onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
@@ -286,7 +287,11 @@ const LEGACY_OTHER_THEME_IDS = {
                   {item.ipa && <span className="text-text-muted text-xs ml-2">{item.ipa}</span>}
                   <span className="text-text-muted text-xs ml-1">{expandedId === item.id ? '▾' : '▸'}</span>
                   {item.source === 'user' && (
-                    <span className="ml-2 text-[10px] uppercase tracking-wide text-accent/80">· {t('user_card_badge', 'своя')}</span>
+                    // Fixed-width badge so the inline label doesn't
+                    // expand the target cell and shift the row to
+                    // the right (which used to misalign the RU
+                    // translation and every stat column).
+                    <span className="ml-2 text-[10px] uppercase tracking-wide text-accent/80 inline-block w-12">· {t('user_card_badge', 'своя')}</span>
                   )}
                 </div>
                 <span className="text-text-muted text-sm">{item.translations?.ru || item.translations?.en}</span>
@@ -301,31 +306,37 @@ const LEGACY_OTHER_THEME_IDS = {
                 <span className="text-text-muted text-xs w-16 text-center">
                   {item.card.interval} {t('cards_days', { count: item.card.interval, defaultValue: 'дн.' })}
                 </span>
-                <div className="flex items-center gap-2">
-                  {item.source === 'user' ? (
-                    <>
-                      <button
-                        onClick={() => setModalState({ id: item.id, mode: 'edit' })}
-                        className="text-accent hover:text-accent/80 text-xs font-medium"
-                      >
-                        {t('user_card_edit')}
-                      </button>
-                      <button
-                        onClick={() => handleDelete(item)}
-                        className="text-red-400 hover:text-red-300 text-xs font-medium"
-                      >
-                        {t('user_card_delete')}
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => editingId === item.id ? setEditingId(null) : startEdit(item)}
-                      className="text-accent hover:text-accent/80 text-xs font-medium"
-                    >
-                      {editingId === item.id ? '✕' : t('cards_edit', 'Изменить')}
-                    </button>
-                  )}
-                </div>
+                {/* 8th column: edit. Single button, no flex wrapper, so
+                    this column is the same width on every row. */}
+                {item.source === 'user' ? (
+                  <button
+                    onClick={() => setModalState({ id: item.id, mode: 'edit' })}
+                    className="text-accent hover:text-accent/80 text-xs font-medium w-16 text-left"
+                  >
+                    {t('user_card_edit')}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => editingId === item.id ? setEditingId(null) : startEdit(item)}
+                    className="text-accent hover:text-accent/80 text-xs font-medium w-16 text-left"
+                  >
+                    {editingId === item.id ? '✕' : t('cards_edit', 'Изменить')}
+                  </button>
+                )}
+                {/* 9th column: delete. Only user cards have a button
+                    here; static rows reserve the same width with a
+                    placeholder span so the column lines up across
+                    rows. */}
+                {item.source === 'user' ? (
+                  <button
+                    onClick={() => handleDelete(item)}
+                    className="text-red-400 hover:text-red-300 text-xs font-medium w-16 text-left"
+                  >
+                    {t('user_card_delete')}
+                  </button>
+                ) : (
+                  <span className="w-16" />
+                )}
               </div>
 
               {/* Main row — mobile */}
@@ -389,7 +400,7 @@ const LEGACY_OTHER_THEME_IDS = {
               {expandedId === item.id && (
                 <CardDetails
                   item={item}
-                  examples={EXAMPLES[item.id]}
+                  examples={examples[item.id]}
                   builtinHint={hints[item.id] || item.hint}
                   userMnemonic={userMnemonics[item.id]}
                   t={t}

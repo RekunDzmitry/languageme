@@ -39,10 +39,22 @@ router.get('/cards', authenticate, async (req, res, next) => {
     // Filter on target_lang (NOT NULL since migration 025) rather than
     // parsing the vocab_id prefix. User cards and seed cards are now
     // both selected uniformly.
+    const userId = req.user.sub;
     const { rows } = await pool.query(
       'SELECT vocab_id, ease, interval_days, reps, due, last_reviewed FROM srs_card WHERE user_id = $1 AND target_lang = $2',
-      [req.user.sub, target]
+      [userId, target]
     );
+    console.log('[study] srs_db_fetch', {
+      userId,
+      target,
+      count: rows.length,
+      rows: rows.map((r) => ({
+        vocab_id: r.vocab_id,
+        reps: r.reps,
+        last_reviewed: r.last_reviewed,
+        due: r.due,
+      })),
+    });
     res.json(rows);
   } catch (err) { next(err); }
 });
@@ -94,12 +106,13 @@ router.post('/review', authenticate,
   validate({
     vocabId: { required: true },
     quality: { required: true, type: 'number', min: 0, max: 3 },
+    queue: {}, // optional: the remaining queue after this click, for analytics
   }),
   async (req, res, next) => {
     const client = await pool.connect();
     try {
-      const { vocabId, quality } = req.body;
-      const userId = req.user.sub;
+    const { vocabId, quality, queue } = req.body;
+    const userId = req.user.sub;
 
       await client.query('BEGIN');
 
@@ -159,6 +172,13 @@ router.post('/review', authenticate,
 
       await client.query('COMMIT');
 
+      console.log('[study] rate', {
+        userId,
+        vocabId,
+        quality,
+        queue: Array.isArray(queue) ? queue : null,
+      });
+
       res.json({ ...card, ...updated });
     } catch (err) {
       await client.query('ROLLBACK');
@@ -168,6 +188,55 @@ router.post('/review', authenticate,
     }
   }
 );
+
+// Log a study session start with the initial queue. The queue is
+// built client-side (StudySession lazy useState init) so the server
+// has no other visibility into it. Fire-and-forget: this is an
+// analytics endpoint, not a study primitive — failures must not
+// break the session.
+router.post('/session-start', authenticate, async (req, res, next) => {
+  try {
+    const { route, themeId, targetLang, queue, due, newC, poolSize, userVocabCount, poolUsrCount, cardsCount } = req.body || {};
+    if (route !== 'learn' && route !== 'study') {
+      return res.status(400).json({ error: 'route must be "learn" or "study"' });
+    }
+    console.log('[study] session_start', {
+      userId: req.user.sub,
+      route,
+      themeId: themeId || null,
+      targetLang: targetLang || null,
+      queue: Array.isArray(queue) ? queue : [],
+      // The client splits getStudyableCards() into its two halves so
+      // the server can see exactly what the reordering produced:
+      //   due  = cards where cards[w.id]?.due <= now (sorted by due asc,
+      //          user-first tiebreaker)
+      //   newC = cards where reps===0 && !lastReviewed (sorted by
+      //          user-first), excluding anything already in `due`
+      // The final `queue` is due+newC sliced to BATCH_SIZE. When
+      // the user card is missing from `queue` but present in
+      // `newC`/`due`, the pool didn't include it — that's the
+      // userVocab-empty symptom we want to surface.
+      due: Array.isArray(due) ? due : null,
+      newC: Array.isArray(newC) ? newC : null,
+      poolSize: typeof poolSize === 'number' ? poolSize : null,
+      // Diagnostic counters that pinpoint where the user card is
+      // being dropped: userVocabCount = user cards in the React
+      // context after fetchProgress; poolUsrCount = how many of
+      // those made it past the scope filter into themeVocab;
+      // cardsCount = srs_card rows the client has.
+      //   userVocabCount > 0 && poolUsrCount === 0
+      //     → scope filter dropped the card (themeId mismatch)
+      //   poolUsrCount > 0 && user card missing from queue
+      //     → BATCH_SIZE slice dropped it (position >= 10)
+      //   userVocabCount === 0
+      //     → fetchProgress didn't load it (race with createUserCard)
+      userVocabCount: typeof userVocabCount === 'number' ? userVocabCount : null,
+      poolUsrCount: typeof poolUsrCount === 'number' ? poolUsrCount : null,
+      cardsCount: typeof cardsCount === 'number' ? cardsCount : null,
+    });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
 
 // User-authored write_answer drills (created from email corrections)
 router.get('/write-exercises', authenticate, async (req, res, next) => {

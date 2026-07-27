@@ -174,7 +174,14 @@ export function UserProgressProvider({ children }) {
         // lang (the only one supported today) so Flashcard's
         // `word.translations?.[nativeLang]` lookup hits.
         if (Array.isArray(userCardsData)) {
-          next.userVocab = {}
+          // Merge the API response with the existing userVocab
+          // rather than overwriting it. This is critical: createUserCard
+          // adds the new card to userVocab optimistically (lines
+          // 460-471), then fetchProgress races against the create
+          // commit. If the API response lands BEFORE the commit
+          // (or in a stale read), overwriting here would silently
+          // drop the brand-new card. Merging preserves it.
+          next.userVocab = { ...prev.userVocab }
           userCardsData.forEach(c => {
             next.userVocab[c.id] = {
               id: c.id,
@@ -201,6 +208,28 @@ export function UserProgressProvider({ children }) {
     fetchProgress(targetLang)
   }, [isAuthenticated, fetchProgress, targetLang])
 
+  // Test-only: expose setProgress on window so E2E tests can
+  // seed userVocab (or any other progress slice) without waiting
+  // for the createUserCard → fetchProgress feedback loop to settle.
+  // The feedback loop races against the create commit and can
+  // leave userVocab empty at lazy_init, masking the refill-effect
+  // bug we're regression-testing. Production code is unaffected.
+  // Test-only: expose setProgress and isProgressLoading on window
+  // so E2E tests can seed userVocab (or any other progress
+  // slice) without waiting for the createUserCard → fetchProgress
+  // feedback loop to settle, and wait for fetchProgress to
+  // complete before navigating to a route that mounts the
+  // StudySession. The feedback loop races against the create
+  // commit and can leave userVocab empty at lazy_init, masking
+  // the refill-effect bug we're regression-testing. Production
+  // code is unaffected.
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.__userProgressSetProgress = setProgress
+      window.__userProgressIsProgressLoading = isProgressLoading
+    }
+  }, [isProgressLoading])
+
   // Initialize cards for current target language when target changes
   useEffect(() => {
     if (isAuthenticated) return // API will provide cards
@@ -216,7 +245,7 @@ export function UserProgressProvider({ children }) {
     setTimeout(() => setNotification(null), 3000)
   }, [])
 
-  const rateCard = useCallback((wordId, quality) => {
+  const rateCard = useCallback((wordId, quality, queue = null) => {
     if (isAuthenticated) {
       // Optimistic local update
       setProgress(prev => {
@@ -232,7 +261,7 @@ export function UserProgressProvider({ children }) {
           },
         }
       })
-      api.post('/api/study/review', { vocabId: wordId, quality }).catch(err => {
+      api.post('/api/study/review', { vocabId: wordId, quality, queue }).catch(err => {
         console.error('Review sync failed:', err)
       })
       return
