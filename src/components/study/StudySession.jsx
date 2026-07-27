@@ -47,6 +47,14 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
     if (isProgressLoading) return
     const timer = setTimeout(() => {
       if (sessionStartFiredRef.current) return
+      // Set the guard BEFORE building the payload so the analytics
+      // event fires exactly once even if the effect re-runs, if
+      // React dev/StrictMode double-invokes, or if the .catch
+      // resolves after a later queue change. Without this, every
+      // queue mutation after the first fire would re-send the
+      // event, and the server log would see N duplicates for a
+      // single session.
+      sessionStartFiredRef.current = true
       // Recompute due/newC at fire-time so the server log shows
       // the full studyable halves for the current pool+cards. The
       // queue field is the settled React state directly. Earlier

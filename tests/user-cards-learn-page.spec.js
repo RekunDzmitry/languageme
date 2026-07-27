@@ -287,3 +287,75 @@ test('sessionStart payload queue matches the visible React queue (PR #26 review)
   // excluded the visible queue and the user card was absent.
   expect(sessionStartPayload.queue, 'sessionStart.queue must include the user card').toContain(created.id)
 })
+
+// Regression for PR #26 review (6th comment): a refactor of the
+// sessionStart effect removed the `sessionStartFiredRef.current =
+// true` assignment inside the timeout, leaving only the guard
+// check. The analytics event then re-fires on every queue
+// change (isProgressLoading flip, refill effect, user rate), and
+// React dev/StrictMode can also duplicate it. The server log sees
+// N events for a single session. The fix restores the assignment
+// so the event fires exactly once.
+test('sessionStart fires exactly once per page mount (PR #26 review, 6th comment)', async ({ page, request }) => {
+  const email = `oneshot-${Date.now()}@test.local`
+  const password = 'testpass123'
+
+  const reg = await request.post('http://localhost:3000/api/auth/register', {
+    data: { email, password },
+  })
+  expect(reg.ok()).toBe(true)
+  const { accessToken, refreshToken } = await reg.json()
+
+  await page.goto('/')
+  await page.evaluate(({ accessToken, refreshToken }) => {
+    localStorage.setItem('lm_access_token', accessToken)
+    localStorage.setItem('lm_refresh_token', refreshToken)
+    localStorage.setItem('lm_settings', JSON.stringify({
+      nativeLang: 'ru',
+      targetLang: 'pl',
+      uiLang: 'ru',
+      autoPlayAudio: false,
+      activePackId: 'pl-a1-a2',
+    }))
+  }, { accessToken, refreshToken })
+
+  // Create a user card so the refill effect has work to do after
+  // fetchProgress completes (the refill effect mutates the
+  // queue, which re-runs the sessionStart useEffect and would
+  // trigger a second fire if the guard was broken).
+  const createRes = await request.post('http://localhost:3000/api/user-cards', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    data: { targetLang: 'pl', target: 'oneshot', translation: 'ваншот', themeId: 'pl-a1-a2_other' },
+  })
+  expect(createRes.ok()).toBe(true)
+
+  // Count every sessionStart POST. The client fires it 500ms
+  // after fetchProgress completes and the queue stabilises;
+  // isProgressLoading flips + the refill effect mutates queue
+  let sessionStartCount = 0
+  await page.route('**/api/study/session-start', async (route) => {
+    sessionStartCount += 1
+    await route.continue()
+  })
+
+  await page.goto('/learn')
+  await page.waitForLoadState('networkidle')
+  // Wait for the first sessionStart to fire. The effect runs
+  // when isProgressLoading flips + the refill effect mutates
+  // queue; both are guaranteed to happen during a normal /learn
+  // mount. The 500ms debounce + ~2s for the refill gives any
+  // duplicate from the refill's queue change time to land.
+  await expect.poll(() => sessionStartCount, { timeout: 10000 }).toBeGreaterThan(0)
+  // Flip the first card and rate it. This changes the queue
+  // (handleRate slices off the head), which re-runs the
+  // sessionStart useEffect. A broken guard (never set to true)
+  // would let a new timer fire and send a second event. Wait
+  // 2s after the rate click for any duplicate to land (500ms
+  // debounce + network round-trip + React re-render).
+  await expect(page.getByText(/нажмите, чтобы открыть/).first()).toBeVisible({ timeout: 8000 })
+  await page.getByText(/нажмите, чтобы открыть/).first().click()
+  await expect(page.getByRole('button', { name: 'Хорошо' })).toBeVisible({ timeout: 5000 })
+  await page.getByRole('button', { name: 'Хорошо' }).click()
+  await page.waitForTimeout(2000)
+  expect(sessionStartCount, 'sessionStart must fire exactly once per page mount (guard must be set before payload build)').toBe(1)
+})
