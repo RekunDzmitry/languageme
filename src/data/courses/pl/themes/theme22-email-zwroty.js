@@ -114,7 +114,7 @@ const theme22EmailZwroty = {
         { type: 'write_answer', category: 'Вступление', prompt: 'Мы (мужчины или смешанная группа) давно друг другу не писали.', answer: 'Dawno do siebie nie pisaliśmy.', hint: 'Мужская/смешанная форма: pisaliśmy.' },
         { type: 'write_answer', category: 'Вступление', prompt: 'Мы (женщины) давно друг другу не писали.', answer: 'Dawno do siebie nie pisałyśmy.', hint: 'Женская форма: pisałyśmy.' },
         { type: 'write_answer', category: 'Вступление', prompt: 'Извини за долгое молчание.', answer: 'Przepraszam za dłuższe milczenie.', hint: 'Неофициальное объяснение паузы в переписке.' },
-        { type: 'write_answer', category: 'Вступление', prompt: 'Пишу по поводу языкового курса.', answer: 'Kontaktuję się w sprawie kursu językowego.', hint: 'Официальная формула: Kontaktuję się w sprawie...' },
+        { type: 'write_answer', category: 'Вступление', prompt: 'Пишу по поводу языкового курса.', answers: ['Kontaktuję się w sprawie kursu językowego.', 'Piszę z powodu kursu językowego.'], hint: 'Официальная формула: Kontaktuję się w sprawie... (допускается также Piszę z powodu kursu językowego).' },
         { type: 'write_answer', category: 'Вступление', prompt: 'Я ознакомился с информацией на сайте вашей школы.', answer: 'Zapoznałem się z informacjami na stronie Państwa szkoły.', hint: 'Мужская форма: Zapoznałem się; Państwa с заглавной.' },
         { type: 'write_answer', category: 'Вступление', prompt: 'Я ознакомилась с информацией на сайте вашей школы.', answer: 'Zapoznałam się z informacjami na stronie Państwa szkoły.', hint: 'Женская форма: Zapoznałam się.' },
 
@@ -139,7 +139,7 @@ const theme22EmailZwroty = {
 
         { type: 'write_answer', category: 'Порядок', prompt: 'во-первых', answer: 'po pierwsze', hint: 'Фраза для перечисления аргументов.' },
         { type: 'write_answer', category: 'Порядок', prompt: 'затем / потом', answers: ['potem', 'następnie'], hint: 'Фразы для порядка событий.' },
-        { type: 'write_answer', category: 'Порядок', prompt: 'в завершение', answer: 'na zakończenie', hint: 'Фраза для последнего пункта письма.' },
+        { type: 'write_answer', category: 'Порядок', prompt: 'в завершение', answers: ['na zakończenie', 'na koniec'], hint: 'Фраза для последнего пункта письма; na zakończenie / na koniec.' },
         { type: 'write_answer', category: 'Порядок', prompt: 'прежде всего', answer: 'przede wszystkim', hint: 'Полезно для выделения главного аргумента.' },
 
         { type: 'write_answer', category: 'Полезные слова', prompt: 'особенно сейчас', answer: 'zwłaszcza teraz', hint: 'Zwłaszcza = особенно.' },
