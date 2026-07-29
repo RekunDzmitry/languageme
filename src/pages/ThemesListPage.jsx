@@ -20,7 +20,7 @@ export default function ThemesListPage() {
     <div className="max-w-4xl mx-auto px-5 py-6">
       <h2 className="text-2xl font-extrabold mb-5">{t(`themes_title_${targetLang}`)}</h2>
       <div className="space-y-3">
-        {allThemes.map((theme, i) => {
+        {allThemes.map((theme) => {
           // For authenticated users, use API unlock status if available, otherwise check locally
           const apiUnlockStatus = themeUnlockStatus?.[theme.id]?.unlocked
           const unlocked = isAuthenticated
@@ -39,7 +39,7 @@ export default function ThemesListPage() {
             >
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-sm shrink-0
                 ${completed ? 'bg-green-500/20 text-green-400' : unlocked ? 'bg-accent-glow text-accent' : 'bg-white/5 text-text-muted'}`}>
-                {completed ? '✓' : i + 1}
+                {completed ? '✓' : theme.order}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
