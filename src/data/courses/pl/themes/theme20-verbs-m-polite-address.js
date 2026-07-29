@@ -2,7 +2,7 @@
 
 const theme20VerbsMPoliteAddress = {
   id: 'pl_theme20',
-  order: 20,
+  order: 11,
   title: 'Czasowniki na -m i formy grzecznościowe',
   titleRu: 'Глаголы на -m и вежливое обращение',
   description: 'Польские вопросы, спряжение rozumieć/szukać и обращения Pan/Pani',

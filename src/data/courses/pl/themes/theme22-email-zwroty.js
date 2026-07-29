@@ -5,7 +5,7 @@
 
 const theme22EmailZwroty = {
   id: 'pl_theme22',
-  order: 22,
+  order: 13,
   title: 'Mail — struktura i zwroty',
   titleRu: 'E-mail: структура и фразы',
   description: 'Struktura listu, formuły oficjalne i nieoficjalne: początek, główna treść i zakończenie maila',

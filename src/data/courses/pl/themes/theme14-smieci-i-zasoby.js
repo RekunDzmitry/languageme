@@ -3,7 +3,7 @@
 
 const theme14SmieciIZasoby = {
   id: 'pl_theme14',
-  order: 14,
+  order: 5,
   title: 'Śmieci, odpady i oszczędzanie zasobów',
   titleRu: 'Мусор, отходы и экономия ресурсов',
   description: 'Лексика для обсуждения мусора, переработки отходов и экономии ресурсов',

@@ -3,7 +3,7 @@
 
 const theme15CyfrowyNomadyzm = {
   id: 'pl_theme15',
-  order: 15,
+  order: 6,
   title: 'Cyfrowy nomadyzm',
   titleRu: 'Цифровой номадизм',
   description: 'Teksty i słownictwo o stylu życia cyfrowego nomadyzmu',

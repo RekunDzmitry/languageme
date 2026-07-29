@@ -3,7 +3,7 @@
 
 const theme21Verbs2ndConj = {
   id: 'pl_theme21',
-  order: 21,
+  order: 12,
   title: 'Czasowniki II koniugacji i rzeczowniki męskie',
   titleRu: 'Глаголы 2-го спряжения и существительные мужского рода',
   description: 'Спряжение глаголов на -isz/-ysz, склонение существительных мужского рода, liczba mnoga',

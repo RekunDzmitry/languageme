@@ -3,7 +3,7 @@
 
 const theme17MediaSpolecznosciowe = {
   id: 'pl_theme17',
-  order: 17,
+  order: 8,
   title: 'Media społecznościowe',
   titleRu: 'Социальные сети',
   description: 'Teksty i słownictwo o mediach społecznościowych i ich wpływie',
