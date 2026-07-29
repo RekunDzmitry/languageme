@@ -3,7 +3,7 @@
 
 const theme18MyIMedia = {
   id: 'pl_theme18',
-  order: 18,
+  order: 9,
   title: 'My i media',
   titleRu: 'Мы и медиа',
   description: 'Osobiste relacje z mediami — gazety, radio, TV, Internet, gry',

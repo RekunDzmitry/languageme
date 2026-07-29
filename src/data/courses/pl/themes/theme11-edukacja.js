@@ -3,7 +3,7 @@
 
 const theme11Edukacja = {
   id: 'pl_theme11',
-  order: 11,
+  order: 2,
   title: 'Edukacja i nauka',
   titleRu: 'Образование и обучение',
   description: 'Лексика для обсуждения образования, школы и обучения',

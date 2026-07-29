@@ -3,7 +3,7 @@
 
 const theme10Praca = {
   id: 'pl_theme10',
-  order: 10,
+  order: 1,
   title: 'Praca i kariera',
   titleRu: 'Работа и карьера',
   description: 'Лексика для обсуждения работы, карьеры и поиска работы',

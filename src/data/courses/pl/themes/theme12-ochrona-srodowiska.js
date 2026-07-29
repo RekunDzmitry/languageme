@@ -3,7 +3,7 @@
 
 const theme12OchronaSrodowiska = {
   id: 'pl_theme12',
-  order: 12,
+  order: 3,
   title: 'Ochrona środowiska i efekt cieplarniany',
   titleRu: 'Охрана окружающей среды и парниковый эффект',
   description: 'Лексика для обсуждения охраны окружающей среды, парникового эффекта и вымирания видов',
