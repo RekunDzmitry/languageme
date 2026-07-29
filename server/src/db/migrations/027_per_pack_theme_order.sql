@@ -16,6 +16,17 @@
 --      PostgreSQL NULL semantics mean the per-lang catch-alls
 --      (pack_id = NULL) don't collide.
 --
+-- Ownership boundary:
+--   pl_theme22 is owned by migration 022_seed_pl_theme22.sql, which
+--   inserts it directly with pack_id = 'pl-telc' and order = 13. This
+--   migration only handles pl_theme10-22 rows that exist at the time
+--   it runs. If 022 is merged later (lower number → runs after 027 in
+--   environments that haven't applied 027 yet), its row will already
+--   be correct and the regex backfill/remap below will harmlessly skip
+--   it (the WHERE pack_id IS NULL guard misses it, and the
+--   "order BETWEEN 10 AND 22" remap guard also misses it because its
+--   order is already 13).
+--
 -- Note on themeId vs order:
 --   The themeId (e.g. pl_theme10) is NOT renamed. It stays as the
 --   stable identifier used in DB foreign keys, routes, srs_card keys,
