@@ -44,7 +44,7 @@ export const LESSON_PACKS = [
     langPrefix: 'pl',
     // Polish B1/B2: vocabulary, grammar and email drills (pl_theme10..22).
     themeRange: { from: 10, to: 22 },
-    primaryRoute: '/email',
+    primaryRoute: '/themes',
     modes: ['themes', 'training', 'email', 'cards'],
     accentClass: 'from-violet-500 to-fuchsia-500',
   },
