@@ -357,13 +357,36 @@ export default function TrainingPage() {
   // Merge user drills into each theme's exercises section (appended after the
   // seeded ones so index-based SRS keys stay stable), plus a synthetic
   // "Moje ćwiczenia" theme for unattached drills.
+  //
+  // Two exceptions that keep the pack's tab contract honest:
+  //
+  // 1. PL_A1_A2 pack: themes 20 and 21 are vocab-only. We do NOT merge
+  //    user-authored write_answer drills into them because the pack's
+  //    contract is "no Ćwiczenia" — surfacing them under Cwiczenia 0/N
+  //    would break that. The drills stay in the DB; unattached ones
+  //    (theme_id = pl_other) are never reachable from this pack.
+  //
+  // 2. PL_TELC pack: the Cwiczenia tab is the seeded write_answer
+  //    curriculum (orthography themes 01–09 + email phrases theme 22),
+  //    not a free-for-all. Themes 10–18 are Słowa/vocab-only and must
+  //    stay out of Cwiczenia. So we only inject user drills into
+  //    themes that ALREADY have an `exercises` section (the seeded
+  //    write_answer curriculum). Drills attached to Słowa-only themes
+  //    are surfaced via the catch-all "Moje ćwiczenia" theme below.
   const mergedThemes = useMemo(() => {
     if (!isPolish) return themes
+    if (activePackId === PACK_IDS.PL_A1_A2) return themes
     const out = themes.map(theme => {
       const extra = userExByTheme[theme.id]
       if (!extra || extra.length === 0) return theme
       const sections = [...(theme.sections || [])]
       const exIdx = sections.findIndex(s => s.type === 'exercises')
+      // PL_TELC: only inject into themes that already have a seeded
+      // `exercises` section. Otherwise (e.g. Słowa themes 10–18) the
+      // drill would be promoted into Cwiczenia and break the pack's
+      // "10 cards" contract. The drill is still surfaced via the
+      // catch-all below.
+      if (activePackId === PACK_IDS.PL_TELC && exIdx < 0) return theme
       if (exIdx >= 0) {
         sections[exIdx] = { ...sections[exIdx], exercises: [...(sections[exIdx].exercises || []), ...extra] }
       } else {
@@ -371,16 +394,30 @@ export default function TrainingPage() {
       }
       return { ...theme, sections }
     })
-    if (activePackId === PACK_IDS.PL_TELC && userExByTheme.pl_other?.length) {
-      out.push({
-        id: 'pl_other',
-        order: '★',
-        title: 'Moje ćwiczenia',
-        titleRu: 'Мои упражнения',
-        sections: [{ type: 'exercises', exercises: userExByTheme.pl_other }],
-        vocabIds: [],
-        verbList: [],
-      })
+    // Build the catch-all "Moje ćwiczenia" from: (a) drills with no
+    // theme_id, plus (b) drills attached to Słowa-only themes in PL_TELC
+    // that we deliberately skipped above (so they still surface
+    // somewhere instead of being lost).
+    if (activePackId === PACK_IDS.PL_TELC) {
+      const skipped = themes
+        .filter((theme) => {
+          const sections = theme.sections || []
+          return !sections.some((s) => s.type === 'exercises')
+        })
+        .flatMap((theme) => userExByTheme[theme.id] || [])
+      const otherDrills = userExByTheme.pl_other || []
+      const catchAllDrills = [...otherDrills, ...skipped]
+      if (catchAllDrills.length) {
+        out.push({
+          id: 'pl_other',
+          order: '★',
+          title: 'Moje ćwiczenia',
+          titleRu: 'Мои упражнения',
+          sections: [{ type: 'exercises', exercises: catchAllDrills }],
+          vocabIds: [],
+          verbList: [],
+        })
+      }
     }
     return out
   }, [themes, userExByTheme, isPolish, activePackId])
@@ -459,12 +496,21 @@ export default function TrainingPage() {
     : activeTab === 'vocab'
       ? vocabTabStats
       : { total: emailTabTotal, mastered: 0, due: 0, percent: 0 }
-
   const activePolishThemes = activeTab === 'exercises'
     ? exerciseThemes
     : activeTab === 'vocab'
       ? vocabThemes
       : emailThemes
+
+  // Compute per-pack display order: the theme's own `order` is a stable
+  // global sort key (the same theme id can appear under different orders
+  // in different packs), but the user-visible number on the training page
+  // should be 1-based within the active pack so that a theme in pl-a1-a2
+  // displays as 1 or 2 instead of its old global order.
+  const activePolishThemesNumbered = activePolishThemes.map((theme, idx) => ({
+    ...theme,
+    displayOrder: idx + 1,
+  }))
 
   function handleAiChat(verb) {
     setAiChatVerb(verb)
@@ -518,7 +564,7 @@ export default function TrainingPage() {
         >
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
-              <span className="text-text-muted text-sm font-mono">{theme.order}.</span>
+              <span className="text-text-muted text-sm font-mono">{theme.displayOrder}.</span>
               <span className="font-bold text-white text-sm">{getThemeTitle(theme, targetLang)}</span>
             </div>
             <div className="flex items-center gap-2">
@@ -658,7 +704,7 @@ export default function TrainingPage() {
             <EmailTabContent emailThemes={emailThemes} navigate={navigate} />
           ) : (
             <div className="flex flex-col gap-3">
-              {activePolishThemes.map(theme => renderThemeCard(theme))}
+              {activePolishThemesNumbered.map(theme => renderThemeCard(theme))}
             </div>
           )}
         </>
