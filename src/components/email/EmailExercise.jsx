@@ -114,7 +114,26 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
   const updateProgress = useCallback((step, status) => {
     if (!step) return
     setEvaluationProgress(prev => {
-      const label = STREAM_STEP_LABELS[step] || (step.startsWith('enrichment_') ? 'Szczegóły błędu' : step)
+      if (step.startsWith('enrichment_')) {
+        const SECTION_STEP = 'enrichment_section'
+        const oldSection = prev.find(it => it.step === SECTION_STEP)
+        const children = oldSection
+          ? oldSection.children.filter(c => c.step !== step)
+          : []
+        children.push({ step, status })
+        const num = (s) => Number(s.split('_').pop())
+        children.sort((a, b) => num(a.step) - num(b.step))
+        const running = children.some(c => c.status === 'running')
+        const section = {
+          step: SECTION_STEP,
+          label: 'Szczegóły błędu',
+          status: running ? 'running' : 'complete',
+          children,
+        }
+        const rest = prev.filter(it => it.step !== SECTION_STEP)
+        return [...rest, section]
+      }
+      const label = STREAM_STEP_LABELS[step] || step
       const next = prev.filter(item => item.step !== step)
       return [...next, { step, label, status }]
     })
