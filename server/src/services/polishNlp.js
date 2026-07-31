@@ -46,6 +46,124 @@ const POLISH_WORD_RE = /[A-Za-zĄąĆćĘęŁłŃńÓóŚśŹźŻż]+/g;
 const POLISH_SENTENCE_RE = /[^.!?…]+[.!?…]+|[^.!?…]+$/g;
 
 // ────────────────────────────────────────────────────────────────────────────
+// Lemmatization (heuristic + irregular-form table)
+// ────────────────────────────────────────────────────────────────────────────
+
+const IRREGULAR_FORMS = {
+  // jechać
+  jadę: 'jechać', jedziesz: 'jechać', jedzie: 'jechać',
+  jedziemy: 'jechać', jedziecie: 'jechać', jadą: 'jechać',
+  jechałem: 'jechać', jechałam: 'jechać', jechałeś: 'jechać', jechałaś: 'jechać',
+  jechaliśmy: 'jechać', jechaliście: 'jechać', jechał: 'jechać', jechała: 'jechać',
+  jechali: 'jechać', jechały: 'jechać',
+  // być
+  jestem: 'być', jesteś: 'być', jest: 'być', jesteśmy: 'być',
+  jesteście: 'być', są: 'być',
+  byłem: 'być', byłam: 'być', byłeś: 'być', byłaś: 'być',
+  byliśmy: 'być', byliście: 'być', był: 'być', była: 'być', byli: 'być', były: 'być',
+  // mieć
+  mam: 'mieć', masz: 'mieć', ma: 'mieć', mamy: 'mieć', macie: 'mieć', mają: 'mieć',
+  miałem: 'mieć', miałam: 'mieć', miałeś: 'mieć', miałaś: 'mieć',
+  mieliśmy: 'mieć', mieliście: 'mieć', miał: 'mieć', miała: 'mieć', mieli: 'mieć', miały: 'mieć',
+  // iść
+  idę: 'iść', idziesz: 'iść', idzie: 'iść', idziemy: 'iść', idziecie: 'iść', idą: 'iść',
+  szedłem: 'iść', szłam: 'iść', szedłeś: 'iść', szłaś: 'iść',
+  szliśmy: 'iść', szliście: 'iść', szedł: 'iść', szła: 'iść', szli: 'iść', szły: 'iść',
+  // móc
+  mogę: 'móc', możesz: 'móc', może: 'móc', możemy: 'móc', możecie: 'móc', mogą: 'móc',
+  mógł: 'móc', mogła: 'móc', mogli: 'móc',
+  mogłem: 'móc', mogłam: 'móc', mogłeś: 'móc', mogłaś: 'móc',
+  // jeść
+  jem: 'jeść', jesz: 'jeść', je: 'jeść', jemy: 'jeść', jecie: 'jeść', jedzą: 'jeść',
+  jadłem: 'jeść', jadłam: 'jeść', jadłeś: 'jeść', jadłaś: 'jeść',
+  jadł: 'jeść', jadła: 'jeść', jedli: 'jeść', jadły: 'jeść',
+  // pić
+  piję: 'pić', pijesz: 'pić', pije: 'pić', pijemy: 'pić', pijecie: 'pić', piją: 'pić',
+  piłem: 'pić', piłaś: 'pić', pił: 'pić', piła: 'pić', pili: 'pić', piły: 'pić',
+  // wiedzieć
+  wiem: 'wiedzieć', wiesz: 'wiedzieć', wie: 'wiedzieć', wiemy: 'wiedzieć', wiecie: 'wiedzieć', wiedzą: 'wiedzieć',
+  wiedziałem: 'wiedzieć', wiedziałaś: 'wiedzieć', wiedział: 'wiedzieć', wiedziała: 'wiedzieć', wiedzieli: 'wiedzieć',
+  // robić
+  robię: 'robić', robisz: 'robić', robi: 'robić', robimy: 'robić', robicie: 'robić', robią: 'robić',
+  robiłem: 'robić', robiłam: 'robić', robiłeś: 'robić', robiłaś: 'robić',
+  robiliśmy: 'robić', robiliście: 'robić', robił: 'robić', robiła: 'robić', robili: 'robić', robiły: 'robić',
+  // mówić
+  mówię: 'mówić', mówisz: 'mówić', mówi: 'mówić', mówimy: 'mówić', mówicie: 'mówić', mówią: 'mówić',
+  mówiłem: 'mówić', mówiłam: 'mówić', mówił: 'mówić', mówiła: 'mówić', mówili: 'mówić',
+  // czytać
+  czytam: 'czytać', czytasz: 'czytać', czyta: 'czytać', czytamy: 'czytać', czytacie: 'czytać', czytają: 'czytać',
+  // pisać
+  piszę: 'pisać', piszesz: 'pisać', pisze: 'pisać', piszemy: 'pisać', piszecie: 'pisać', piszą: 'pisać',
+  // widzieć
+  widzę: 'widzieć', widzisz: 'widzieć', widzi: 'widzieć', widzimy: 'widzieć', widzicie: 'widzieć', widzą: 'widzieć',
+  // mieszkać
+  mieszkam: 'mieszkać', mieszkasz: 'mieszkać', mieszka: 'mieszkać', mieszkamy: 'mieszkać', mieszkacie: 'mieszkać', mieszkają: 'mieszkać',
+  // pracować
+  pracuję: 'pracować', pracujesz: 'pracować', pracuje: 'pracować',
+  pracujemy: 'pracować', pracujecie: 'pracować', pracują: 'pracować',
+  // uczyć
+  uczę: 'uczyć', uczysz: 'uczyć', uczy: 'uczyć', uczymy: 'uczyć', uczycie: 'uczyć', uczą: 'uczyć',
+  // kochać
+  kocham: 'kochać', kochasz: 'kochać', kocha: 'kochać', kochamy: 'kochać', kochacie: 'kochać', kochają: 'kochać',
+  // lubić
+  lubię: 'lubić', lubisz: 'lubić', lubi: 'lubić', lubimy: 'lubić', lubicie: 'lubić', lubią: 'lubić',
+  // chcieć
+  chcę: 'chcieć', chcesz: 'chcieć', chce: 'chcieć', chcemy: 'chcieć', chcecie: 'chcieć', chcą: 'chcieć',
+  chciałem: 'chcieć', chciałam: 'chcieć', chciał: 'chcieć', chciała: 'chcieć', chcieli: 'chcieć',
+  // musieć
+  muszę: 'musieć', musisz: 'musieć', musi: 'musieć', musimy: 'musieć', musicie: 'musieć', muszą: 'musieć',
+  musiałem: 'musieć', musiałam: 'musieć', musiał: 'musieć', musiała: 'musieć',
+  // znać
+  znam: 'znać', znasz: 'znać', zna: 'znać', znamy: 'znać', znacie: 'znać', znają: 'znać',
+  // rozumieć
+  rozumiem: 'rozumieć', rozumiesz: 'rozumieć', rozumie: 'rozumieć', rozumiemy: 'rozumieć', rozumiecie: 'rozumieć', rozumieją: 'rozumieć',
+  // dać
+  dam: 'dać', dasz: 'dać', da: 'dać', damy: 'dać', dacie: 'dać', dadzą: 'dać',
+  dałem: 'dać', dałaś: 'dać', dał: 'dać', dała: 'dać', dali: 'dać',
+  // brać
+  biorę: 'brać', bierzesz: 'brać', bierze: 'brać', bierzemy: 'brać', bierzecie: 'brać', biorą: 'brać',
+  // kupić
+  kupię: 'kupić', kupisz: 'kupić', kupi: 'kupić', kupimy: 'kupić', kupicie: 'kupić', kupią: 'kupić',
+  kupiłem: 'kupić', kupiłam: 'kupić', kupił: 'kupić', kupiła: 'kupić', kupili: 'kupić',
+  // sprzedać
+  sprzedam: 'sprzedać', sprzedasz: 'sprzedać', sprzeda: 'sprzedać',
+  // pomagać
+  pomagam: 'pomagać', pomagasz: 'pomagać', pomaga: 'pomagać', pomagamy: 'pomagać', pomagacie: 'pomagać', pomagają: 'pomagać',
+  // dziękować
+  dziękuję: 'dziękować', dziękujesz: 'dziękować', dziękuje: 'dziękować',
+  dziękowaliśmy: 'dziękować', dziękowałem: 'dziękować', dziękowałam: 'dziękować', dziękował: 'dziękować',
+  // pytać
+  pytam: 'pytać', pytasz: 'pytać', pyta: 'pytać', pytamy: 'pytać', pytacie: 'pytać', pytają: 'pytać',
+  // prosić
+  proszę: 'prosić', prosisz: 'prosić', prosi: 'prosić', prosimy: 'prosić', prosicie: 'prosić', proszą: 'prosić',
+};
+
+const POLISH_ENDINGS = [
+  'owaliśmy', 'owaliście', 'owałam', 'owałeś', 'owałaś',
+  'łem', 'łam', 'łeś', 'łaś', 'ło', 'li', 'ły',
+  'owi', 'emu', 'ami', 'ach', 'imi', 'ymi', 'ego', 'iej',
+  'esz', 'asz', 'isz',
+  'ę', 'am', 'asz', 'a', 'e', 'i', 'y', 'o', 'u',
+];
+
+export function lemmatize(word) {
+  if (!word) return '';
+  const lower = word.toLowerCase();
+  if (IRREGULAR_FORMS[lower]) return IRREGULAR_FORMS[lower];
+  if (POLISH_LEMMA_TO_CEFR[lower]) return lower;
+  for (const ending of POLISH_ENDINGS) {
+    if (lower.length > ending.length + 2 && lower.endsWith(ending)) {
+      const stem = lower.slice(0, -ending.length);
+      if (POLISH_LEMMA_TO_CEFR[stem]) return stem;
+      for (const alt of [stem + 'a', stem + 'e', stem + 'y', stem + 'i', stem + 'o']) {
+        if (POLISH_LEMMA_TO_CEFR[alt]) return alt;
+      }
+    }
+  }
+  return lower;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // Tokenisation
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -69,34 +187,6 @@ export function splitSentences(text) {
 export function splitParagraphs(text) {
   if (!text) return [];
   return text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// Lemmatization (heuristic)
-// ────────────────────────────────────────────────────────────────────────────
-
-const POLISH_ENDINGS = [
-  'owaliśmy', 'owaliście', 'owałam', 'owałeś', 'owałaś',
-  'łem', 'łam', 'łeś', 'łaś', 'ło', 'li', 'ły',
-  'owi', 'emu', 'ami', 'ach', 'imi', 'ymi', 'ego', 'iej',
-  'esz', 'asz', 'isz',
-  'ę', 'am', 'asz', 'a', 'e', 'i', 'y', 'o', 'u',
-];
-
-export function lemmatize(word) {
-  if (!word) return '';
-  const lower = word.toLowerCase();
-  if (POLISH_LEMMA_TO_CEFR[lower]) return lower;
-  for (const ending of POLISH_ENDINGS) {
-    if (lower.length > ending.length + 2 && lower.endsWith(ending)) {
-      const stem = lower.slice(0, -ending.length);
-      if (POLISH_LEMMA_TO_CEFR[stem]) return stem;
-      for (const alt of [stem + 'a', stem + 'e', stem + 'y', stem + 'i', stem + 'o']) {
-        if (POLISH_LEMMA_TO_CEFR[alt]) return alt;
-      }
-    }
-  }
-  return lower;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -234,6 +324,16 @@ export function findAllErrors(text) {
 // Lexical / sentence metrics
 // ────────────────────────────────────────────────────────────────────────────
 
+// Very high-frequency verbs and other "essentially function" lemmas that
+// appear in almost every Polish sentence. They break the content-overlap
+// heuristic (every off-topic text mentions "być" somewhere, e.g. "jest
+// ładna pogoda" matching a point about "jak BYŁ zorganizowany kurs").
+// Used only by contentBow — we still want them counted for vocabulary.
+const STOP_CONTENT_LEMMAS = new Set([
+  'być', 'mieć', 'móc', 'chcieć', 'musieć', 'wiedzieć', 'znać',
+  'to', 'co', 'kto',
+]);
+
 export function sentenceCosine(a, b) {
   if (!a.size || !b.size) return 0;
   let inter = 0;
@@ -242,11 +342,18 @@ export function sentenceCosine(a, b) {
   return union === 0 ? 0 : inter / union;
 }
 
+// Filter function-word set used by sentence-to-point assignment. Strips
+// function words, lemmatizes each content token (jadę/jedziesz/jechałem
+// all collapse to jechać), AND drops stop-content lemmas that appear in
+// nearly every Polish sentence.
 function contentBow(sentence) {
   const out = new Set();
   for (const t of tokenizeWords(sentence)) {
     const lower = t.toLowerCase();
-    if (lower.length > 2 && !POLISH_FUNCTION_WORDS.has(lower)) out.add(lower);
+    if (lower.length <= 2 || POLISH_FUNCTION_WORDS.has(lower)) continue;
+    const lemma = lemmatize(lower);
+    if (STOP_CONTENT_LEMMAS.has(lemma)) continue;
+    out.add(lemma);
   }
   return out;
 }
@@ -396,9 +503,6 @@ function firstGreetingCandidate(text) {
   return (m ? m[1] : first).trim();
 }
 
-// Short capitalised token-with-no-closing-punctuation = a name. Used to
-// decide whether the last line of a multi-line email is the signer (and the
-// closing is therefore on the line above).
 function looksLikeName(line) {
   if (line.length > 30) return false;
   if (/[,!?…]/.test(line)) return false;
@@ -467,7 +571,14 @@ const OFFTOPIC_MIN_WORDS = 20;
 
 export function offTopicByCoverage(text, points) {
   if (!points || points.length === 0) return false;
-  const tokens = new Set(tokenizeWords(text).map(t => t.toLowerCase()));
+  // Lemmatize text tokens so a misspelled "meiszkania" still matches
+  // a point word "mieszkaniu" (both → "mieszkania").
+  const textTokenSet = new Set();
+  for (const t of tokenizeWords(text)) {
+    const lower = t.toLowerCase();
+    if (lower.length > 2) textTokenSet.add(lower);
+    textTokenSet.add(lemmatize(lower));
+  }
   const wc = wordCount(text);
   if (wc < OFFTOPIC_MIN_WORDS) return false;
   let allEmpty = true;
@@ -476,8 +587,8 @@ export function offTopicByCoverage(text, points) {
     let any = false;
     for (const t of ptoks) {
       if (t.length <= 3) continue;
-      if (tokens.has(t)) { any = true; break; }
-      if (tokens.has(lemmatize(t))) { any = true; break; }
+      if (textTokenSet.has(t)) { any = true; break; }
+      if (textTokenSet.has(lemmatize(t))) { any = true; break; }
     }
     if (any) { allEmpty = false; break; }
   }
@@ -496,5 +607,7 @@ export function listStats() {
     discourseMarkers: DISCOURSE_MARKERS.length,
     collocations: COLLOCATIONS.length,
     functionWords: POLISH_FUNCTION_WORDS.size,
+    irregularForms: Object.keys(IRREGULAR_FORMS).length,
+    stopContentLemmas: STOP_CONTENT_LEMMAS.size,
   };
 }
