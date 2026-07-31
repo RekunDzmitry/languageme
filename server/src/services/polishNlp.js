@@ -234,11 +234,6 @@ export function findAllErrors(text) {
 // Lexical / sentence metrics
 // ────────────────────────────────────────────────────────────────────────────
 
-function sentenceBow(sentence) {
-  const tokens = tokenizeWords(sentence).map(t => t.toLowerCase());
-  return new Set(tokens);
-}
-
 export function sentenceCosine(a, b) {
   if (!a.size || !b.size) return 0;
   let inter = 0;
@@ -247,16 +242,25 @@ export function sentenceCosine(a, b) {
   return union === 0 ? 0 : inter / union;
 }
 
+function contentBow(sentence) {
+  const out = new Set();
+  for (const t of tokenizeWords(sentence)) {
+    const lower = t.toLowerCase();
+    if (lower.length > 2 && !POLISH_FUNCTION_WORDS.has(lower)) out.add(lower);
+  }
+  return out;
+}
+
 export function assignSentencesToPoints(text, points) {
   const sentences = splitSentences(text);
   if (sentences.length === 0 || points.length === 0) {
     return points.map(() => ({ sentences: [], coverage: 0, wordCount: 0, depthSignals: 0 }));
   }
-  const pointBows = points.map(p => ({ bow: sentenceBow(p) }));
+  const pointBows = points.map(p => ({ bow: contentBow(p) }));
   return points.map((point, idx) => {
     const target = pointBows[idx].bow;
     const assigned = sentences.filter(s => {
-      const bow = sentenceBow(s);
+      const bow = contentBow(s);
       let common = 0;
       for (const w of bow) if (target.has(w)) common++;
       return common >= 1 || sentenceCosine(bow, target) >= 0.15;
@@ -387,17 +391,26 @@ function firstGreetingCandidate(text) {
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (lines.length === 0) return '';
   const first = lines[0];
-  // If the first line is short and looks like a greeting candidate, return it.
-  // Otherwise return the first sentence of the line.
   if (first.length <= 60) return first;
   const m = first.match(/^([^.!?…]{1,40}[.!?…]?)/);
   return (m ? m[1] : first).trim();
 }
 
+// Short capitalised token-with-no-closing-punctuation = a name. Used to
+// decide whether the last line of a multi-line email is the signer (and the
+// closing is therefore on the line above).
+function looksLikeName(line) {
+  if (line.length > 30) return false;
+  if (/[,!?…]/.test(line)) return false;
+  return /^[A-ZĄĆĘŁŃÓŚŹŻ][\p{L}\s-]*[\p{L}]$/u.test(line);
+}
+
 function lastClosingCandidate(text) {
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (lines.length === 0) return '';
-  // If multi-line, the last line is the closing. Otherwise, the last sentence.
+  if (lines.length >= 2 && looksLikeName(lines[lines.length - 1])) {
+    return lines[lines.length - 2];
+  }
   if (lines.length >= 2) return lines[lines.length - 1];
   const sentences = splitSentences(text);
   if (sentences.length === 0) return '';
@@ -450,11 +463,13 @@ function escapeRegExp(s) {
 // Off-topic / task-misunderstood heuristic
 // ────────────────────────────────────────────────────────────────────────────
 
+const OFFTOPIC_MIN_WORDS = 20;
+
 export function offTopicByCoverage(text, points) {
   if (!points || points.length === 0) return false;
   const tokens = new Set(tokenizeWords(text).map(t => t.toLowerCase()));
   const wc = wordCount(text);
-  if (wc < 50) return false;
+  if (wc < OFFTOPIC_MIN_WORDS) return false;
   let allEmpty = true;
   for (const point of points) {
     const ptoks = tokenizeWords(point).map(t => t.toLowerCase());
