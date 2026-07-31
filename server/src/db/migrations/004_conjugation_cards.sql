@@ -22,6 +22,9 @@ CREATE INDEX IF NOT EXISTS idx_conjugation_card_key
 
 COMMIT;
 
--- Record migration
-INSERT INTO _migrations (name) VALUES ('004_conjugation_cards')
-ON CONFLICT DO NOTHING;
+-- NOTE: this file used to register itself in _migrations here, under the
+-- extension-less name '004_conjugation_cards'. The runner (db/migrate.js)
+-- records '004_conjugation_cards.sql', so the two never collided — but the
+-- extra row is junk that matches no file on disk. Recording is the
+-- runner's job; 027_relax_vocab_gender_check.sql deletes the stray row
+-- from databases that already have it.

@@ -1,5 +1,17 @@
 -- Seed Polish themes 10 (Praca) and 11 (Edukacja) and their vocab mappings.
 -- These themes only have vocabIds (audio flashcards), no write_answer exercises.
+--
+-- ORDERING NOTE: the pl_* vocab these mappings point at is not seeded
+-- until 012_seed_polish_vocab.sql, which sorts AFTER this file. On a
+-- database built from scratch the plain VALUES form died on
+-- theme_vocab_vocab_id_fkey, so `npm run migrate` could never complete
+-- against an empty database.
+--
+-- The theme_vocab inserts below therefore JOIN against `vocab` and skip
+-- rows whose vocab does not exist yet. That is lossless: 012 re-inserts
+-- all 118 of these mappings itself (verified to be an exact superset of
+-- this file's set), so on a fresh database the rows land during 012, and
+-- on an already-migrated database this file is never re-run at all.
 
 -- Insert themes 10 and 11 (unlocked unconditionally like themes 1-9)
 INSERT INTO theme (id, "order", title, title_ru, description, description_ru, unlock_theme_id, unlock_min_score) VALUES
@@ -8,7 +20,8 @@ INSERT INTO theme (id, "order", title, title_ru, description, description_ru, un
 ON CONFLICT (id) DO NOTHING;
 
 -- Seed vocab for theme 10 (Praca / Work) — 86 vocab items
-INSERT INTO theme_vocab (theme_id, vocab_id) VALUES
+INSERT INTO theme_vocab (theme_id, vocab_id)
+SELECT m.theme_id, m.vocab_id FROM (VALUES
   ('pl_theme10', 'pl_065'), ('pl_theme10', 'pl_096'), ('pl_theme10', 'pl_097'), ('pl_theme10', 'pl_098'), ('pl_theme10', 'pl_099'),
   ('pl_theme10', 'pl_100'), ('pl_theme10', 'pl_101'), ('pl_theme10', 'pl_102'), ('pl_theme10', 'pl_103'), ('pl_theme10', 'pl_104'),
   ('pl_theme10', 'pl_105'), ('pl_theme10', 'pl_106'), ('pl_theme10', 'pl_107'), ('pl_theme10', 'pl_108'), ('pl_theme10', 'pl_109'),
@@ -21,10 +34,13 @@ INSERT INTO theme_vocab (theme_id, vocab_id) VALUES
   ('pl_theme10', 'pl_140'), ('pl_theme10', 'pl_141'), ('pl_theme10', 'pl_142'), ('pl_theme10', 'pl_143'), ('pl_theme10', 'pl_144'),
   ('pl_theme10', 'pl_145'), ('pl_theme10', 'pl_146'), ('pl_theme10', 'pl_147'), ('pl_theme10', 'pl_148'), ('pl_theme10', 'pl_149'),
   ('pl_theme10', 'pl_150')
+) AS m(theme_id, vocab_id)
+JOIN vocab v ON v.id = m.vocab_id
 ON CONFLICT DO NOTHING;
 
 -- Seed vocab for theme 11 (Edukacja / Education) — 57 vocab items
-INSERT INTO theme_vocab (theme_id, vocab_id) VALUES
+INSERT INTO theme_vocab (theme_id, vocab_id)
+SELECT m.theme_id, m.vocab_id FROM (VALUES
   ('pl_theme11', 'pl_064'), ('pl_theme11', 'pl_075'),
   ('pl_theme11', 'pl_151'), ('pl_theme11', 'pl_152'), ('pl_theme11', 'pl_153'), ('pl_theme11', 'pl_154'), ('pl_theme11', 'pl_155'),
   ('pl_theme11', 'pl_156'), ('pl_theme11', 'pl_157'), ('pl_theme11', 'pl_158'), ('pl_theme11', 'pl_159'), ('pl_theme11', 'pl_160'),
@@ -38,4 +54,6 @@ INSERT INTO theme_vocab (theme_id, vocab_id) VALUES
   ('pl_theme11', 'pl_196'), ('pl_theme11', 'pl_197'), ('pl_theme11', 'pl_198'), ('pl_theme11', 'pl_199'), ('pl_theme11', 'pl_200'),
   ('pl_theme11', 'pl_201'), ('pl_theme11', 'pl_202'), ('pl_theme11', 'pl_203'), ('pl_theme11', 'pl_204'), ('pl_theme11', 'pl_205'),
   ('pl_theme11', 'pl_206'), ('pl_theme11', 'pl_207'), ('pl_theme11', 'pl_208'), ('pl_theme11', 'pl_209'), ('pl_theme11', 'pl_210')
+) AS m(theme_id, vocab_id)
+JOIN vocab v ON v.id = m.vocab_id
 ON CONFLICT DO NOTHING;

@@ -757,5 +757,8 @@ INSERT INTO theme_vocab (theme_id, vocab_id) VALUES ('pl_theme11', 'pl_208') ON 
 INSERT INTO theme_vocab (theme_id, vocab_id) VALUES ('pl_theme11', 'pl_209') ON CONFLICT DO NOTHING;
 INSERT INTO theme_vocab (theme_id, vocab_id) VALUES ('pl_theme11', 'pl_210') ON CONFLICT DO NOTHING;
 
--- 5. Mark migration as applied
-INSERT INTO _migrations (name) VALUES ('012_seed_polish_vocab.sql') ON CONFLICT DO NOTHING;
+-- NOTE: this file used to register itself in _migrations here. The
+-- runner (db/migrate.js) already does that, and its INSERT has no
+-- ON CONFLICT clause, so the self-registration made the runner die with
+-- 'duplicate key value violates unique constraint "_migrations_pkey"'
+-- on a database built from scratch. Recording is the runner's job.

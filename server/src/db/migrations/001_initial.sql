@@ -4,7 +4,12 @@ CREATE TABLE vocab (
   id VARCHAR(10) PRIMARY KEY,
   target VARCHAR(100) NOT NULL,
   ipa VARCHAR(100),
-  gender VARCHAR(1) CHECK (gender IN ('m', 'f')),
+  -- 'n' (neuter) is required by Polish: 012_seed_polish_vocab.sql seeds
+  -- nouns like pl_029 'dziecko' with gender='n'. Without it that seed
+  -- fails on vocab_gender_check and migration from scratch cannot
+  -- complete. 027_relax_vocab_gender_check.sql applies the same
+  -- relaxation to databases created before this line was corrected.
+  gender VARCHAR(1) CHECK (gender IN ('m', 'f', 'n')),
   freq INT,
   theme VARCHAR(50),
   created_at TIMESTAMPTZ DEFAULT NOW(),
