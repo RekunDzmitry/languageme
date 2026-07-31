@@ -2,6 +2,7 @@
 import { Router } from 'express';
 import { pool } from '../db/pool.js';
 import { authenticate as requireAuth, optionallyAuthenticate } from '../middleware/auth.js';
+import { grade as deterministicGrade, METRIC_VERSION } from '../services/emailScoring.js';
 
 const router = Router();
 
@@ -685,10 +686,99 @@ function buildFinalEvaluation({ rubricData, errors, constructionReplacements, po
   };
 }
 
+// Build the per-criterion streaming event payload from a deterministic
+// grade result. Mirrors the shape of `parseRubricResponse` so the existing
+// downstream code (and the frontend event handler) can keep reading
+// `telcRubric` / `taskCoverage` / `etiquetteCheck` / `registerMatch` /
+// `overallFeedback` / `offTopic` / `taskMisunderstood` the same way.
+function deterministicRubricEventData(gradeResult) {
+  const { rubric, parts } = gradeResult;
+  const taskCoverage = {};
+  const perPoint = parts.content.signals.perPoint || [];
+  for (let i = 0; i < perPoint.length; i++) {
+    const p = perPoint[i];
+    taskCoverage[`point${i + 1}`] = {
+      covered: p.covered === 1,
+      snippet: '',
+      feedback: '',
+    };
+  }
+  const comp = parts.composition.signals;
+  const etiquetteCheck = {
+    greeting: comp.greeting,
+    closing: comp.closing,
+    greetingText: comp.greetingText || '',
+    closingText: comp.closingText || '',
+    feedback: '',
+  };
+  // Register match: accept if the body has either kind of marker AND the
+  // composition Rm passed (1 in the 0-1 register-fit signal). Without
+  // markers we cannot tell — fall back to false so we never claim a
+  // mismatch for a text that simply lacks the lexicon overlap.
+  const hasMarkers = comp.registerMarkers.formal + comp.registerMarkers.informal > 0;
+  return {
+    telcRubric: rubric,
+    taskCoverage,
+    etiquetteCheck,
+    registerMatch: hasMarkers ? comp.RmScore > 0.5 : false,
+    overallFeedback: rubric.examinerSummary,
+    offTopic: rubric.offTopic,
+    taskMisunderstood: rubric.taskMisunderstood,
+  };
+}
+
+// Final wire payload used by both the streaming and the single-prompt
+// routes. Mirrors the shape produced by the legacy `buildFinalEvaluation`
+// so the client JSON contract is unchanged.
+function buildDeterministicFinalEvaluation({ gradeResult, errors = [], constructionReplacements = [] }) {
+  const { rubric, parts, metricVersion } = gradeResult;
+  const finalErrors = (Array.isArray(errors) ? errors : [])
+    .filter(err => err && err.resolved && err.startOffset >= 0 && err.endOffset > err.startOffset)
+    .sort((a, b) => a.startOffset - b.startOffset)
+    .map((err, idx) => ({
+      id: `err_${idx}`,
+      originalText: err.originalText || '',
+      correction: err.correction || err.originalText,
+      explanation: err.explanation || '',
+      category: ERROR_CATEGORIES.includes(err.category) ? err.category : 'grammar',
+      startOffset: err.startOffset,
+      endOffset: err.endOffset,
+      proposedWords: Array.isArray(err.proposedWords) ? err.proposedWords : [],
+      alternatives: Array.isArray(err.alternatives) ? err.alternatives : [],
+    }));
+
+  const comp = parts.composition.signals;
+  const hasMarkers = comp.registerMarkers.formal + comp.registerMarkers.informal > 0;
+
+  return {
+    score: rubric.percentage,
+    telcRubric: rubric,
+    taskCoverage: deterministicRubricEventData(gradeResult).taskCoverage,
+    etiquetteCheck: {
+      greeting: comp.greeting,
+      closing: comp.closing,
+      greetingText: comp.greetingText || '',
+      closingText: comp.closingText || '',
+      feedback: '',
+    },
+    registerMatch: hasMarkers ? comp.RmScore > 0.5 : false,
+    overallFeedback: rubric.examinerSummary,
+    targetLevel: rubric.criteria ? null : null, // set by caller
+    errors: finalErrors,
+    constructionReplacements: Array.isArray(constructionReplacements) ? constructionReplacements : [],
+    metricVersion,
+    deterministicSignals: {
+      composition: parts.composition.signals,
+      accuracy: parts.accuracy.signals,
+      vocabulary: parts.vocabulary.signals,
+      content: parts.content.signals,
+    },
+  };
+}
+
 // ============================================================================
 // POST /api/email/evaluate-stream — progressive persisted evaluation
 // ============================================================================
-
 router.post('/evaluate-stream', requireAuth, async (req, res) => {
   const { userText, taskDescription, nativeLang, points, register, etiquetteHint, targetLevel, themeId, exerciseIdx } = req.body;
   const userId = req.user.sub;
@@ -733,19 +823,28 @@ router.post('/evaluate-stream', requireAuth, async (req, res) => {
   const aiOptions = { ...PLAIN_AI_OPTIONS, signal: requestController.signal };
 
   try {
+    // Rubric step is now deterministic — no LLM. Same input → same rubric.
     writeStreamEvent(res, 'step_started', { step: 'rubric' });
     steps = await updateEvaluationStep({ attemptId: attempt.id, userId, steps, key: 'rubric', patch: { status: 'running', startedAt: new Date().toISOString() } });
-    const rubricRaw = await callAI(buildRubricPrompt(context, taskPoints.length), aiOptions);
-    const rubricData = parseRubricResponse(rubricRaw, taskPoints.length);
+    const gradeResult = deterministicGrade(trimmedText, {
+      points: taskPoints,
+      register: register || 'nieformalny',
+      targetLevel: normalizedTargetLevel,
+    });
+    const rubricData = deterministicRubricEventData(gradeResult);
     steps = await updateEvaluationStep({
       attemptId: attempt.id,
       userId,
       steps,
       key: 'rubric',
-      patch: { status: 'complete', completedAt: new Date().toISOString(), raw: rubricRaw, data: rubricData }
+      patch: {
+        status: 'complete',
+        completedAt: new Date().toISOString(),
+        data: rubricData,
+        metricVersion: gradeResult.metricVersion,
+      },
     });
     writeStreamEvent(res, 'step_completed', { step: 'rubric', data: rubricData });
-
     const acceptedRanges = [];
     const discoveredErrors = [];
     for (const category of ERROR_CATEGORIES) {
@@ -836,22 +935,23 @@ router.post('/evaluate-stream', requireAuth, async (req, res) => {
     });
     writeStreamEvent(res, 'step_completed', { step: 'constructionReplacements', data: constructionReplacements });
 
-    const finalEvaluation = buildFinalEvaluation({
-      rubricData,
+    const finalEvaluation = buildDeterministicFinalEvaluation({
+      gradeResult,
       errors: enrichedErrors,
       constructionReplacements,
-      pointsCount: taskPoints.length,
-      targetLevel: normalizedTargetLevel
     });
+    finalEvaluation.targetLevel = normalizedTargetLevel;
     steps = await updateEvaluationStep({ attemptId: attempt.id, userId, steps, key: 'final', patch: { status: 'complete', completedAt: new Date().toISOString(), data: finalEvaluation }, status: 'complete' });
     await pool.query(
       `UPDATE email_attempt
        SET score = $3,
            ai_evaluation = $4::jsonb,
+           deterministic_signals = $5::jsonb,
+           metric_version = $6,
            evaluation_error = NULL,
            updated_at = NOW()
        WHERE id = $1 AND user_id = $2`,
-      [attempt.id, userId, finalEvaluation.score, JSON.stringify(finalEvaluation)]
+      [attempt.id, userId, finalEvaluation.score, JSON.stringify(finalEvaluation), JSON.stringify(finalEvaluation.deterministicSignals || {}), METRIC_VERSION]
     );
     const autoAdded = await autoAddCorrectionExercises(userId, attempt.id, finalEvaluation);
     writeStreamEvent(res, 'evaluation_complete', { attemptId: attempt.id, evaluation: finalEvaluation, autoAdded });
@@ -945,6 +1045,16 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
     }
 
     const telcRubric = normalizeTelcRubric(evaluation, pointsCount);
+    // Deterministic grade overrides the LLM-emitted scores. The LLM still
+    // contributes errors and constructionReplacements below; the rubric
+    // itself is reproducible.
+    const gradeResult = deterministicGrade(userText.trim(), {
+      points: points || [],
+      register: register || 'nieformalny',
+      targetLevel: normalizedTargetLevel,
+      offTopic: typeof evaluation.offTopic === 'boolean' ? evaluation.offTopic : null,
+      taskMisunderstood: typeof evaluation.taskMisunderstood === 'boolean' ? evaluation.taskMisunderstood : null,
+    });
 
     // Normalize etiquetteCheck
     const rawEtiquette = evaluation.etiquetteCheck || {};
@@ -995,17 +1105,13 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
         }))
       : [];
 
-    res.json({
-      score: telcRubric.percentage,
-      telcRubric,
-      taskCoverage: normalizedTaskCoverage,
-      etiquetteCheck: normalizedEtiquette,
-      registerMatch: evaluation.registerMatch === true,
-      overallFeedback: evaluation.overallFeedback || '',
-      targetLevel: normalizedTargetLevel,
-      errors: evaluation.errors,
-      constructionReplacements,
+    const finalEvaluation = buildDeterministicFinalEvaluation({
+      gradeResult,
+      errors: Array.isArray(evaluation.errors) ? evaluation.errors : [],
+      constructionReplacements: Array.isArray(evaluation.constructionReplacements) ? evaluation.constructionReplacements : [],
     });
+    finalEvaluation.targetLevel = normalizedTargetLevel;
+    return res.json(finalEvaluation);
   } catch (err) {
     console.error('Email evaluation error:', err);
     res.status(500).json({ error: 'Failed to evaluate email', details: err.message });
