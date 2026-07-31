@@ -172,64 +172,6 @@ const theme21Verbs2ndConj = {
         },
       ],
     },
-    {
-      type: 'exercises',
-      exercises: [
-        // --- Глаголы 2-го спряжения ---
-        { type: 'write_answer', category: 'Koniugacja II', prompt: 'Я говорю по-польски.', answer: 'Mówię po polsku.', hint: 'mówić → mówię' },
-        { type: 'write_answer', category: 'Koniugacja II', prompt: 'Ты говоришь по-английски?', answer: 'Mówisz po angielsku?', hint: 'mówić → mówisz' },
-        { type: 'write_answer', category: 'Koniugacja II', prompt: 'Он говорит по-русски.', answer: 'On mówi po rosyjsku.', hint: 'mówić → on mówi' },
-        { type: 'write_answer', category: 'Koniugacja II', prompt: 'Мы говорим по-польски.', answer: 'Mówimy po polsku.', hint: 'mówić → mówimy' },
-        { type: 'write_answer', category: 'Koniugacja II', prompt: 'Вы говорите по-немецки?', answer: 'Mówicie po niemiecku?', hint: 'mówić → mówicie' },
-        { type: 'write_answer', category: 'Koniugacja II', prompt: 'Они говорят по-французски.', answer: 'Oni mówią po francusku.', hint: 'mówić → oni mówią' },
-
-        { type: 'write_answer', category: 'Koniugacja II', prompt: 'Я думаю, что это хорошая идея.', answer: 'Myślę, że to dobry pomysł.', hint: 'myśleć → myślę; dobry pomysł = хорошая идея' },
-        { type: 'write_answer', category: 'Koniugacja II', prompt: 'О чём ты думаешь?', answer: 'O czym myślisz?', hint: 'myśleć → myślisz; o czym = о чём' },
-        { type: 'write_answer', category: 'Koniugacja II', prompt: 'Она думает о работе.', answer: 'Ona myśli o pracy.', hint: 'myśleć → myśli; o pracy = о работе' },
-        { type: 'write_answer', category: 'Koniugacja II', prompt: 'Мы думаем о каникулах.', answer: 'Myślimy o wakacjach.', hint: 'myśleć → myślimy; wakacje = каникулы' },
-
-        { type: 'write_answer', category: 'Koniugacja II', prompt: 'Что ты делаешь?', answer: 'Co robisz?', hint: 'robić → robisz' },
-        { type: 'write_answer', category: 'Koniugacja II', prompt: 'Я делаю домашнее задание.', answer: 'Robię zadanie domowe.', hint: 'robić → robię; zadanie domowe = домашнее задание' },
-        { type: 'write_answer', category: 'Koniugacja II', prompt: 'Я верю тебе.', answer: 'Wierzę ci.', hint: 'wierzyć → wierzę; ci = тебе' },
-        { type: 'write_answer', category: 'Koniugacja II', prompt: 'Ты веришь в Бога?', answer: 'Wierzysz w Boga?', hint: 'wierzyć → wierzysz; w Boga = в Бога' },
-
-        // --- Падежи мужского рода ---
-        { type: 'write_answer', category: 'Przypadki — mianownik', prompt: 'Это кот.', answer: 'To jest kot.', hint: 'mianownik: kot; to jest = это' },
-        { type: 'write_answer', category: 'Przypadki — dopełniacz', prompt: 'У меня нет кота.', answer: 'Nie mam kota.', hint: 'dopełniacz: kota; nie mam = у меня нет' },
-        { type: 'write_answer', category: 'Przypadki — biernik', prompt: 'Я вижу кота.', answer: 'Widzę kota.', hint: 'biernik одуш. = dopełniacz: kota' },
-        { type: 'write_answer', category: 'Przypadki — narzędnik', prompt: 'Я иду с котом.', answer: 'Idę z kotem.', hint: 'narzędnik: kotem; z = с' },
-        { type: 'write_answer', category: 'Przypadki — miejscownik', prompt: 'Я говорю о коте.', answer: 'Mówię o kocie.', hint: 'miejscownik: o kocie; чередование t→cie' },
-
-        { type: 'write_answer', category: 'Przypadki — dopełniacz', prompt: 'У меня нет дома.', answer: 'Nie mam domu.', hint: 'dopełniacz неодуш.: domu (окончание -u)' },
-        { type: 'write_answer', category: 'Przypadki — biernik', prompt: 'Я вижу дом.', answer: 'Widzę dom.', hint: 'biernik неодуш. = mianownik: dom' },
-        { type: 'write_answer', category: 'Przypadki — miejscownik', prompt: 'Я говорю о доме.', answer: 'Mówię o domu.', hint: 'miejscownik от dom: o domu (окончание -u)' },
-
-        { type: 'write_answer', category: 'Przypadki — celownik', prompt: 'Я помогаю студенту.', answer: 'Pomagam studentowi.', hint: 'celownik: studentowi' },
-        { type: 'write_answer', category: 'Przypadki — wołacz', prompt: 'Студент! Иди сюда!', answer: 'Studencie! Chodź tutaj!', hint: 'wołacz: studencie! (чередование t→cie)' },
-
-        // --- Множественное число ---
-        { type: 'write_answer', category: 'Liczba mnoga', prompt: 'Это студенты. (лично-мужская форма)', answer: 'To są studenci.', hint: 'męskoosobowy: studenci' },
-        { type: 'write_answer', category: 'Liczba mnoga', prompt: 'Это коты. (женско-вещная форма)', answer: 'To są koty.', hint: 'niemęskoosobowy: koty (животные!)' },
-        { type: 'write_answer', category: 'Liczba mnoga', prompt: 'Это дома.', answer: 'To są domy.', hint: 'niemęskoosobowy: domy' },
-
-        // --- Предлог od ---
-        { type: 'write_answer', category: 'Przyimek od', prompt: 'Я знаю его пять лет.', answer: 'Znam go od pięciu lat.', hint: 'od + dopełniacz: od pięciu lat' },
-        { type: 'write_answer', category: 'Przyimek od', prompt: 'Я живу здесь с рождения.', answer: 'Mieszkam tu od urodzenia.', hint: 'od + dopełniacz: od urodzenia' },
-
-        // --- Глаголы «работать» ---
-        { type: 'write_answer', category: '"Pracować" vs "działać"', prompt: 'Мой отец работает в школе.', answer: 'Mój ojciec pracuje w szkole.', hint: 'pracować (трудиться где-то) → pracuje; w szkole = в школе' },
-        { type: 'write_answer', category: '"Pracować" vs "działać"', prompt: 'Микрофон не работает.', answer: 'Mikrofon nie działa.', hint: 'działać (функционировать) → działa' },
-
-        // --- Открыто / Закрыто ---
-        { type: 'write_answer', category: 'Otwarte / Zamknięte', prompt: 'Магазины закрыты по воскресеньям.', answer: 'Sklepy są zamknięte w niedzielę.', hint: 'zamknięte = закрыты; w niedzielę = по воскресеньям' },
-        { type: 'write_answer', category: 'Otwarte / Zamknięte', prompt: 'Банк открыт?', answer: 'Czy bank jest otwarty?', hint: 'otwarty (м.р.) = открыт; bank м.р. → otwarty' },
-
-        // --- Беглые гласные ---
-        { type: 'write_answer', category: 'e ruchome', prompt: 'Я вижу отца.', answer: 'Widzę ojca.', hint: 'ojciec → ojca (biernik = dopełniacz); e выпадает' },
-        { type: 'write_answer', category: 'e ruchome', prompt: 'У меня нет свитера.', answer: 'Nie mam swetra.', hint: 'sweter → swetra; e выпадает' },
-        { type: 'write_answer', category: 'e ruchome', prompt: 'Я иду с псом.', answer: 'Idę z psem.', hint: 'pies → psa (dopełniacz), psem (narzędnik); e выпадает' },
-      ],
-    },
   ],
   verbList: [],
 }

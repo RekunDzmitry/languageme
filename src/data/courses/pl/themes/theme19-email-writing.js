@@ -11,7 +11,7 @@
 
 const theme19EmailWriting = {
   id: 'pl_theme19',
-  order: 10,
+  order: 19,
   title: 'Pisanie maila - jak piszemy mail',
   titleRu: 'Письмо на польском - как писать e-mail',
   description: 'Ćwiczymy pisanie e-maili w formacie egzaminu TELC (B1/B2). Każde zadanie ma 3 obowiązkowe punkty do rozwinięcia.',

@@ -3,7 +3,7 @@
 
 const theme13KatastrofyNaturalne = {
   id: 'pl_theme13',
-  order: 4,
+  order: 13,
   title: 'Katastrofy naturalne',
   titleRu: 'Стихийные катастрофы',
   description: 'Лексика для обсуждения пожаров, наводнений, ураганов, землетрясений и других стихийных катастроф',
