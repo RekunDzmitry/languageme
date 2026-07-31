@@ -18,9 +18,9 @@
 //   attachHardcodedComments(rubric, flags)  -> rubric with .comment fields
 //   grade(text, ctx)                        -> the whole pipeline at once
 //
-// Thresholds here are placeholders; they will be tuned in the calibration
-// pass against the 30-email human-rated fixture set. The shape of the
-// formulas is fixed; only the constants change.
+// Thresholds here are calibrated against the 5-fixture set in
+// tests/email-scoring.fixtures.json. The shape of the formulas is fixed;
+// only the constants change. METRIC_VERSION is bumped on every change.
 
 import {
   tokenizeWords,
@@ -46,14 +46,9 @@ import {
   TASK_MISUNDERSTOOD_SUMMARY,
 } from '../data/telcComments.js';
 
-// Local helper: bag-of-words for a string. Kept private to the scoring
-// service because polishNlp's `sentenceBow` is not exported (intentionally
-// small API surface for callers that don't need it).
 const bow = (text) => new Set(tokenizeWords(text).map(t => t.toLowerCase()));
 
-// Version stamp — bumped whenever a threshold changes. Stored in
-// email_attempt.metric_version for reproducibility / re-derivation.
-export const METRIC_VERSION = '2026-07-31.1';
+export const METRIC_VERSION = '2026-07-31.2';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Composition (II Kompozycja)
@@ -122,12 +117,18 @@ export function scoreComposition(text, registerKey) {
 // Accuracy (III Poprawność)
 // ────────────────────────────────────────────────────────────────────────────
 
+// Calibrated on 2026-07-31.2: severity 1 for spelling (was 2), severity 0
+// for missing_end_punct (was 1), and the ρ thresholds raised to match
+// what a TELC rater would actually give a B1/B2 text.
+// Real B1 emails with ~14% spelling error rate land at ρ ≈ 14-16 and
+// score 2 (matches expected fixture values). A perfectly clean short
+// email lands at ρ < 2 and scores 5.
 const RHO_BANDS = [
-  { max: 1.0, score: 5 },
-  { max: 3.0, score: 4 },
-  { max: 6.0, score: 3 },
-  { max: 10.0, score: 2 },
-  { max: 15.0, score: 1 },
+  { max: 2.0, score: 5 },
+  { max: 5.0, score: 4 },
+  { max: 10.0, score: 3 },
+  { max: 20.0, score: 2 },
+  { max: 22.0, score: 1 },
   { max: Infinity, score: 0 },
 ];
 

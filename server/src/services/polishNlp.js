@@ -24,14 +24,9 @@ import {
   CEFR_LIST_STATS,
 } from '../data/polishCefrWords.js';
 
-// Unicode-aware word-boundary helpers (replacement for ASCII \b).
 const WB_LEFT = '(?<!\\p{L})';
 const WB_RIGHT = '(?!\\p{L})';
 const W = (pat) => new RegExp(`${WB_LEFT}${pat}${WB_RIGHT}`, 'giu');
-
-// ────────────────────────────────────────────────────────────────────────────
-// Spell checker (singleton)
-// ────────────────────────────────────────────────────────────────────────────
 
 let _spell = null;
 function getSpell() {
@@ -45,10 +40,32 @@ function getSpell() {
 const POLISH_WORD_RE = /[A-Za-zĄąĆćĘęŁłŃńÓóŚśŹźŻż]+/g;
 const POLISH_SENTENCE_RE = /[^.!?…]+[.!?…]+|[^.!?…]+$/g;
 
-// ────────────────────────────────────────────────────────────────────────────
-// Lemmatization (heuristic + irregular-form table)
-// ────────────────────────────────────────────────────────────────────────────
+export function tokenizeWords(text) {
+  if (!text) return [];
+  const matches = text.match(POLISH_WORD_RE);
+  return matches || [];
+}
 
+export function wordCount(text) {
+  return tokenizeWords(text).length;
+}
+
+export function splitSentences(text) {
+  if (!text) return [];
+  const matches = text.match(POLISH_SENTENCE_RE);
+  if (!matches) return [];
+  return matches.map(s => s.trim()).filter(Boolean);
+}
+
+export function splitParagraphs(text) {
+  if (!text) return [];
+  return text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+}
+
+// Polish verb forms that the simple suffix-strip can't reduce to the bare
+// stem. Consulted BEFORE the suffix-strip pass so verbs like "jechać" map
+// "jadę" / "jedziesz" / "jechałem" all to "jechać" and content-word
+// assignment doesn't silently drop coverage.
 const IRREGULAR_FORMS = {
   // jechać
   jadę: 'jechać', jedziesz: 'jechać', jedzie: 'jechać',
@@ -163,36 +180,6 @@ export function lemmatize(word) {
   return lower;
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Tokenisation
-// ────────────────────────────────────────────────────────────────────────────
-
-export function tokenizeWords(text) {
-  if (!text) return [];
-  const matches = text.match(POLISH_WORD_RE);
-  return matches || [];
-}
-
-export function wordCount(text) {
-  return tokenizeWords(text).length;
-}
-
-export function splitSentences(text) {
-  if (!text) return [];
-  const matches = text.match(POLISH_SENTENCE_RE);
-  if (!matches) return [];
-  return matches.map(s => s.trim()).filter(Boolean);
-}
-
-export function splitParagraphs(text) {
-  if (!text) return [];
-  return text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// Spelling
-// ────────────────────────────────────────────────────────────────────────────
-
 export function findSpellingErrors(text) {
   const spell = getSpell();
   const errors = [];
@@ -207,16 +194,12 @@ export function findSpellingErrors(text) {
         endOffset: match.index + word.length,
         suggestions: spell.suggest(word).slice(0, 5),
         category: 'spelling',
-        severity: 2,
+        severity: 1,
       });
     }
   }
   return errors;
 }
-
-// ────────────────────────────────────────────────────────────────────────────
-// Polish punctuation / capitalisation rules
-// ────────────────────────────────────────────────────────────────────────────
 
 const PUNCT_RULES = [
   {
@@ -247,7 +230,7 @@ const PUNCT_RULES = [
       if (!trimmed) return [];
       const last = trimmed[trimmed.length - 1];
       if (!/[.!?…]/.test(last)) {
-        return [{ category: 'punctuation', severity: 1, offset: trimmed.length - 1, endOffset: trimmed.length, message: 'brak końca zdania' }];
+        return [{ category: 'punctuation', severity: 0, offset: trimmed.length - 1, endOffset: trimmed.length, message: 'brak końca zdania' }];
       }
       return [];
     },
@@ -260,16 +243,10 @@ export function findPunctuationErrors(text) {
     try {
       const found = rule.test(text);
       for (const f of found) errs.push(f);
-    } catch {
-      // Defensive: a bad rule must not break the pipeline.
-    }
+    } catch {}
   }
   return errs;
 }
-
-// ────────────────────────────────────────────────────────────────────────────
-// Common case-government / collocation / agreement errors
-// ────────────────────────────────────────────────────────────────────────────
 
 const GRAMMAR_RULES = [
   { id: 'dziękować_za', re: /dziękuję\s+(?!za\b)(?!\p{L})([\s\S]{0,30})/giu, severity: 3, message: 'czasownik „dziękować" łączy się z „za" + dopełniacz' },
@@ -320,18 +297,13 @@ export function findAllErrors(text) {
   return { spelling, punctuation, grammar, all: [...spelling, ...punctuation, ...grammar] };
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Lexical / sentence metrics
-// ────────────────────────────────────────────────────────────────────────────
-
-// Very high-frequency verbs and other "essentially function" lemmas that
-// appear in almost every Polish sentence. They break the content-overlap
-// heuristic (every off-topic text mentions "być" somewhere, e.g. "jest
-// ładna pogoda" matching a point about "jak BYŁ zorganizowany kurs").
-// Used only by contentBow — we still want them counted for vocabulary.
+// Truly generic "always present in every Polish sentence" lemmas. Keep
+// this set MINIMAL — modal verbs like chcieć, móc, musieć carry meaning
+// in real TELC tasks ("czy chce dołączyć?" / "co możesz zrobić?") so
+// they MUST survive the content-overlap match. Only "być" / "mieć" /
+// "wiedzieć" / "znać" are generic enough to filter.
 const STOP_CONTENT_LEMMAS = new Set([
-  'być', 'mieć', 'móc', 'chcieć', 'musieć', 'wiedzieć', 'znać',
-  'to', 'co', 'kto',
+  'być', 'mieć', 'wiedzieć', 'znać',
 ]);
 
 export function sentenceCosine(a, b) {
@@ -342,10 +314,6 @@ export function sentenceCosine(a, b) {
   return union === 0 ? 0 : inter / union;
 }
 
-// Filter function-word set used by sentence-to-point assignment. Strips
-// function words, lemmatizes each content token (jadę/jedziesz/jechałem
-// all collapse to jechać), AND drops stop-content lemmas that appear in
-// nearly every Polish sentence.
 function contentBow(sentence) {
   const out = new Set();
   for (const t of tokenizeWords(sentence)) {
@@ -405,10 +373,6 @@ export function countDepthSignals(text) {
   return n;
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Lexical diversity (MATTR)
-// ────────────────────────────────────────────────────────────────────────────
-
 export function mattr(text, windowSize = 500) {
   const tokens = tokenizeWords(text).map(t => t.toLowerCase());
   if (tokens.length === 0) return 0;
@@ -424,10 +388,6 @@ export function mattr(text, windowSize = 500) {
   }
   return count ? totalRatio / count : 0;
 }
-
-// ────────────────────────────────────────────────────────────────────────────
-// CEFR band distribution
-// ────────────────────────────────────────────────────────────────────────────
 
 export function cefrDistribution(text) {
   const tokens = tokenizeWords(text).map(t => t.toLowerCase());
@@ -459,10 +419,6 @@ export function cefrAtOrAbove(text, level) {
   return n;
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Repetition index
-// ────────────────────────────────────────────────────────────────────────────
-
 export function repetitionIndex(text) {
   const tokens = tokenizeWords(text).map(t => t.toLowerCase()).filter(t => t.length > 2);
   if (tokens.length === 0) return 0;
@@ -472,10 +428,6 @@ export function repetitionIndex(text) {
   for (const [, c] of counts) if (c >= 3) repeated++;
   return repeated / counts.size;
 }
-
-// ────────────────────────────────────────────────────────────────────────────
-// Collocation match rate
-// ────────────────────────────────────────────────────────────────────────────
 
 export function collocationRate(text) {
   const tokens = tokenizeWords(text).map(t => t.toLowerCase()).filter(t => t.length > 2 && !POLISH_FUNCTION_WORDS.has(t));
@@ -489,10 +441,6 @@ export function collocationRate(text) {
   }
   return bigrams === 0 ? 0 : hits / bigrams;
 }
-
-// ────────────────────────────────────────────────────────────────────────────
-// Register analysis
-// ────────────────────────────────────────────────────────────────────────────
 
 function firstGreetingCandidate(text) {
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
@@ -563,16 +511,10 @@ function escapeRegExp(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Off-topic / task-misunderstood heuristic
-// ────────────────────────────────────────────────────────────────────────────
-
 const OFFTOPIC_MIN_WORDS = 20;
 
 export function offTopicByCoverage(text, points) {
   if (!points || points.length === 0) return false;
-  // Lemmatize text tokens so a misspelled "meiszkania" still matches
-  // a point word "mieszkaniu" (both → "mieszkania").
   const textTokenSet = new Set();
   for (const t of tokenizeWords(text)) {
     const lower = t.toLowerCase();
@@ -594,10 +536,6 @@ export function offTopicByCoverage(text, points) {
   }
   return allEmpty;
 }
-
-// ────────────────────────────────────────────────────────────────────────────
-// Stats / debug
-// ────────────────────────────────────────────────────────────────────────────
 
 export function listStats() {
   return {

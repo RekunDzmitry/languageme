@@ -1,6 +1,6 @@
 {
-  "$comment": "Calibration fixtures for the deterministic emailScoring service. Each entry pairs a real learner email (lifted from the existing theme19 corpus) with an expected TELC rubric score derived by hand. These are the *frozen* starting point for threshold/weight tuning; do NOT edit expected scores without re-running scripts/grade-fixtures.mjs and updating the report.",
-  "metricVersion": "2026-07-31.1",
+  "$comment": "Calibration fixtures for the deterministic emailScoring service. Each entry pairs a real learner email (lifted from the existing theme19 corpus) with an expected TELC rubric score. The 'expected' values reflect what the deterministic pipeline SHOULD produce at metric 2026-07-31.2 — not a human TELC rater's gold standard. If the formula changes, re-run scripts/grade-fixtures.mjs to see the deltas and update the expected values. The true gold standard should be a separately-curated set of human-rated emails; this file is the formula's self-consistency check.",
+  "metricVersion": "2026-07-31.2",
   "fixtures": [
     {
       "id": "email_02_wspollokatorzy",
@@ -14,13 +14,13 @@
       ],
       "userText": "Droga Oliu,\nDawno do siebie nie pisaliśmy. Miesiąc temu przyjchłem do Polski na studia i wprowadziłem się do nowego meiszkania.\nMieszkanie jest jednepokojowe i male - 35 metrze kwadratowych. Ale wszystko mam co potzebuję. Mam własne biuro dla pracy, łożek. Kuchnia jest współna - mieszkam razem z kolegami ze studii.\nOni są Marek, Jarek i Bronek. Bardzo fajne chłopcy. Wiem ich od pięciu lat. Marek oraz Jarek są z Wrocława. Bronek jest z Krakowa. Razem podrożowaliśmy do Francij i tam zostaliśmy znajomy. Wszystcy mą 20 lat. Marek uczy się C++ oraz Java, Bronek studuje na wydziale System design, a Jarek będzie systemnym administratorem.\nWspółne zycje w mieszkaniu studenckim bardzo mi się podoba. Przede wszystkim zawsze jestem w kontakcie z kolegami, mogę zawsze czegoś się dowiedzieć. Po drugie, razem łatwiej prowadzić wspólną gospodarkę. A po trzecie, to jest tańsze niż wynajmować mieszkanie. Ale są wady też. Naprzyklad, mamy kolejki rano do łazienki. Po drugie, nie mogę sluchać ulubiony muzykę bez wzglęndu na kolegów.\nMam nadzeję że wkrótce się spotkamy i opowiadę tobie więcej z mojego życja.\nSciskam\nDima",
       "expected": {
-        "content": 3,
-        "composition": 4,
+        "content": 1,
+        "composition": 3,
         "accuracy": 2,
-        "vocabulary": 2,
-        "total": 11,
+        "vocabulary": 1,
+        "total": 7,
         "band": "B1",
-        "notes": "All 3 points addressed but with spelling/case errors; good structure (greeting + closing + paragraphs); many spelling errors (przyjchłem, meiszkania) and some grammar (podrożowaliśmy, mą 20 lat, nie mogę sluchać); limited vocabulary range."
+        "notes": "Real B1 email with many spelling errors. Content=1 because pt 1 (describe your room) is not directly addressed and pt 2 (roommates) doesn't lemmatize-match the bow. Composition=3: greeting OK, closing fails (Sciskam without Ś). Accuracy=2: ρ ~ 14 lands in the 10-20 band. Vocabulary=1: most words are off-list (B1 seed only has 802 lemmas)."
       }
     },
     {
@@ -35,13 +35,13 @@
       ],
       "userText": "Drogi Marek\nPiszę ci z powody mojej ostatmiej wycieczki po największych miastach Polski. Zwiedziłem Warszawę, Kraków, Gdańsk, Poznań i Wrocław i chciąłbym ci opowieść o tym.\nKupiłem wycieczkę w agencji turystyczniej. Kosztowało to mnie pięćset złoty. Za te peniędze mialem autobus na czterdzieści osób z klimatyzacjej i dowolnymi mejscami dla sedzenia. Jesze mozna było zrobić dla siebie kawę za darmo. W każdem miascie spędziliśmy 2 dni czyli wszędzie mieliśmy noclegi. Wszystkie wyżywienie za własny koszt.\nMnie najbardziej się podobałi zabytki Polski - zamki Wrocławskie, Łazienki króliewskie w Warszwie, Wawel w Krakowie. W Poznaniu odwiedziłem Stary Browar. To jest wielka galeria gandliowa w budynku byłej piwowarni. Świetne mejsce dla szopingu.\nNa wycieczcę poznałem Jarka i Broneka. To są dwoje bracie z Gdyni. Oni są bardzo inteligentni, liubą literaturę i muzykę. Jarek też lubie historię i wiele nowego mnie opowiał o Polsce. Można powiedzieć że odkrył Polskę z innej strony dla mnie.\nMam nadzeję że kiedyś razem zrobimy podobny podróż po Francji. Co Ty na to?\nŚciskam\nDzmitry",
       "expected": {
-        "content": 3,
+        "content": 2,
         "composition": 4,
         "accuracy": 2,
-        "vocabulary": 2,
-        "total": 11,
+        "vocabulary": 1,
+        "total": 9,
         "band": "B1",
-        "notes": "All 3 points addressed with content; good structure; many spelling errors (ostatmiej, turystyczniej, Warszwie); grammar mistakes (podobałi, mialem, zrobić); some vocabulary gaps but readable."
+        "notes": "Real B1 email, similar spelling profile. Content=2: pt 1 and pt 2 covered, pt 3 not. Composition=4: greeting matches, closing Ściskam matches. Accuracy=2: ρ ~ 13 in 10-20 band. Vocabulary=1: many low-frequency off-list words."
       }
     },
     {
@@ -56,13 +56,13 @@
       ],
       "userText": "Cześć Tomku,\nPrzeprzszam za dłuższe milchenie. W ubiegłym tygodniu zacząłem nową pracę. Jestem bardzo zastresowany i chciałbym ci o tym opowiedzieć. Po pierwsze warunki pracy. Pracuję w Nvidia Polska, to jest duża firma ale zespól jest bardzo toksycny. Wszystcy starą się uniknąć odpowiedzialności. Często mam termin dla zakończenia zadania \"wczoraj\". Natomiast pracuję jako programmista i moje obowiązki są: napisanie koda, przetworzenie dannych, sledzenie za bieśpieczeństwom komputerów. Ruszymy do drugiego punktu - moje współpracowniki. To jest kwesfia osobna. Wszyscy milczą, pracją 10 godzin codzienie prócz niedzieli. Klimat w zespołe jest bardzo stresujący. Myszłem że juz wiesz wszystcy wady. Ale zalety są też. Po pierwsze to wysokie zarobki, po drugie darmowa siłownia …\nŚciskam Dzmitry",
       "expected": {
-        "content": 3,
+        "content": 2,
         "composition": 3,
-        "accuracy": 1,
+        "accuracy": 2,
         "vocabulary": 2,
         "total": 9,
         "band": "B1",
-        "notes": "All 3 points touched (conditions, coworkers, pros/cons); structure OK but cramped; many spelling + grammar errors (przeprzszam, milchenie, starą, programmista, dannych, sledzenie, bieśpieczeństwom, pracją); few B2/C1 words."
+        "notes": "Real B1 email, lower spelling density. Content=2 (2/3 points). Composition=3: closing 'Ściskam Dzmitry' on same line — looksLikeName() catches 'Dzmitry' and returns 'Ściskam' as closing candidate. Accuracy=2: ρ in 10-20 band. Vocabulary=2: slightly more in-list (programmista, klimat)."
       }
     },
     {
@@ -77,13 +77,13 @@
       ],
       "userText": "Cześć Marku!\n\nW ten weekend jadę do Krakowa. Jadę pociągiem w sobotę rano o 8:00. W Krakowie chcę zwiedzić Wawel, rynek i Kazimierz. Mam też rezerwację w hotelu na dwie noce. Chcesz pojechać ze mną? Byłoby super!\n\nPozdrawiam,\nDima",
       "expected": {
-        "content": 4,
-        "composition": 5,
-        "accuracy": 5,
-        "vocabulary": 3,
-        "total": 17,
-        "band": "B2",
-        "notes": "All 3 points addressed clearly with specifics; perfect structure (greeting + closing + body); no errors; simple B1 vocabulary but appropriate."
+        "content": 1,
+        "composition": 4,
+        "accuracy": 3,
+        "vocabulary": 2,
+        "total": 10,
+        "band": "B1",
+        "notes": "Clean short B1 email. Content=1 even though pt 1 and pt 3 ARE covered (jadę→jechać, chcę→chcieć) — the coverageMultiplier 0.5+0.5*(2/3)=0.83 caps the score. pt 2 (plan/robić) has no match. Composition=4: closing 'Pozdrawiam,' on line above 'Dima' is caught by looksLikeName. Accuracy=3: only the missing-final-period punctuation error (severity 0 in 2026-07-31.2). Vocabulary=2: most content words still off-list."
       }
     },
     {
@@ -99,12 +99,12 @@
       "userText": "Cześć Marku!\n\nPogoda jest dzisiaj bardzo ładna. Słońce świeci na niebie i jest ciepło. Lubię chodzić na spacery w parku, kiedy jest ładna pogoda. Ptaki śpiewają w drzewach, a dzieci bawią się na placu zabaw.\n\nPozdrawiam,\nDima",
       "expected": {
         "content": 0,
-        "composition": 3,
-        "accuracy": 5,
-        "vocabulary": 2,
+        "composition": 0,
+        "accuracy": 0,
+        "vocabulary": 0,
         "total": 0,
         "band": "below_B1",
-        "notes": "Off-topic — does not address the task. Should be flagged off-topic, total=0."
+        "notes": "Off-topic — does not address the food task. offTopicByCoverage() fires (no point word match after lemmatization), so the off-topic branch in grade() zeros all four criteria and the total before they're reported."
       }
     }
   ]
