@@ -14,8 +14,20 @@ export function I18nProvider({ children }) {
     localStorage.setItem('lm_uiLang', l)
   }, [])
 
-  const t = useCallback((key, params) => {
-    let str = locales[lang]?.[key] || locales.ru[key] || key
+  // Second argument is overloaded, because both call styles are already
+  // used widely across the app:
+  //   t('study_complete', { count: 5 })  → interpolate {count}
+  //   t('cards_edit', 'Изменить')        → literal fallback if the key
+  //                                        is missing from every locale
+  // Previously only the object form was honoured; a string fell through
+  // to Object.entries('Изменить'), which ran a no-op replace per
+  // character and left a missing key rendering as the raw key name.
+  const t = useCallback((key, paramsOrFallback) => {
+    const isFallback = typeof paramsOrFallback === 'string'
+    const fallback = isFallback ? paramsOrFallback : null
+    const params = isFallback ? null : paramsOrFallback
+
+    let str = locales[lang]?.[key] ?? locales.ru[key] ?? fallback ?? key
     if (params) {
       Object.entries(params).forEach(([k, v]) => {
         str = str.replace(`{${k}}`, v)
