@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { API_URL } from './helpers/env.js'
 
 // End-to-end coverage for the user-authored flashcards feature
 // (migration 025 + /api/user-cards + CardsPage modal + study loop).
@@ -13,7 +14,7 @@ test('user can create, edit, study, and delete a personal flashcard, tied to the
   const email = `ucards-${Date.now()}@test.local`
   const password = 'testpass123'
 
-  const res = await request.post('http://localhost:3000/api/auth/register', {
+  const res = await request.post(`${API_URL}/api/auth/register`, {
     data: { email, password },
   })
   expect(res.ok()).toBe(true)
@@ -59,7 +60,7 @@ test('user can create, edit, study, and delete a personal flashcard, tied to the
   await expect(page.locator('text=salutations').first()).toBeVisible({ timeout: 5000 })
 
   // ---- Server-side sanity ----
-  const list1 = await request.get('http://localhost:3000/api/user-cards?target=fr', {
+  const list1 = await request.get(`${API_URL}/api/user-cards?target=fr`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
   const cards = await list1.json()
@@ -71,7 +72,7 @@ test('user can create, edit, study, and delete a personal flashcard, tied to the
   const cardId = cards[0].id
   expect(cardId).toMatch(/^usr_[0-9a-f]{32}$/)
 
-  const srs1 = await request.get('http://localhost:3000/api/study/cards?target=fr', {
+  const srs1 = await request.get(`${API_URL}/api/study/cards?target=fr`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
   const srsRows = await srs1.json()
@@ -106,7 +107,7 @@ test('user can create, edit, study, and delete a personal flashcard, tied to the
   await page.getByRole('button', { name: 'Хорошо' }).click()
   await page.waitForTimeout(500)
 
-  const srs2 = await request.get('http://localhost:3000/api/study/cards?target=fr', {
+  const srs2 = await request.get(`${API_URL}/api/study/cards?target=fr`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
   const srsRows2 = await srs2.json()
@@ -122,20 +123,20 @@ test('user can create, edit, study, and delete a personal flashcard, tied to the
 
   await expect(page.locator('text=подсказка для теста')).toHaveCount(0, { timeout: 5000 })
 
-  const srs3 = await request.get('http://localhost:3000/api/study/cards?target=fr', {
+  const srs3 = await request.get(`${API_URL}/api/study/cards?target=fr`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
   const srsRows3 = await srs3.json()
   expect(srsRows3.find((r) => r.vocab_id === cardId)).toBeUndefined()
 
-  const list2 = await request.get('http://localhost:3000/api/user-cards?target=fr', {
+  const list2 = await request.get(`${API_URL}/api/user-cards?target=fr`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
   expect((await list2.json())).toEqual([])
 
   // Identity-safety: the server rejects an id with a non-usr_ prefix
   // even for the caller's own (non-existent) row.
-  const badPatch = await request.patch('http://localhost:3000/api/user-cards/fr_001', {
+  const badPatch = await request.patch(`${API_URL}/api/user-cards/fr_001`, {
     headers: { Authorization: `Bearer ${accessToken}` },
     data: { translation: 'hijack' },
   })
@@ -149,7 +150,7 @@ test('user card is isolated to the pack it was filed under', async ({ page, requ
   const email = `ucards-iso-${Date.now()}@test.local`
   const password = 'testpass123'
 
-  const reg = await request.post('http://localhost:3000/api/auth/register', {
+  const reg = await request.post(`${API_URL}/api/auth/register`, {
     data: { email, password },
   })
   const { accessToken, refreshToken } = await reg.json()
@@ -180,7 +181,7 @@ test('user card is isolated to the pack it was filed under', async ({ page, requ
 
   // The card's themeId must be the pl-a1-a2 catch-all, not pl_other
   // (the per-language legacy id) and not pl-telc_other.
-  const list = await request.get('http://localhost:3000/api/user-cards?target=pl', {
+  const list = await request.get(`${API_URL}/api/user-cards?target=pl`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
   const cards = await list.json()
@@ -220,11 +221,11 @@ test('user card is isolated to the pack it was filed under', async ({ page, requ
 test('user cannot review another user\'s private usr_ card', async ({ request }) => {
   // Owner creates a card.
   const ownerEmail = `ucards-owner-${Date.now()}@test.local`
-  const ownerReg = await request.post('http://localhost:3000/api/auth/register', {
+  const ownerReg = await request.post(`${API_URL}/api/auth/register`, {
     data: { email: ownerEmail, password: 'testpass123' },
   })
   const owner = await ownerReg.json()
-  const created = await (await request.post('http://localhost:3000/api/user-cards', {
+  const created = await (await request.post(`${API_URL}/api/user-cards`, {
     headers: { Authorization: `Bearer ${owner.accessToken}` },
     data: { targetLang: 'fr', target: 'private-word', translation: 'private', themeId: 'fr-foundations_other' },
   })).json()
@@ -233,12 +234,12 @@ test('user cannot review another user\'s private usr_ card', async ({ request })
 
   // Attacker registers and tries to review the owner's card.
   const attackerEmail = `ucards-attacker-${Date.now()}@test.local`
-  const attackerReg = await request.post('http://localhost:3000/api/auth/register', {
+  const attackerReg = await request.post(`${API_URL}/api/auth/register`, {
     data: { email: attackerEmail, password: 'testpass123' },
   })
   const attacker = await attackerReg.json()
 
-  const reviewRes = await request.post('http://localhost:3000/api/study/review', {
+  const reviewRes = await request.post(`${API_URL}/api/study/review`, {
     headers: { Authorization: `Bearer ${attacker.accessToken}` },
     data: { vocabId: cardId, quality: 2 },
   })
@@ -248,7 +249,7 @@ test('user cannot review another user\'s private usr_ card', async ({ request })
   // The owner's srs_card must be untouched (the attacker may have
   // tried quality=2 but the lookup should have returned 400 before
   // any INSERT).
-  const srsRows = await (await request.get('http://localhost:3000/api/study/cards?target=fr', {
+  const srsRows = await (await request.get(`${API_URL}/api/study/cards?target=fr`, {
     headers: { Authorization: `Bearer ${owner.accessToken}` },
   })).json()
   const ownerRow = srsRows.find((r) => r.vocab_id === cardId)

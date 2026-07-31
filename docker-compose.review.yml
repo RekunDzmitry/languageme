@@ -1,0 +1,67 @@
+# Isolated stack for running the E2E suite without disturbing the
+# main `languageme` compose project (which may be serving a different
+# worktree on 5173/3000). Everything here is namespaced:
+#   - its own postgres + volume, so migrations run against a fresh DB
+#   - ports 5273 (frontend) / 3100 (api) / 55432 (postgres)
+#
+# Run from the repo root:
+#   docker compose -p lmreview -f docker-compose.review.yml up -d
+#   PW_BASE_URL=http://localhost:5273 PW_API_URL=http://localhost:3100 npx playwright test
+#   docker compose -p lmreview -f docker-compose.review.yml down -v
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: lm_user
+      POSTGRES_PASSWORD: lm_pass
+      POSTGRES_DB: languageme
+    ports:
+      - "55432:5432"
+    volumes:
+      - review_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lm_user -d languageme"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./server
+    ports:
+      - "3100:3000"
+    environment:
+      DATABASE_URL: postgres://lm_user:lm_pass@postgres:5432/languageme
+      JWT_SECRET: review-jwt-secret
+      JWT_REFRESH_SECRET: review-jwt-refresh-secret
+      PUBLIC_URL: http://127.0.0.1:5273
+      PORT: 3000
+    volumes:
+      - ./server/src:/app/src
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    ports:
+      - "5273:5173"
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./index.html:/app/index.html
+      - ./vite.config.js:/app/vite.config.js
+      - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
+      - review_node_modules:/app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - API_URL=http://api:3000
+    command: sh -c "npm ci && npx vite --host 0.0.0.0"
+    depends_on:
+      - api
+
+volumes:
+  review_pgdata:
+  review_node_modules:
