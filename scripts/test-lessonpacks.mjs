@@ -1,4 +1,5 @@
 // Quick smoke test for lessonPacks data-driven logic
+import { readFileSync } from 'node:fs'
 import {
   PACK_IDS, LESSON_PACKS,
   getLangFromThemeId, getOrderFromThemeId,
@@ -21,6 +22,9 @@ const A1A2_THEME_IDS = ['pl_theme20', 'pl_theme21']
 
 const tests = []
 const t = (name, fn) => tests.push({ name, fn })
+
+const readMigration = (name) =>
+  readFileSync(new URL(`../server/src/db/migrations/${name}`, import.meta.url), 'utf8')
 
 t('getLangFromThemeId extracts prefix', () => {
   if (getLangFromThemeId('pl_theme01') !== 'pl') throw new Error('pl_theme01 -> pl')
@@ -206,6 +210,36 @@ t('integration: every real theme maps to exactly one pack', async () => {
     }
   } finally {
     console.warn = original
+  }
+})
+
+t('migration 028 avoids unique-key collisions while swapping PL pack ranges', () => {
+  const sql = readMigration('028_swap_pl_pack_ranges.sql')
+  const firstTelcMove = sql.indexOf("UPDATE theme SET pack_id = 'pl-telc'")
+  if (firstTelcMove === -1) throw new Error('missing pl-telc move')
+
+  const beforeTelcMove = sql.slice(0, firstTelcMove)
+  const hasTemporaryOrderBump = /UPDATE\s+theme\s+SET\s+"order"\s*=/.test(beforeTelcMove)
+    && /\+\s*100|-\s*100|999|1000/.test(beforeTelcMove)
+  const dropsPackOrderConstraint = /DROP\s+CONSTRAINT\s+IF\s+EXISTS\s+theme_lang_pack_order_key/i.test(beforeTelcMove)
+
+  if (!hasTemporaryOrderBump && !dropsPackOrderConstraint) {
+    throw new Error(
+      'migration 028 moves pl_theme01-09 into pl-telc before freeing orders 1-9; add a temporary order bump or drop/re-add theme_lang_pack_order_key'
+    )
+  }
+})
+
+t('migration 032 assigns NULL-pack rows seeded by migrations 030 and 031', () => {
+  const sql = readMigration('032_pl_pack_reorg.sql')
+  const movesTheme19FromNull = /pl_theme19[\s\S]{0,250}pack_id\s+IS\s+NULL|pack_id\s+IS\s+NULL[\s\S]{0,250}pl_theme19/i.test(sql)
+  const movesTheme21FromNull = /pl_theme21[\s\S]{0,250}pack_id\s+IS\s+NULL|pack_id\s+IS\s+NULL[\s\S]{0,250}pl_theme21/i.test(sql)
+
+  if (!movesTheme19FromNull) {
+    throw new Error('pl_theme19 is inserted with pack_id NULL in migration 030, but migration 032 only moves it from pl-a1-a2')
+  }
+  if (!movesTheme21FromNull) {
+    throw new Error('pl_theme21 is inserted with pack_id NULL in migration 031, but migration 032 uses pack_id <> pl-a1-a2, which does not match NULL')
   }
 })
 
