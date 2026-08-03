@@ -733,7 +733,7 @@ function deterministicRubricEventData(gradeResult) {
 function buildDeterministicFinalEvaluation({ gradeResult, errors = [], constructionReplacements = [] }) {
   const { rubric, parts, metricVersion } = gradeResult;
   const finalErrors = (Array.isArray(errors) ? errors : [])
-    .filter(err => err && err.resolved && err.startOffset >= 0 && err.endOffset > err.startOffset)
+    .filter(err => err && err.startOffset >= 0 && err.endOffset > err.startOffset)
     .sort((a, b) => a.startOffset - b.startOffset)
     .map((err, idx) => ({
       id: `err_${idx}`,
@@ -1108,7 +1108,7 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
     const finalEvaluation = buildDeterministicFinalEvaluation({
       gradeResult,
       errors: Array.isArray(evaluation.errors) ? evaluation.errors : [],
-      constructionReplacements: Array.isArray(evaluation.constructionReplacements) ? evaluation.constructionReplacements : [],
+      constructionReplacements: constructionReplacements,
     });
     finalEvaluation.targetLevel = normalizedTargetLevel;
     return res.json(finalEvaluation);
