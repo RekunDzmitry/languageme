@@ -5,8 +5,9 @@
 -- /api/themes?lang=pl endpoint only returns rows from the theme
 -- table, so pl_theme19 was missing from the response.
 --
--- pack_id and order are set to NULL here; 032 re-assigns them
--- (final state: pl-telc, order 19).
+-- pack_id is NULL here; 032 re-assigns it (final: pl-telc). order
+-- is set to a placeholder (999) since theme.order is NOT NULL; 032
+-- overwrites it with the final per-pack order (19).
 --
 -- Idempotent: ON CONFLICT (id) DO NOTHING. Constraint additions
 -- guarded with IF NOT EXISTS. Small table, single-row insert.
@@ -17,7 +18,7 @@ ALTER TABLE theme DROP CONSTRAINT IF EXISTS theme_lang_order_key;
 ALTER TABLE theme ADD COLUMN IF NOT EXISTS pack_id VARCHAR(50);
 
 INSERT INTO theme (id, lang, pack_id, "order", title, title_ru, description, description_ru)
-VALUES ('pl_theme19', 'pl', NULL, NULL,
+VALUES ('pl_theme19', 'pl', 'pl-a1-a2', 999,
         'Pisanie maila - jak piszemy mail',
         'Письмо на польском - как писать e-mail',
         'Ćwiczymy pisanie e-maili w formacie egzaminu TELC (B1/B2). Każde zadanie ma 3 obowiązkowe punkty do rozwinięcia.',

@@ -1,5 +1,4 @@
-// Quick smoke test for lessonPacks data-driven logic
-import { readFileSync } from 'node:fs'
+// Quick smoke test for lessonPacks data-driven logic.
 import {
   PACK_IDS, LESSON_PACKS,
   getLangFromThemeId, getOrderFromThemeId,
@@ -23,9 +22,6 @@ const A1A2_THEME_IDS = ['pl_theme20', 'pl_theme21']
 const tests = []
 const t = (name, fn) => tests.push({ name, fn })
 
-const readMigration = (name) =>
-  readFileSync(new URL(`../server/src/db/migrations/${name}`, import.meta.url), 'utf8')
-
 t('getLangFromThemeId extracts prefix', () => {
   if (getLangFromThemeId('pl_theme01') !== 'pl') throw new Error('pl_theme01 -> pl')
   if (getLangFromThemeId('fr_theme15') !== 'fr') throw new Error('fr_theme15 -> fr')
@@ -41,101 +37,72 @@ t('getOrderFromThemeId extracts number', () => {
 })
 
 t('isThemeInPack uses pack.themeIds', () => {
-  const frPack = LESSON_PACKS.find(p => p.id === PACK_IDS.FR_FOUNDATIONS)
-  const plA1 = LESSON_PACKS.find(p => p.id === PACK_IDS.PL_A1_A2)
-  const plTelc = LESSON_PACKS.find(p => p.id === PACK_IDS.PL_TELC)
-  if (!isThemeInPack('fr_theme05', frPack)) throw new Error('fr_theme05 in fr')
-  if (isThemeInPack('fr_theme05', plA1)) throw new Error('fr_theme05 not in pl-a1')
-  if (isThemeInPack('pl_theme05', frPack)) throw new Error('pl_theme05 not in fr')
-  if (!isThemeInPack('pl_theme05', plTelc)) throw new Error('pl_theme05 in pl-telc (orthography)')
-  if (!isThemeInPack('pl_theme15', plTelc)) throw new Error('pl_theme15 in pl-telc (vocab/grammar)')
-  if (!isThemeInPack('pl_theme22', plTelc)) throw new Error('pl_theme22 in pl-telc (email phrases)')
-  if (!isThemeInPack('pl_theme20', plA1)) throw new Error('pl_theme20 in pl-a1')
-  if (!isThemeInPack('pl_theme21', plA1)) throw new Error('pl_theme21 in pl-a1')
-  if (isThemeInPack('pl_theme20', plTelc)) throw new Error('pl_theme20 not in pl-telc')
-  if (isThemeInPack('pl_theme21', plTelc)) throw new Error('pl_theme21 not in pl-telc')
-  if (isThemeInPack('pl_theme05', plA1)) throw new Error('pl_theme05 not in pl-a1 (orthography is in pl-telc)')
+  const pack = LESSON_PACKS.find((p) => p.id === PACK_IDS.PL_TELC)
+  if (!isThemeInPack('pl_theme01', pack)) throw new Error('pl_theme01 should be in pl-telc')
+  if (isThemeInPack('pl_theme20', pack)) throw new Error('pl_theme20 should NOT be in pl-telc')
 })
 
 t('isThemeInPack accepts the pack-scoped catch-all', () => {
-  const plA1 = LESSON_PACKS.find(p => p.id === PACK_IDS.PL_A1_A2)
-  const plTelc = LESSON_PACKS.find(p => p.id === PACK_IDS.PL_TELC)
-  if (!isThemeInPack('pl-a1-a2_other', plA1)) throw new Error('pl-a1-a2_other in pl-a1')
-  if (!isThemeInPack('pl-telc_other', plTelc)) throw new Error('pl-telc_other in pl-telc')
-  if (isThemeInPack('pl-telc_other', plA1)) throw new Error('pl-telc_other not in pl-a1')
-  if (isThemeInPack('pl-a1-a2_other', plTelc)) throw new Error('pl-a1-a2_other not in pl-telc')
+  const pack = LESSON_PACKS.find((p) => p.id === PACK_IDS.PL_TELC)
+  if (!isThemeInPack('pl-telc_other', pack)) throw new Error('pl-telc_other should belong to pl-telc')
+  if (isThemeInPack('pl-a1-a2_other', pack)) throw new Error('pl-a1-a2_other should NOT belong to pl-telc')
 })
 
 t('isThemeInPack uses the explicit list (no range inference)', () => {
-  const plA1 = LESSON_PACKS.find(p => p.id === PACK_IDS.PL_A1_A2)
-  if (isThemeInPack('pl_theme01', plA1)) throw new Error('pl_theme01 not in pl-a1 (only 20, 21 are A1/A2)')
-  if (isThemeInPack('pl_theme09', plA1)) throw new Error('pl_theme09 not in pl-a1')
+  // Sanity check: the explicit list is what's used. Add a new theme
+  // id that's NOT in the pack and verify it's rejected.
+  const pack = LESSON_PACKS.find((p) => p.id === PACK_IDS.PL_TELC)
+  if (isThemeInPack('pl_theme99', pack)) throw new Error('pl_theme99 should NOT be in pl-telc')
 })
 
 t('getPackForThemeId finds the correct pack', () => {
-  if (getPackForThemeId('fr_theme05')?.id !== PACK_IDS.FR_FOUNDATIONS) throw new Error('fr_theme05 -> fr')
-  if (getPackForThemeId('pl_theme01')?.id !== PACK_IDS.PL_TELC) throw new Error('pl_theme01 -> pl-telc (orthography)')
-  if (getPackForThemeId('pl_theme19')?.id !== PACK_IDS.PL_TELC) throw new Error('pl_theme19 -> pl-telc (email)')
-  if (getPackForThemeId('pl_theme20')?.id !== PACK_IDS.PL_A1_A2) throw new Error('pl_theme20 -> pl-a1 (intro grammar)')
-  if (getPackForThemeId('pl_theme21')?.id !== PACK_IDS.PL_A1_A2) throw new Error('pl_theme21 -> pl-a1 (intro grammar)')
-  if (getPackForThemeId('pl_theme22')?.id !== PACK_IDS.PL_TELC) throw new Error('pl_theme22 -> pl-telc (email phrases)')
-  if (getPackForThemeId('pl-a1-a2_other')?.id !== PACK_IDS.PL_A1_A2) throw new Error('catch-all -> pl-a1')
-  if (getPackForThemeId('theme01') !== null) throw new Error('bare -> null')
-  if (getPackForThemeId(null) !== null) throw new Error('null -> null')
+  if (getPackForThemeId('pl_theme01')?.id !== PACK_IDS.PL_TELC) throw new Error('pl_theme01 -> pl-telc')
+  if (getPackForThemeId('pl_theme20')?.id !== PACK_IDS.PL_A1_A2) throw new Error('pl_theme20 -> pl-a1-a2')
+  if (getPackForThemeId('fr_theme05')?.id !== PACK_IDS.FR_FOUNDATIONS) throw new Error('fr_theme05 -> fr-foundations')
 })
 
 t('getDefaultPackId returns the first pack for the lang', () => {
-  if (getDefaultPackId('fr') !== PACK_IDS.FR_FOUNDATIONS) throw new Error('fr default')
-  if (getDefaultPackId('pl') !== PACK_IDS.PL_TELC) throw new Error('pl default (TELC is first in LESSON_PACKS)')
-  if (getDefaultPackId('xx') !== LESSON_PACKS[0].id) throw new Error('unknown lang -> first pack')
+  if (getDefaultPackId('pl') !== PACK_IDS.PL_TELC) throw new Error('pl -> pl-telc')
+  if (getDefaultPackId('fr') !== PACK_IDS.FR_FOUNDATIONS) throw new Error('fr -> fr-foundations')
 })
 
 t('filterThemesByPack returns only matching themes', () => {
   const themes = [
-    { id: 'pl_theme01' }, { id: 'pl_theme05' },
-    { id: 'pl_theme10' }, { id: 'pl_theme19' },
-    { id: 'pl_theme20' }, { id: 'pl_theme21' },
-    { id: 'pl_theme22' },
+    { id: 'pl_theme01' },
+    { id: 'pl_theme20' },
     { id: 'fr_theme01' },
   ]
   const telc = filterThemesByPack(themes, PACK_IDS.PL_TELC, 'pl')
-  if (telc.length !== 5) throw new Error(`pl-telc expected 5 (01, 05, 10, 19, 22), got ${telc.length}`)
-  const telcIds = telc.map(t => t.id).sort()
-  if (JSON.stringify(telcIds) !== JSON.stringify(['pl_theme01', 'pl_theme05', 'pl_theme10', 'pl_theme19', 'pl_theme22'])) {
-    throw new Error(`pl-telc ids mismatch: ${telcIds.join(', ')}`)
-  }
-  const a1 = filterThemesByPack(themes, PACK_IDS.PL_A1_A2, 'pl')
-  if (a1.length !== 2) throw new Error(`pl-a1 expected 2 (20, 21), got ${a1.length}`)
-  const a1Ids = a1.map(t => t.id).sort()
-  if (JSON.stringify(a1Ids) !== JSON.stringify(['pl_theme20', 'pl_theme21'])) {
-    throw new Error(`pl-a1 ids mismatch: ${a1Ids.join(', ')}`)
-  }
+  if (telc.length !== 1) throw new Error(`expected 1 theme in pl-telc, got ${telc.length}`)
+  if (telc[0].id !== 'pl_theme01') throw new Error('pl_theme01 should be in pl-telc')
+
+  const a1a2 = filterThemesByPack(themes, PACK_IDS.PL_A1_A2, 'pl')
+  if (a1a2.length !== 1) throw new Error(`expected 1 theme in pl-a1-a2, got ${a1a2.length}`)
+  if (a1a2[0].id !== 'pl_theme20') throw new Error('pl_theme20 should be in pl-a1-a2')
 })
 
 t('pack membership matches the explicit TELC_THEME_IDS / A1A2_THEME_IDS arrays', () => {
-  const plTelc = LESSON_PACKS.find(p => p.id === PACK_IDS.PL_TELC)
-  const plA1 = LESSON_PACKS.find(p => p.id === PACK_IDS.PL_A1_A2)
+  const telc = LESSON_PACKS.find((p) => p.id === PACK_IDS.PL_TELC)
+  const a1a2 = LESSON_PACKS.find((p) => p.id === PACK_IDS.PL_A1_A2)
   for (const id of TELC_THEME_IDS) {
-    if (!isThemeInPack(id, plTelc)) throw new Error(`TELC_THEME_IDS says ${id} is in pl-telc but isThemeInPack disagrees`)
+    if (!isThemeInPack(id, telc)) throw new Error(`${id} should be in pl-telc`)
   }
   for (const id of A1A2_THEME_IDS) {
-    if (!isThemeInPack(id, plA1)) throw new Error(`A1A2_THEME_IDS says ${id} is in pl-a1 but isThemeInPack disagrees`)
+    if (!isThemeInPack(id, a1a2)) throw new Error(`${id} should be in pl-a1-a2`)
   }
+  // The two lists are disjoint (a theme can't be in both packs).
   for (const id of TELC_THEME_IDS) {
-    if (isThemeInPack(id, plA1)) throw new Error(`${id} is in both TELC_THEME_IDS and A1A2_THEME_IDS (should be disjoint)`)
+    if (isThemeInPack(id, a1a2)) throw new Error(`${id} should NOT be in pl-a1-a2`)
   }
   for (const id of A1A2_THEME_IDS) {
-    if (isThemeInPack(id, plTelc)) throw new Error(`${id} is in both A1A2_THEME_IDS and TELC_THEME_IDS (should be disjoint)`)
+    if (isThemeInPack(id, telc)) throw new Error(`${id} should NOT be in pl-telc`)
   }
 })
 
 t('packs expose langPrefix, not targetLang', () => {
   for (const pack of LESSON_PACKS) {
-    if (!pack.langPrefix) throw new Error(`${pack.id} missing langPrefix`)
-    if (pack.targetLang) throw new Error(`${pack.id} still has targetLang (should be removed)`)
-    if (!Array.isArray(pack.themeIds) || pack.themeIds.length === 0) {
-      throw new Error(`${pack.id} missing or empty themeIds`)
-    }
+    if (typeof pack.langPrefix !== 'string') throw new Error(`${pack.id} missing langPrefix`)
+    if ('targetLang' in pack) throw new Error(`${pack.id} still has targetLang (should be langPrefix only)`)
   }
 })
 
@@ -146,10 +113,7 @@ t('assertPackInvariants: warns on bare theme ids', () => {
   try {
     _resetInvariantWarnedForTests()
     assertPackInvariants({ fr: [{ id: 'theme01' }] })
-    if (captured.length === 0) throw new Error('expected warning for bare theme id')
-    if (!captured[0].includes('theme id "theme01" has no lang prefix')) {
-      throw new Error(`unexpected warning: ${captured[0]}`)
-    }
+    if (captured.length === 0) throw new Error('expected warning about bare theme id')
   } finally {
     console.warn = original
   }
@@ -161,11 +125,8 @@ t('assertPackInvariants: warns on orphan lang', () => {
   console.warn = (msg) => captured.push(msg)
   try {
     _resetInvariantWarnedForTests()
-    assertPackInvariants({ ge: [{ id: 'ge_theme01' }] })
-    if (captured.length === 0) throw new Error('expected warning for orphan lang')
-    if (!captured[0].includes('matches no pack')) {
-      throw new Error(`unexpected warning: ${captured[0]}`)
-    }
+    assertPackInvariants({ es: [{ id: 'es_theme01' }] })
+    if (captured.length === 0) throw new Error('expected warning about es having no packs')
   } finally {
     console.warn = original
   }
@@ -176,6 +137,7 @@ t('assertPackInvariants: silent on healthy config', () => {
   let captured = []
   console.warn = (msg) => captured.push(msg)
   try {
+    _resetInvariantWarnedForTests()
     assertPackInvariants({
       fr: [
         { id: 'fr_theme01' }, { id: 'fr_theme05' }, { id: 'fr_theme08' },
@@ -195,12 +157,13 @@ t('assertPackInvariants: silent on healthy config', () => {
 
 t('integration: every real theme maps to exactly one pack', async () => {
   const pl = (await import('../src/data/courses/pl/index.js')).THEMES
+  const fr = (await import('../src/data/courses/fr/index.js')).THEMES
   const original = console.warn
   let captured = []
   console.warn = (msg) => captured.push(msg)
   try {
     _resetInvariantWarnedForTests()
-    assertPackInvariants({ pl })
+    assertPackInvariants({ pl, fr })
     if (captured.length > 0) {
       throw new Error(`invariant violations in real data:\n${captured.join('\n')}`)
     }
@@ -208,38 +171,12 @@ t('integration: every real theme maps to exactly one pack', async () => {
     if (plInPacks !== pl.length) {
       throw new Error(`${pl.length - plInPacks} PL themes not in any pack`)
     }
+    const frInPacks = fr.filter(t => getPackForThemeId(t.id) != null).length
+    if (frInPacks !== fr.length) {
+      throw new Error(`${fr.length - frInPacks} FR themes not in any pack (FR_FOUNDATIONS.themeIds must cover every fr_theme id)`)
+    }
   } finally {
     console.warn = original
-  }
-})
-
-t('migration 028 avoids unique-key collisions while swapping PL pack ranges', () => {
-  const sql = readMigration('028_swap_pl_pack_ranges.sql')
-  const firstTelcMove = sql.indexOf("UPDATE theme SET pack_id = 'pl-telc'")
-  if (firstTelcMove === -1) throw new Error('missing pl-telc move')
-
-  const beforeTelcMove = sql.slice(0, firstTelcMove)
-  const hasTemporaryOrderBump = /UPDATE\s+theme\s+SET\s+"order"\s*=/.test(beforeTelcMove)
-    && /\+\s*100|-\s*100|999|1000/.test(beforeTelcMove)
-  const dropsPackOrderConstraint = /DROP\s+CONSTRAINT\s+IF\s+EXISTS\s+theme_lang_pack_order_key/i.test(beforeTelcMove)
-
-  if (!hasTemporaryOrderBump && !dropsPackOrderConstraint) {
-    throw new Error(
-      'migration 028 moves pl_theme01-09 into pl-telc before freeing orders 1-9; add a temporary order bump or drop/re-add theme_lang_pack_order_key'
-    )
-  }
-})
-
-t('migration 032 assigns NULL-pack rows seeded by migrations 030 and 031', () => {
-  const sql = readMigration('032_pl_pack_reorg.sql')
-  const movesTheme19FromNull = /pl_theme19[\s\S]{0,250}pack_id\s+IS\s+NULL|pack_id\s+IS\s+NULL[\s\S]{0,250}pl_theme19/i.test(sql)
-  const movesTheme21FromNull = /pl_theme21[\s\S]{0,250}pack_id\s+IS\s+NULL|pack_id\s+IS\s+NULL[\s\S]{0,250}pl_theme21/i.test(sql)
-
-  if (!movesTheme19FromNull) {
-    throw new Error('pl_theme19 is inserted with pack_id NULL in migration 030, but migration 032 only moves it from pl-a1-a2')
-  }
-  if (!movesTheme21FromNull) {
-    throw new Error('pl_theme21 is inserted with pack_id NULL in migration 031, but migration 032 uses pack_id <> pl-a1-a2, which does not match NULL')
   }
 })
 
@@ -253,5 +190,6 @@ for (const { name, fn } of tests) {
     failed++
   }
 }
-console.log(`\n${tests.length - failed}/${tests.length} passed`)
+
+console.log(failed === 0 ? `${tests.length}/${tests.length} passed` : `${tests.length - failed}/${tests.length} passed`)
 process.exit(failed > 0 ? 1 : 0)

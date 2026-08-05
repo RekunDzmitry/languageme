@@ -1,0 +1,16 @@
+# Override the api service to use the freshly-built image
+# (languageme-api:polish-themes-reorg) so the baseline migration
+# (server/src/db/migrations/001_baseline.sql) is baked in. The base
+# compose (docker-compose.local.yml) still bind-mounts the worktree's
+# server source for hot-reload, but the baked image ensures the
+# baseline ships with the image even if the bind mount isn't refreshed.
+#
+# Run from the worktree root:
+#   docker compose \
+#     -f docker-compose.local.yml \
+#     -f docker-compose.polish-themes-reorg.yml \
+#     up -d --build
+
+services:
+  api:
+    image: languageme-api:polish-themes-reorg
