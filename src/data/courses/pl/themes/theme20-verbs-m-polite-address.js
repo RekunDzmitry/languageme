@@ -125,21 +125,6 @@ const theme20VerbsMPoliteAddress = {
         },
       ],
     },
-    {
-      type: 'exercises',
-      exercises: [
-        { type: 'write_answer', category: 'Глаголы на -am', prompt: 'Я это помню.', answer: 'Pamiętam to.', hint: 'pamiętać → pamiętam' },
-        { type: 'write_answer', category: 'Глаголы с się', prompt: 'Я встречаюсь с Анной.', answer: 'Spotykam się z Anną.', hint: 'spotykać się z kimś; z Anną' },
-        { type: 'write_answer', category: 'Глаголы на -am', prompt: 'Я держу книгу.', answer: 'Trzymam książkę.', hint: 'trzymać → trzymam; biernik: książkę' },
-        { type: 'write_answer', category: 'Глаголы на -am', prompt: 'Я играю в футбол.', answer: 'Gram w piłkę.', hint: 'grać w coś; w piłkę' },
-        { type: 'write_answer', category: 'Глаголы на -am', prompt: 'Я пою песню.', answer: 'Śpiewam piosenkę.', hint: 'śpiewać → śpiewam; biernik: piosenkę' },
-        { type: 'write_answer', category: 'Управление глаголов', prompt: 'Я помогаю маме.', answer: 'Pomagam mamie.', hint: 'pomagać komuś; celownik: mamie' },
-        { type: 'write_answer', category: 'Управление глаголов', prompt: 'Я отвечаю на вопрос.', answer: 'Odpowiadam na pytanie.', hint: 'odpowiadać na coś; na pytanie' },
-        { type: 'write_answer', category: 'Управление глаголов', prompt: 'Я пользуюсь словарём.', answer: 'Używam słownika.', hint: 'używać czegoś; dopełniacz: słownika' },
-        { type: 'write_answer', category: 'Управление глаголов', prompt: 'Я проверяю слово.', answer: 'Sprawdzam słowo.', hint: 'sprawdzać coś; biernik: słowo' },
-        { type: 'write_answer', category: 'Управление глаголов', prompt: 'Я собираю марки.', answer: 'Zbieram znaczki.', hint: 'zbierać coś; biernik: znaczki' },
-      ],
-    },
   ],
   verbList: [],
 }

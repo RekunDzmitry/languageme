@@ -23,5 +23,5 @@ CREATE INDEX IF NOT EXISTS idx_conjugation_card_key
 COMMIT;
 
 -- Record migration
-INSERT INTO _migrations (name) VALUES ('004_conjugation_cards')
+INSERT INTO _migrations (name) VALUES ('004_conjugation_cards.sql')
 ON CONFLICT DO NOTHING;

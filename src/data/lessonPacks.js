@@ -1,7 +1,11 @@
 // Learning packs — coarse-grained groupings of themes inside one target language.
-// A pack is described entirely by its metadata (langPrefix + themeRange); the
-// set of "themes in this pack" is derived, not enumerated, so adding a new
-// theme to the lang/band automatically includes it in the right pack.
+//
+// Each pack declares its contents as an explicit `themeIds` list. We do NOT
+// derive membership from a theme-id order range: the polish-themes reorg put
+// non-contiguous themes into the PL_TELC pack (orthography 01-09, then
+// vocab/grammar 10-18, then email 19 and 22), so a contiguous range filter
+// would be wrong. Explicit lists make the pack contents self-documenting and
+// keep membership stable as new themes are added in the future.
 //
 // Conventions:
 //   - Every theme id must carry a language prefix (fr_themeNN, pl_themeNN, …).
@@ -11,6 +15,8 @@
 //   - A pack's `id` is stable across renames of UI labels — never use it as a
 //     user-facing string. The UI pulls title/shortTitle/subtitle/badge/level
 //     through i18n with pack_<id>_title, pack_<id>_short, etc.
+//   - A pack-scoped catch-all theme ("<pack.id>_other") is treated as
+//     belonging to the pack automatically — no need to list it in themeIds.
 
 export const PACK_IDS = {
   FR_FOUNDATIONS: 'fr-foundations',
@@ -22,31 +28,62 @@ export const PACK_IDS = {
 // appear in the dashboard and the language switcher dropdown.
 export const LESSON_PACKS = [
   {
+    // French Foundations. The FR course ships 32 themes
+    // (fr_theme01..31, registered as 8 real theme files plus 23
+    // stubTheme() entries in theme01-pronouns-present.js). Migration
+    // 027 backfills every fr_theme row to pack_id='fr-foundations',
+    // so the explicit themeIds list must cover all of them — a
+    // missing id becomes an orphan: filterThemesByPack drops it,
+    // getPackForThemeId returns null, and assertPackInvariants
+    // warns "matches no pack".
     id: PACK_IDS.FR_FOUNDATIONS,
     langPrefix: 'fr',
-    // French has 31 themes (theme01..theme31). Range is inclusive.
-    themeRange: { from: 1, to: 31 },
+    themeIds: [
+      'fr_theme01', 'fr_theme02', 'fr_theme03', 'fr_theme04', 'fr_theme05',
+      'fr_theme06', 'fr_theme07', 'fr_theme08', 'fr_theme09', 'fr_theme10',
+      'fr_theme11', 'fr_theme12', 'fr_theme13', 'fr_theme14', 'fr_theme15',
+      'fr_theme16', 'fr_theme17', 'fr_theme18', 'fr_theme19', 'fr_theme20',
+      'fr_theme21', 'fr_theme22', 'fr_theme23', 'fr_theme24', 'fr_theme25',
+      'fr_theme26', 'fr_theme27', 'fr_theme28', 'fr_theme29', 'fr_theme30',
+      'fr_theme31',
+    ],
     primaryRoute: '/themes',
     modes: ['themes', 'training', 'cards'],
     accentClass: 'from-sky-500 to-indigo-500',
   },
   {
+    // Polish B1/B2 (the TELC exam level). Holds all polish content
+    // that targets B1/B2: orthography drills (themes 01-09), vocab
+    // and grammar (themes 10-18), and the email writing drills
+    // (themes 19 and 22). Themes 20 and 21 ("Глаголы на -m и
+    // вежливое обращение", "Глаголы 2-го спряжения и существительные
+    // мужского рода") live in the A1/A2 pack because their content
+    // is A1/A2 intro material.
+    id: PACK_IDS.PL_TELC,
+    langPrefix: 'pl',
+    themeIds: [
+      'pl_theme01', 'pl_theme02', 'pl_theme03', 'pl_theme04', 'pl_theme05',
+      'pl_theme06', 'pl_theme07', 'pl_theme08', 'pl_theme09',
+      'pl_theme10', 'pl_theme11', 'pl_theme12', 'pl_theme13', 'pl_theme14',
+      'pl_theme15', 'pl_theme16', 'pl_theme17', 'pl_theme18',
+      'pl_theme19', 'pl_theme22',
+    ],
+    primaryRoute: '/themes',
+    modes: ['themes', 'training', 'cards', 'email'],
+    accentClass: 'from-violet-500 to-fuchsia-500',
+  },
+  {
+    // Polish A1/A2. Holds the two themes whose content is genuinely
+    // beginner material: theme 20 ("Глаголы на -m и вежливое
+    // обращение") and theme 21 ("Глаголы 2-го спряжения и
+    // существительные мужского рода"). Both are demoted to
+    // vocab-only — no write_answer exercises and no email drills.
     id: PACK_IDS.PL_A1_A2,
     langPrefix: 'pl',
-    // Polish A1/A2: orthography (pl_theme01..09).
-    themeRange: { from: 1, to: 9 },
+    themeIds: ['pl_theme20', 'pl_theme21'],
     primaryRoute: '/themes',
     modes: ['themes', 'training', 'cards'],
     accentClass: 'from-emerald-500 to-cyan-500',
-  },
-  {
-    id: PACK_IDS.PL_TELC,
-    langPrefix: 'pl',
-    // Polish B1/B2: vocabulary, grammar and email drills (pl_theme10..22).
-    themeRange: { from: 10, to: 22 },
-    primaryRoute: '/email',
-    modes: ['themes', 'training', 'email', 'cards'],
-    accentClass: 'from-violet-500 to-fuchsia-500',
   },
 ]
 
@@ -83,18 +120,21 @@ export function getOrderFromThemeId(themeId) {
 
 /**
  * Does this theme belong to this pack? Pure data, no Set allocation.
+ *
+ * Membership rule:
+ *   1. Pack-scoped catch-all ("<pack.id>_other") belongs to the pack
+ *      automatically — no need to list it in themeIds.
+ *   2. Otherwise the theme id must be in the pack's `themeIds` list.
+ *
+ * The list is the source of truth: we don't infer membership from the
+ * theme id's order number, so non-contiguous packs (like PL_TELC,
+ * which contains 01-09, 10-18, 19 and 22 — but not 20, 21) work
+ * without a regex/range.
  */
 export function isThemeInPack(themeId, pack) {
   if (!pack || !themeId) return false
-  // Pack-scoped catch-all: "<pack.id>_other" (e.g. "pl-a1-a2_other"
-  // belongs to the pl-a1-a2 pack). Checked before the regular theme
-  // pattern because these ids don't match `^<lang>_theme\d+$`.
   if (themeId === `${pack.id}_other`) return true
-  const lang = getLangFromThemeId(themeId)
-  if (lang !== pack.langPrefix) return false
-  const order = getOrderFromThemeId(themeId)
-  if (order == null) return false
-  return order >= pack.themeRange.from && order <= pack.themeRange.to
+  return Array.isArray(pack.themeIds) && pack.themeIds.includes(themeId)
 }
 
 /**
@@ -211,12 +251,12 @@ export function assertPackInvariants(themesByLang) {
       )
       if (matching.length === 0) {
         messages.push(
-          `[lessonPacks] theme id "${theme.id}" matches no pack (lang="${themeLang}" order=${getOrderFromThemeId(theme.id)}). Add a pack for this lang/band.`
+          `[lessonPacks] theme id "${theme.id}" matches no pack (lang="${themeLang}" order=${getOrderFromThemeId(theme.id)}). Add it to a pack's themeIds list.`
         )
       } else if (matching.length > 1) {
         const ids = matching.map((p) => p.id).join(', ')
         messages.push(
-          `[lessonPacks] theme id "${theme.id}" is in multiple packs: ${ids}. Pack themeRanges must be disjoint.`
+          `[lessonPacks] theme id "${theme.id}" is in multiple packs: ${ids}. Pack themeIds lists must be disjoint.`
         )
       }
     }

@@ -11,7 +11,14 @@ export default function ThemesListPage() {
   const { t } = useT()
   const { settings } = useSettings()
   const targetLang = settings.targetLang
+  // Compute the displayed order from the position within the pack-filtered
+  // list. The theme's own `order` field is a stable global sort key (the
+  // same theme may belong to different packs in different orders), but the
+  // user-visible number should be 1-based within the active pack so that
+  // a theme in pl-a1-a2 displays as 1 or 2, not as its old global order
+  // (11, 12) from the pre-pack layout.
   const allThemes = filterThemesByPack(getThemes(targetLang), settings.activePackId, targetLang)
+  const numberedThemes = allThemes.map((theme, idx) => ({ ...theme, displayOrder: idx + 1 }))
   const { isAuthenticated } = useAuth()
   const { themeProgress, themeUnlockStatus } = useProgress()
   const navigate = useNavigate()
@@ -20,7 +27,7 @@ export default function ThemesListPage() {
     <div className="max-w-4xl mx-auto px-5 py-6">
       <h2 className="text-2xl font-extrabold mb-5">{t(`themes_title_${targetLang}`)}</h2>
       <div className="space-y-3">
-        {allThemes.map((theme) => {
+        {numberedThemes.map((theme) => {
           // For authenticated users, use API unlock status if available, otherwise check locally
           const apiUnlockStatus = themeUnlockStatus?.[theme.id]?.unlocked
           const unlocked = isAuthenticated
@@ -39,7 +46,7 @@ export default function ThemesListPage() {
             >
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-sm shrink-0
                 ${completed ? 'bg-green-500/20 text-green-400' : unlocked ? 'bg-accent-glow text-accent' : 'bg-white/5 text-text-muted'}`}>
-                {completed ? '✓' : theme.order}
+                {completed ? '✓' : theme.displayOrder}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">

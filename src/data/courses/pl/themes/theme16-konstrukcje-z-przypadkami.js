@@ -3,7 +3,7 @@
 
 const theme16Konstrukcje = {
   id: 'pl_theme16',
-  order: 7,
+  order: 16,
   title: 'Konstrukcje z przypadkami',
   titleRu: 'Конструкции с падежами',
   description: 'Ważne konstrukcje gramatyczne z odpowiednimi przypadkami',

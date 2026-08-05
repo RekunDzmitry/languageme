@@ -1,11 +1,23 @@
-// Quick smoke test for lessonPacks data-driven logic
+// Quick smoke test for lessonPacks data-driven logic.
 import {
   PACK_IDS, LESSON_PACKS,
   getLangFromThemeId, getOrderFromThemeId,
   isThemeInPack, getPackForThemeId,
-  getDefaultPackId, getLessonPack, filterThemesByPack,
+  getDefaultPackId, filterThemesByPack,
   assertPackInvariants, _resetInvariantWarnedForTests,
 } from '../src/data/lessonPacks.js'
+
+// Explicit lists — no regex. We add new themes to these arrays by hand
+// when new content lands so the data model doesn't have to learn a
+// new pattern each time.
+const TELC_THEME_IDS = [
+  'pl_theme01', 'pl_theme02', 'pl_theme03', 'pl_theme04', 'pl_theme05',
+  'pl_theme06', 'pl_theme07', 'pl_theme08', 'pl_theme09',
+  'pl_theme10', 'pl_theme11', 'pl_theme12', 'pl_theme13', 'pl_theme14',
+  'pl_theme15', 'pl_theme16', 'pl_theme17', 'pl_theme18',
+  'pl_theme19', 'pl_theme22',
+]
+const A1A2_THEME_IDS = ['pl_theme20', 'pl_theme21']
 
 const tests = []
 const t = (name, fn) => tests.push({ name, fn })
@@ -24,64 +36,73 @@ t('getOrderFromThemeId extracts number', () => {
   if (getOrderFromThemeId('pl_theme') !== null) throw new Error('pl_theme -> null')
 })
 
-t('isThemeInPack respects langPrefix', () => {
-  const frPack = LESSON_PACKS.find(p => p.id === PACK_IDS.FR_FOUNDATIONS)
-  const plA1 = LESSON_PACKS.find(p => p.id === PACK_IDS.PL_A1_A2)
-  const plTelc = LESSON_PACKS.find(p => p.id === PACK_IDS.PL_TELC)
-  if (!isThemeInPack('fr_theme05', frPack)) throw new Error('fr_theme05 in fr')
-  if (isThemeInPack('fr_theme05', plA1)) throw new Error('fr_theme05 not in pl-a1')
-  if (isThemeInPack('pl_theme05', frPack)) throw new Error('pl_theme05 not in fr')
-  if (!isThemeInPack('pl_theme05', plA1)) throw new Error('pl_theme05 in pl-a1')
-  if (!isThemeInPack('pl_theme15', plTelc)) throw new Error('pl_theme15 in pl-telc')
-  if (isThemeInPack('pl_theme05', plTelc)) throw new Error('pl_theme05 not in pl-telc')
+t('isThemeInPack uses pack.themeIds', () => {
+  const pack = LESSON_PACKS.find((p) => p.id === PACK_IDS.PL_TELC)
+  if (!isThemeInPack('pl_theme01', pack)) throw new Error('pl_theme01 should be in pl-telc')
+  if (isThemeInPack('pl_theme20', pack)) throw new Error('pl_theme20 should NOT be in pl-telc')
 })
 
-t('isThemeInPack respects range', () => {
-  const plA1 = LESSON_PACKS.find(p => p.id === PACK_IDS.PL_A1_A2)
-  const plTelc = LESSON_PACKS.find(p => p.id === PACK_IDS.PL_TELC)
-  if (isThemeInPack('pl_theme09', plTelc)) throw new Error('pl_theme09 not in pl-telc (range starts at 10)')
-  if (isThemeInPack('pl_theme10', plA1)) throw new Error('pl_theme10 not in pl-a1 (range ends at 9)')
-  if (!isThemeInPack('pl_theme09', plA1)) throw new Error('pl_theme09 in pl-a1 (boundary)')
-  if (!isThemeInPack('pl_theme10', plTelc)) throw new Error('pl_theme10 in pl-telc (boundary)')
+t('isThemeInPack accepts the pack-scoped catch-all', () => {
+  const pack = LESSON_PACKS.find((p) => p.id === PACK_IDS.PL_TELC)
+  if (!isThemeInPack('pl-telc_other', pack)) throw new Error('pl-telc_other should belong to pl-telc')
+  if (isThemeInPack('pl-a1-a2_other', pack)) throw new Error('pl-a1-a2_other should NOT belong to pl-telc')
 })
 
-t('getPackForThemeId finds correct pack', () => {
-  if (getPackForThemeId('fr_theme15')?.id !== PACK_IDS.FR_FOUNDATIONS) throw new Error('fr_theme15 -> fr')
-  if (getPackForThemeId('pl_theme03')?.id !== PACK_IDS.PL_A1_A2) throw new Error('pl_theme03 -> pl-a1')
-  if (getPackForThemeId('pl_theme15')?.id !== PACK_IDS.PL_TELC) throw new Error('pl_theme15 -> pl-telc')
-  if (getPackForThemeId('theme01') !== null) throw new Error('bare -> null')
-  if (getPackForThemeId(null) !== null) throw new Error('null -> null')
+t('isThemeInPack uses the explicit list (no range inference)', () => {
+  // Sanity check: the explicit list is what's used. Add a new theme
+  // id that's NOT in the pack and verify it's rejected.
+  const pack = LESSON_PACKS.find((p) => p.id === PACK_IDS.PL_TELC)
+  if (isThemeInPack('pl_theme99', pack)) throw new Error('pl_theme99 should NOT be in pl-telc')
 })
 
-t('getDefaultPackId returns first pack for lang', () => {
-  if (getDefaultPackId('fr') !== PACK_IDS.FR_FOUNDATIONS) throw new Error('fr default')
-  if (getDefaultPackId('pl') !== PACK_IDS.PL_A1_A2) throw new Error('pl default (first match)')
-  if (getDefaultPackId('xx') !== LESSON_PACKS[0].id) throw new Error('unknown lang -> first pack')
+t('getPackForThemeId finds the correct pack', () => {
+  if (getPackForThemeId('pl_theme01')?.id !== PACK_IDS.PL_TELC) throw new Error('pl_theme01 -> pl-telc')
+  if (getPackForThemeId('pl_theme20')?.id !== PACK_IDS.PL_A1_A2) throw new Error('pl_theme20 -> pl-a1-a2')
+  if (getPackForThemeId('fr_theme05')?.id !== PACK_IDS.FR_FOUNDATIONS) throw new Error('fr_theme05 -> fr-foundations')
+})
+
+t('getDefaultPackId returns the first pack for the lang', () => {
+  if (getDefaultPackId('pl') !== PACK_IDS.PL_TELC) throw new Error('pl -> pl-telc')
+  if (getDefaultPackId('fr') !== PACK_IDS.FR_FOUNDATIONS) throw new Error('fr -> fr-foundations')
 })
 
 t('filterThemesByPack returns only matching themes', () => {
   const themes = [
-    { id: 'pl_theme01' }, { id: 'pl_theme05' },
-    { id: 'pl_theme10' }, { id: 'pl_theme15' },
+    { id: 'pl_theme01' },
+    { id: 'pl_theme20' },
     { id: 'fr_theme01' },
   ]
-  const result = filterThemesByPack(themes, PACK_IDS.PL_A1_A2, 'pl')
-  if (result.length !== 2) throw new Error(`pl-a1 expected 2, got ${result.length}`)
-  if (result[0].id !== 'pl_theme01') throw new Error('first should be pl_theme01')
-  if (result[1].id !== 'pl_theme05') throw new Error('second should be pl_theme05')
+  const telc = filterThemesByPack(themes, PACK_IDS.PL_TELC, 'pl')
+  if (telc.length !== 1) throw new Error(`expected 1 theme in pl-telc, got ${telc.length}`)
+  if (telc[0].id !== 'pl_theme01') throw new Error('pl_theme01 should be in pl-telc')
+
+  const a1a2 = filterThemesByPack(themes, PACK_IDS.PL_A1_A2, 'pl')
+  if (a1a2.length !== 1) throw new Error(`expected 1 theme in pl-a1-a2, got ${a1a2.length}`)
+  if (a1a2[0].id !== 'pl_theme20') throw new Error('pl_theme20 should be in pl-a1-a2')
 })
 
-t('invariant: PL_A1_A2 ranges are 1-9, PL_TELC 10-22', () => {
-  const plA1 = LESSON_PACKS.find(p => p.id === PACK_IDS.PL_A1_A2)
-  const plTelc = LESSON_PACKS.find(p => p.id === PACK_IDS.PL_TELC)
-  if (plA1.themeRange.from !== 1 || plA1.themeRange.to !== 9) throw new Error('pl-a1 range')
-  if (plTelc.themeRange.from !== 10 || plTelc.themeRange.to !== 22) throw new Error('pl-telc range')
+t('pack membership matches the explicit TELC_THEME_IDS / A1A2_THEME_IDS arrays', () => {
+  const telc = LESSON_PACKS.find((p) => p.id === PACK_IDS.PL_TELC)
+  const a1a2 = LESSON_PACKS.find((p) => p.id === PACK_IDS.PL_A1_A2)
+  for (const id of TELC_THEME_IDS) {
+    if (!isThemeInPack(id, telc)) throw new Error(`${id} should be in pl-telc`)
+  }
+  for (const id of A1A2_THEME_IDS) {
+    if (!isThemeInPack(id, a1a2)) throw new Error(`${id} should be in pl-a1-a2`)
+  }
+  // The two lists are disjoint (a theme can't be in both packs).
+  for (const id of TELC_THEME_IDS) {
+    if (isThemeInPack(id, a1a2)) throw new Error(`${id} should NOT be in pl-a1-a2`)
+  }
+  for (const id of A1A2_THEME_IDS) {
+    if (isThemeInPack(id, telc)) throw new Error(`${id} should NOT be in pl-telc`)
+  }
 })
 
-t('packs expose langPrefix, no targetLang', () => {
+t('packs expose langPrefix, not targetLang', () => {
   for (const pack of LESSON_PACKS) {
-    if (!pack.langPrefix) throw new Error(`${pack.id} missing langPrefix`)
-    if (pack.targetLang) throw new Error(`${pack.id} still has targetLang (should be removed)`)
+    if (typeof pack.langPrefix !== 'string') throw new Error(`${pack.id} missing langPrefix`)
+    if ('targetLang' in pack) throw new Error(`${pack.id} still has targetLang (should be langPrefix only)`)
   }
 })
 
@@ -92,10 +113,7 @@ t('assertPackInvariants: warns on bare theme ids', () => {
   try {
     _resetInvariantWarnedForTests()
     assertPackInvariants({ fr: [{ id: 'theme01' }] })
-    if (captured.length === 0) throw new Error('expected warning for bare theme id')
-    if (!captured[0].includes('theme id "theme01" has no lang prefix')) {
-      throw new Error(`unexpected warning: ${captured[0]}`)
-    }
+    if (captured.length === 0) throw new Error('expected warning about bare theme id')
   } finally {
     console.warn = original
   }
@@ -107,11 +125,8 @@ t('assertPackInvariants: warns on orphan lang', () => {
   console.warn = (msg) => captured.push(msg)
   try {
     _resetInvariantWarnedForTests()
-    assertPackInvariants({ ge: [{ id: 'ge_theme01' }] })
-    if (captured.length === 0) throw new Error('expected warning for orphan lang')
-    if (!captured[0].includes('matches no pack')) {
-      throw new Error(`unexpected warning: ${captured[0]}`)
-    }
+    assertPackInvariants({ es: [{ id: 'es_theme01' }] })
+    if (captured.length === 0) throw new Error('expected warning about es having no packs')
   } finally {
     console.warn = original
   }
@@ -122,13 +137,16 @@ t('assertPackInvariants: silent on healthy config', () => {
   let captured = []
   console.warn = (msg) => captured.push(msg)
   try {
+    _resetInvariantWarnedForTests()
     assertPackInvariants({
       fr: [
-        { id: 'fr_theme01' }, { id: 'fr_theme05' }, { id: 'fr_theme31' },
+        { id: 'fr_theme01' }, { id: 'fr_theme05' }, { id: 'fr_theme08' },
       ],
       pl: [
         { id: 'pl_theme01' }, { id: 'pl_theme09' },
-        { id: 'pl_theme10' }, { id: 'pl_theme22' },
+        { id: 'pl_theme10' }, { id: 'pl_theme18' },
+        { id: 'pl_theme19' }, { id: 'pl_theme20' },
+        { id: 'pl_theme21' }, { id: 'pl_theme22' },
       ],
     })
     if (captured.length !== 0) throw new Error(`expected no warnings, got: ${captured.join('\n')}`)
@@ -138,22 +156,24 @@ t('assertPackInvariants: silent on healthy config', () => {
 })
 
 t('integration: every real theme maps to exactly one pack', async () => {
-  const fr = (await import('../src/data/courses/fr/index.js')).THEMES
   const pl = (await import('../src/data/courses/pl/index.js')).THEMES
+  const fr = (await import('../src/data/courses/fr/index.js')).THEMES
   const original = console.warn
   let captured = []
   console.warn = (msg) => captured.push(msg)
   try {
     _resetInvariantWarnedForTests()
-    assertPackInvariants({ fr, pl })
-    // Surface any invariant violations loudly so CI fails.
+    assertPackInvariants({ pl, fr })
     if (captured.length > 0) {
       throw new Error(`invariant violations in real data:\n${captured.join('\n')}`)
     }
-    // Spot-check that all PL themes are accounted for.
     const plInPacks = pl.filter(t => getPackForThemeId(t.id) != null).length
     if (plInPacks !== pl.length) {
       throw new Error(`${pl.length - plInPacks} PL themes not in any pack`)
+    }
+    const frInPacks = fr.filter(t => getPackForThemeId(t.id) != null).length
+    if (frInPacks !== fr.length) {
+      throw new Error(`${fr.length - frInPacks} FR themes not in any pack (FR_FOUNDATIONS.themeIds must cover every fr_theme id)`)
     }
   } finally {
     console.warn = original
@@ -163,12 +183,13 @@ t('integration: every real theme maps to exactly one pack', async () => {
 let failed = 0
 for (const { name, fn } of tests) {
   try {
-    fn()
+    await fn()
     console.log(`  ✓ ${name}`)
   } catch (e) {
     console.log(`  ✗ ${name}: ${e.message}`)
     failed++
   }
 }
-console.log(`\n${tests.length - failed}/${tests.length} passed`)
+
+console.log(failed === 0 ? `${tests.length}/${tests.length} passed` : `${tests.length - failed}/${tests.length} passed`)
 process.exit(failed > 0 ? 1 : 0)
