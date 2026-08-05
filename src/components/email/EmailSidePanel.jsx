@@ -350,6 +350,54 @@ function EvaluationProgressSection({ progress = [] }) {
         {visible.map(item => {
           const isRunning = item.status === 'running'
           const isFailed = item.status === 'failed'
+
+          // Group per-error enrichment steps under a single "Szczegóły błędu"
+          // section so users see evaluation is in progress (spinner + counter
+          // + filling dots) even after the TELC row above is already complete.
+          if (item.children) {
+            const total = item.children.length
+            const done = item.children.filter(c => c.status === 'complete' || c.status === 'failed').length
+            return (
+              <div key={item.step}>
+                <div className="flex items-center gap-2 text-xs">
+                  {isFailed ? (
+                    <span className="w-2 h-2 rounded-full bg-red-400" />
+                  ) : isRunning ? (
+                    <span
+                      className="w-3 h-3 border-2 border-accent border-t-transparent rounded-full animate-spin"
+                      aria-label="evaluating"
+                    />
+                  ) : (
+                    <span className="w-2 h-2 rounded-full bg-green-400" />
+                  )}
+                  <span className={isFailed ? 'text-red-400' : isRunning ? 'text-white font-medium' : 'text-text-muted'}>
+                    {item.label}
+                  </span>
+                  <span className="text-text-muted/70 tabular-nums">
+                    ({done}/{total})
+                  </span>
+                </div>
+                <div className="pl-5 mt-1.5 flex flex-wrap gap-1 border-l border-border/60">
+                  {item.children.map(c => {
+                    const cRunning = c.status === 'running'
+                    const cFailed = c.status === 'failed'
+                    return (
+                      <span
+                        key={c.step}
+                        title={c.step}
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          cFailed ? 'bg-red-400'
+                            : cRunning ? 'bg-accent animate-pulse'
+                            : 'bg-green-400'
+                        }`}
+                      />
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          }
+
           return (
             <div key={item.step} className="flex items-center gap-2 text-xs text-text-muted">
               <span className={`w-2 h-2 rounded-full ${isFailed ? 'bg-red-400' : isRunning ? 'bg-accent animate-pulse' : 'bg-green-400'}`} />
