@@ -28,11 +28,24 @@ export const PACK_IDS = {
 // appear in the dashboard and the language switcher dropdown.
 export const LESSON_PACKS = [
   {
+    // French Foundations. The FR course ships 32 themes
+    // (fr_theme01..31, registered as 8 real theme files plus 23
+    // stubTheme() entries in theme01-pronouns-present.js). Migration
+    // 027 backfills every fr_theme row to pack_id='fr-foundations',
+    // so the explicit themeIds list must cover all of them — a
+    // missing id becomes an orphan: filterThemesByPack drops it,
+    // getPackForThemeId returns null, and assertPackInvariants
+    // warns "matches no pack".
     id: PACK_IDS.FR_FOUNDATIONS,
     langPrefix: 'fr',
     themeIds: [
       'fr_theme01', 'fr_theme02', 'fr_theme03', 'fr_theme04', 'fr_theme05',
-      'fr_theme06', 'fr_theme07', 'fr_theme08',
+      'fr_theme06', 'fr_theme07', 'fr_theme08', 'fr_theme09', 'fr_theme10',
+      'fr_theme11', 'fr_theme12', 'fr_theme13', 'fr_theme14', 'fr_theme15',
+      'fr_theme16', 'fr_theme17', 'fr_theme18', 'fr_theme19', 'fr_theme20',
+      'fr_theme21', 'fr_theme22', 'fr_theme23', 'fr_theme24', 'fr_theme25',
+      'fr_theme26', 'fr_theme27', 'fr_theme28', 'fr_theme29', 'fr_theme30',
+      'fr_theme31',
     ],
     primaryRoute: '/themes',
     modes: ['themes', 'training', 'cards'],
@@ -56,7 +69,7 @@ export const LESSON_PACKS = [
       'pl_theme19', 'pl_theme22',
     ],
     primaryRoute: '/themes',
-    modes: ['themes', 'training', 'cards'],
+    modes: ['themes', 'training', 'cards', 'email'],
     accentClass: 'from-violet-500 to-fuchsia-500',
   },
   {

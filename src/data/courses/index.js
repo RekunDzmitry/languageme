@@ -3,7 +3,7 @@
 
 import { COURSE as FR_COURSE, VOCAB as FR_VOCAB, THEMES as FR_THEMES, getHints } from './fr/index.js'
 import { COURSE as PL_COURSE, VOCAB as PL_VOCAB, THEMES as PL_THEMES } from './pl/index.js'
-import { hints as ruHints } from './fr/hints/ru'
+import { hints as ruHints } from './fr/hints/ru.js'
 import { EXAMPLES as FR_EXAMPLES } from './fr/examples.js'
 
 // Course registry by target language

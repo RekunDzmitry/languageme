@@ -119,7 +119,7 @@ test.describe('Polish themes reorganization - rendered UI', () => {
     }
   })
 
-  test('/training for PL_A1/A2 shows Ćwiczenia 0/0 and Email 0/0; Słowa shows 2 themes (even with user-authored write_answer drills on theme 20/21)', async ({
+  test('/training for PL_A1/A2 shows Ćwiczenia 0/0 (no Email tab; pack is vocab-only); Słowa shows 2 themes (even with user-authored write_answer drills on theme 20/21)', async ({
     page,
     request,
   }) => {
@@ -149,9 +149,9 @@ test.describe('Polish themes reorganization - rendered UI', () => {
     await expect(cwiczeniaTab).toBeVisible()
     await expect(cwiczeniaTab).toContainText('0/0')
 
-    const emailTab = page.getByRole('button', { name: /Email/ }).first()
-    await expect(emailTab).toBeVisible()
-    await expect(emailTab).toContainText('0/0')
+    // PL_A1/A2 is vocab-only, so the Email tab is suppressed by the
+    // activePack.modes gate. Asserting its absence is part of the spec.
+    await expect(page.getByRole('button', { name: /Email/ })).toHaveCount(0)
 
     // Switch to Słowa and confirm both A1/A2 themes render.
     const slowaTab = page.getByRole('button', { name: /Słowa/ }).first()

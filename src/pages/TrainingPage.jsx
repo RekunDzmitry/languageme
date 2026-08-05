@@ -5,7 +5,7 @@ import { exerciseApi } from '../api/client'
 import { useProgress } from '../stores/UserProgressContext'
 import { useSettings } from '../stores/SettingsContext'
 import { getThemes, getThemeTitle, getVocab } from '../data/courses'
-import { filterThemesByPack, PACK_IDS } from '../data/lessonPacks'
+import { filterThemesByPack, getLessonPack, PACK_IDS } from '../data/lessonPacks'
 import { getThemeConjugationMastery, getConjugationDueCount, getExerciseMastery, getExerciseDueCountByTheme, getVocabMastery, getVocabDueCount } from '../utils/progress'
 import { conjCardKey, PRONOUNS } from '../utils/conjugation'
 import AIChatModal from '../components/ai/AIChatModal'
@@ -319,6 +319,7 @@ export default function TrainingPage() {
   const { settings } = useSettings()
   const targetLang = settings.targetLang
   const activePackId = settings.activePackId
+  const activePack = getLessonPack(activePackId, targetLang)
   const themes = filterThemesByPack(getThemes(targetLang), activePackId, targetLang)
   const vocab = getVocab(targetLang)
   const { t } = useT()
@@ -330,6 +331,7 @@ export default function TrainingPage() {
   const [activeTab, setActiveTab] = useState('exercises')
 
   const isPolish = targetLang === 'pl'
+
 
   // User-authored write_answer drills added from email corrections.
   const [userExercises, setUserExercises] = useState([])
@@ -516,11 +518,27 @@ export default function TrainingPage() {
     setAiChatVerb(verb)
   }
 
+  // Tab visibility is gated on activePack.modes so the Email tab
+  // only renders for packs that actually carry email_writing themes.
+  // PL_A1/A2 is vocab-only, so its Email tab is suppressed (was
+  // rendering as an always-empty "0/0" before this gate).
+  const hasEmailMode = !!activePack?.modes?.includes('email')
   const TABS = [
     { id: 'exercises', label: 'Ćwiczenia', stats: exerciseTabStats },
     { id: 'vocab', label: 'Słowa', stats: vocabTabStats },
-    { id: 'email', label: 'Email', stats: { total: emailTabTotal, mastered: 0 } },
+    ...(hasEmailMode ? [{ id: 'email', label: 'Email', stats: { total: emailTabTotal, mastered: 0 } }] : []),
   ]
+
+  // If the active tab was removed by the activePack.modes gate (e.g.
+  // the user had Email selected in PL_TELC and switched to PL_A1/A2,
+  // which doesn't expose the Email tab), fall back to the first
+  // available tab so the page doesn't render an empty list with no
+  // way to switch.
+  useEffect(() => {
+    if (!TABS.some((t) => t.id === activeTab)) {
+      setActiveTab(TABS[0]?.id || 'exercises')
+    }
+  }, [activeTab, TABS])
 
   function renderThemeCard(theme) {
     const hasVerbs = theme.verbList?.length > 0

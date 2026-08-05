@@ -1,6 +1,6 @@
-import { VOCAB, THEMES } from './vocab'
-import { hints as ruHints } from './hints/ru'
-import { hints as plHints } from './hints/pl'
+import { VOCAB, THEMES } from './vocab.js'
+import { hints as ruHints } from './hints/ru.js'
+import { hints as plHints } from './hints/pl.js'
 
 export const COURSE = {
   id: 'fr-ru',

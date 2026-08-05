@@ -185,7 +185,6 @@ export default function EmailExercise({ exercise, themeId, exerciseIdx, onContin
       setStage('ready')
     }
   }, [userText, stage, exercise, themeId, exerciseIdx, t, targetLevel, updateProgress])
-
   // Keep handleEvaluate ref in sync
   useEffect(() => { handleEvaluateRef.current = handleEvaluate }, [handleEvaluate])
 
