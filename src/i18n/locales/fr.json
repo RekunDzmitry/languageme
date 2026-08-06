@@ -301,5 +301,7 @@
   "theme_other": "Mes cartes",
   "optional": "facultatif",
   "saving": "Enregistrement...",
-  "save": "Enregistrer"
+  "save": "Enregistrer",
+  "edit_exercise_note": "Modifier la note",
+  "add_exercise_note": "Ajouter une note"
 }

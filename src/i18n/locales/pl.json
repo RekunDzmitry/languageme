@@ -358,5 +358,7 @@
   "theme_other": "Moje fiszki",
   "optional": "opcjonalnie",
   "saving": "Zapisywanie...",
-  "save": "Zapisz"
+  "save": "Zapisz",
+  "edit_exercise_note": "Edytuj notatkę",
+  "add_exercise_note": "Dodaj notatkę"
 }
