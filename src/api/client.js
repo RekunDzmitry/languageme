@@ -128,37 +128,6 @@ export const studyApi = {
 }
 
 
-// AI Assistant API
-export const aiApi = {
-  // Send a chat message
-  chat: (message, exerciseKey, exerciseType = 'conjugation', exerciseContext = null) =>
-    api.post('/api/ai/chat', { message, exerciseKey, exerciseType, exerciseContext }),
-
-  // Get conversation history for an exercise
-  getConversation: (exerciseKey) =>
-    api.get(`/api/ai/conversations/${encodeURIComponent(exerciseKey)}`),
-
-  // Get all recent conversations
-  getConversations: (limit = 10) =>
-    api.get(`/api/ai/conversations?limit=${limit}`),
-
-  // Get notes
-  getNotes: (exerciseKey) =>
-    api.get(`/api/ai/notes${exerciseKey ? `?exerciseKey=${encodeURIComponent(exerciseKey)}` : ''}`),
-
-  // Save a note
-  saveNote: (exerciseKey, content, title, exerciseType = 'conjugation') =>
-    api.post('/api/ai/notes', { exerciseKey, content, exerciseType, title }),
-
-  // Update a note
-  updateNote: (noteId, content, title = null) =>
-    api.put(`/api/ai/notes/${noteId}`, { content, title }),
-
-  // Delete a note
-  deleteNote: (noteId) =>
-    api.delete(`/api/ai/notes/${noteId}`),
-}
-
 // Admin API (observability + AI sandbox)
 export const adminApi = {
   listLogs: ({ limit = 50, offset = 0, userId, isSandbox, q } = {}) => {
