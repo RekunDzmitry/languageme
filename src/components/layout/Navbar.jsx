@@ -7,7 +7,7 @@ import LanguageSwitcher from './LanguageSwitcher'
 export default function Navbar() {
   const { t } = useT()
   const location = useLocation()
-  const { isAuthenticated, isLoading, isAdmin } = useAuth()
+  const { isAuthenticated, isLoading,  } = useAuth()
 
   const links = [
     { to: '/', label: t('nav_home'), icon: '⌂' },
@@ -38,16 +38,6 @@ export default function Navbar() {
             </Link>
           )
         })}
-        {isAdmin && (
-          <Link
-            to="/admin"
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium no-underline transition-colors
-              ${location.pathname.startsWith('/admin') ? 'bg-accent-glow text-accent' : 'text-text-muted hover:text-text-primary'}`}
-          >
-            <span>🛠</span>
-            <span>{t('nav_admin')}</span>
-          </Link>
-        )}
         <LanguageSwitcher />
         {!isLoading && (
           isAuthenticated ? (
