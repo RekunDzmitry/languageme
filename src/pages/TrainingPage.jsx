@@ -8,7 +8,6 @@ import { getThemes, getThemeTitle, getVocab } from '../data/courses'
 import { filterThemesByPack, getLessonPack, PACK_IDS } from '../data/lessonPacks'
 import { getThemeConjugationMastery, getConjugationDueCount, getExerciseMastery, getExerciseDueCountByTheme, getVocabMastery, getVocabDueCount } from '../utils/progress'
 import { conjCardKey, PRONOUNS } from '../utils/conjugation'
-import AIChatModal from '../components/ai/AIChatModal'
 import ExerciseSection from '../components/themes/ExerciseSection'
 import ExerciseNoteModal from '../components/themes/exercises/ExerciseNoteModal'
 import VocabNoteModal from '../components/themes/exercises/VocabNoteModal'
@@ -166,7 +165,7 @@ function VocabGrid({ vocabIds, vocab, cards, vocabNotes, t, nativeLang, onNoteCl
   )
 }
 
-function VerbGrid({ theme, conjugationCards, t, formType, onAiChat, pronounLabels }) {
+function VerbGrid({ theme, conjugationCards, t, formType, pronounLabels }) {
   const verbs = theme.verbList || []
 
   // Group verbs by their group field
@@ -184,7 +183,6 @@ function VerbGrid({ theme, conjugationCards, t, formType, onAiChat, pronounLabel
             {pronounLabels.map(p => (
               <th key={p} className="text-center text-text-muted font-medium py-1 px-1.5 min-w-[36px]">{p}</th>
             ))}
-            <th className="w-8"></th>
           </tr>
         </thead>
         <tbody>
@@ -230,17 +228,6 @@ function VerbGrid({ theme, conjugationCards, t, formType, onAiChat, pronounLabel
                     </td>
                   )
                 })}
-                <td className="py-1.5 px-1.5">
-                  <button
-                    onClick={() => onAiChat(verb)}
-                    className="w-6 h-6 flex items-center justify-center text-accent hover:bg-accent/20 rounded transition-colors"
-                    title="Chat with AI about this verb"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                    </svg>
-                  </button>
-                </td>
               </tr>
           ))}
         </tbody>
@@ -325,7 +312,6 @@ export default function TrainingPage() {
   const { t } = useT()
   const navigate = useNavigate()
   const [expandedThemeId, setExpandedThemeId] = useState(null)
-  const [aiChatVerb, setAiChatVerb] = useState(null)
   const [noteModal, setNoteModal] = useState(null)
   const [vocabNoteModal, setVocabNoteModal] = useState(null)
   const [activeTab, setActiveTab] = useState('exercises')
@@ -514,10 +500,6 @@ export default function TrainingPage() {
     displayOrder: idx + 1,
   }))
 
-  function handleAiChat(verb) {
-    setAiChatVerb(verb)
-  }
-
   // Tab visibility is gated on activePack.modes so the Email tab
   // only renders for packs that actually carry email_writing themes.
   // PL_A1/A2 is vocab-only, so its Email tab is suppressed (was
@@ -621,7 +603,7 @@ export default function TrainingPage() {
 
         {isExpanded && hasVerbs && (
           <div className="mt-3 border-t border-white/[0.08] pt-3">
-            <VerbGrid theme={theme} conjugationCards={conjugationCards} t={t} formType={formType} onAiChat={handleAiChat} pronounLabels={pronounLabels} />
+            <VerbGrid theme={theme} conjugationCards={conjugationCards} t={t} formType={formType} pronounLabels={pronounLabels} />
             <div className="mt-4 flex justify-center">
               <button
                 onClick={() => navigate(`/learn/${theme.id}`)}
@@ -746,19 +728,6 @@ export default function TrainingPage() {
             {themes.map(theme => renderThemeCard(theme))}
           </div>
         </>
-      )}
-
-      {/* AI Chat Modal for verb notes */}
-      {aiChatVerb && (
-        <AIChatModal
-          exerciseKey={`verb:${aiChatVerb.infinitive}`}
-          exerciseType="verb"
-          verb={aiChatVerb}
-          prompt={aiChatVerb.infinitive}
-          answer={null}
-          onClose={() => setAiChatVerb(null)}
-          onNoteSaved={null}
-        />
       )}
 
       {/* Exercise note modal */}
