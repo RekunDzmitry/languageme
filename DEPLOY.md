@@ -61,7 +61,6 @@ Runtime secrets live in `/opt/languageme/.env` on the server (chmod 600, never c
 | `PUBLIC_URL` | `https://languageme.dpdns.org` — base for OAuth callbacks |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth credentials |
 | `NVIDIA_API_KEY` | AI provider key (NVIDIA Nemotron) |
-| `OPENCODE_API_KEY` | AI provider key |
 | `AI_BASE_URL` / `AI_MODEL` | AI provider config (defaults set in compose) |
 
 `DATABASE_URL`, the JWT secrets, and `PORT` have safe fallbacks baked into
