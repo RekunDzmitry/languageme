@@ -16,3 +16,12 @@ tests/screenshots/
 .pi/
 pi-annotate-*.tgz
 tests/pi-agent-verify.spec.js
+
+# Worktree-only docker compose files. Each worktree tends to carry its
+# own override (docker-compose.local.yml, docker-compose.<branch>.yml,
+# docker-compose.worktree.yml, etc.) with hardcoded dev credentials and
+# bind-mounts that only make sense for that worktree. The base
+# docker-compose.yml + docker-compose.prod.yml + server/Dockerfile are
+# the canonical project files and stay tracked.
+docker-compose.*.yml
+docker-compose.*.yaml
