@@ -45,7 +45,14 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
   const [editText, setEditText] = useState('')
 
   const noteThemeId = themeId || GENERAL_NOTE_THEME
-  const note = exerciseNotes[`${noteThemeId}:${item.key}`] || null
+  // Notes are namespaced by theme to match the write-exercise flow in
+  // ExerciseSection and TrainingPage (which read `exerciseNotes[themeId:key]`
+  // and save under the same composite). Without the prefix, saveExerciseNote
+  // would write to `exerciseNotes[item.key]` while the read happens at
+  // `exerciseNotes[${noteThemeId}:${item.key}]` — the dict lookup misses
+  // and the saved note appears empty on the next reveal.
+  const noteKey = `${noteThemeId}:${item.key}`
+  const note = exerciseNotes[noteKey] || null
 
   function handleReveal() {
     setRevealed(true)
@@ -146,7 +153,7 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
             ) : (
               <ExerciseNotePanel
                 existingNote={note}
-                exerciseKey={item.key}
+                exerciseKey={noteKey}
                 themeId={noteThemeId}
                 onSave={saveExerciseNote}
                 onDelete={clearExerciseNote}
