@@ -6,12 +6,10 @@ import { grade as deterministicGrade, METRIC_VERSION } from '../services/emailSc
 import { discoverErrors } from '../services/emailDiscovery.js';
 import {
   buildEnrichmentPrompt,
-  buildEnrichmentRequestBody,
   parseEnrichmentResponse,
   fallbackEnrichment,
   ENRICHMENT_MAX_TOKENS,
 } from '../services/emailEnrichment.js';
-import { findTextOccurrences, rangesOverlap, resolveErrorSpan } from '../services/emailSpanHelpers.js';
 
 const router = Router();
 
