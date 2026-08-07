@@ -241,11 +241,25 @@ export function parseEnrichmentResponse(rawText, userText, discoveredErrors) {
   const llmErrors = styleVocab.slice(0, 6).map((raw, idx) => {
     const fragment = typeof raw?.originalText === 'string' ? raw.originalText.trim() : '';
     const category = LLM_SOURCED_CATEGORIES.has(raw?.category) ? raw.category : 'style';
-    const span = resolveErrorSpan(
-      userText,
-      fragment,
-      enrichedErrors.map(e => ({ startOffset: e.startOffset, endOffset: e.endOffset })),
-    );
+    // Prefer the LLM's offsets when they form a valid span that matches the
+    // quoted fragment byte-for-byte. Falls back to fuzzy indexOf (which now
+    // honors a preferredStart so a repeated fragment lands on the occurrence
+    // the LLM meant, not always the first one).
+    const llmStart = Number.isInteger(raw?.startOffset) ? raw.startOffset : -1;
+    const llmEnd = Number.isInteger(raw?.endOffset) ? raw.endOffset : -1;
+    const llmSpanValid = llmStart >= 0
+      && llmEnd > llmStart
+      && llmEnd <= userText.length
+      && typeof raw?.originalText === 'string'
+      && userText.slice(llmStart, llmEnd) === raw.originalText;
+    const span = llmSpanValid
+      ? { startOffset: llmStart, endOffset: llmEnd, originalText: userText.slice(llmStart, llmEnd), resolved: true }
+      : resolveErrorSpan(
+        userText,
+        fragment,
+        enrichedErrors.map(e => ({ startOffset: e.startOffset, endOffset: e.endOffset })),
+        llmStart >= 0 ? llmStart : 0,
+      );
     return {
       id: `err_${baseIdx + idx}`,
       source: category === 'style' ? 'llm-style' : 'llm-vocab',

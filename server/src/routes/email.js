@@ -125,7 +125,7 @@ async function callAI(prompt, options = {}) {
 // ============================================================================
 
 const EMAIL_TARGET_LEVELS = ['B1', 'B2'];
-const ERROR_CATEGORIES = ['spelling', 'grammar', 'style', 'vocabulary'];
+const ERROR_CATEGORIES = ['spelling', 'grammar', 'punctuation', 'style', 'vocabulary'];
 
 function normalizeTargetLevel(targetLevel) {
   return EMAIL_TARGET_LEVELS.includes(targetLevel) ? targetLevel : 'B1';
@@ -411,9 +411,13 @@ router.post('/evaluate-stream', requireAuth, async (req, res) => {
   const requestTimeout = setTimeout(() => requestController.abort(), EMAIL_EVALUATION_TIMEOUT_MS);
 
   // Bridge core events to NDJSON output + DB persistence. The core emits
-  // {type, step, ...} events; we mirror them on the wire and snapshot them
-  // into email_attempt.evaluation_steps so a refresh / retry can replay the
-  // last finished state.
+  // {type, step, ...} events synchronously — multiple updates can fire while
+  // the previous UPDATE is still in flight. We maintain an in-memory `steps`
+  // mirror synchronously (the authoritative view) and serialize DB writes
+  // through a single promise chain so each UPDATE writes the latest snapshot
+  // instead of a stale one. The last write wins for the same key (correct:
+  // later events override earlier ones for the same step).
+  let stepsWriteChain = Promise.resolve();
   const onEvent = (evt) => {
     writeStreamEvent(res, evt.type, evt);
     if (evt.type === 'step_started' || evt.type === 'step_completed' || evt.type === 'step_failed') {
@@ -429,9 +433,16 @@ router.post('/evaluate-stream', requireAuth, async (req, res) => {
         ...(evt.counts ? { counts: evt.counts } : {}),
         ...(evt.metricVersion ? { metricVersion: evt.metricVersion } : {}),
       };
-      updateEvaluationStep({ attemptId: attempt.id, userId, steps, key: step, patch })
-        .then(nextSteps => { steps = nextSteps; })
-        .catch(dbErr => console.error(`Failed to persist step ${step}:`, dbErr.message));
+      // 1. Update the in-memory mirror synchronously — this is what the final
+      //    'final' update below reads from.
+      steps = { ...steps, [step]: { ...(steps[step] || {}), ...patch } };
+      // 2. Queue the DB write so each one runs against the latest snapshot.
+      stepsWriteChain = stepsWriteChain.then(() => pool.query(
+        `UPDATE email_attempt
+         SET evaluation_steps = $3::jsonb, updated_at = NOW()
+         WHERE id = $1 AND user_id = $2`,
+        [attempt.id, userId, JSON.stringify(steps)],
+      ).catch(dbErr => console.error(`Failed to persist step ${step}:`, dbErr.message)));
     }
   };
 
@@ -447,7 +458,9 @@ router.post('/evaluate-stream', requireAuth, async (req, res) => {
       onEvent,
       signal: requestController.signal,
     });
-
+    // Wait for every queued step write to land before the final step runs,
+    // so the final 'evaluation_steps' JSONB is the cumulative snapshot.
+    await stepsWriteChain;
     const finalEvaluation = result.evaluation;
     steps = await updateEvaluationStep({ attemptId: attempt.id, userId, steps, key: 'final', patch: { status: 'complete', completedAt: new Date().toISOString(), data: finalEvaluation }, status: 'complete' });
     await pool.query(

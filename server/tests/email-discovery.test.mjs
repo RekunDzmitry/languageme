@@ -309,6 +309,63 @@ test('parseEnrichmentResponse returns no enrichments when response is truncated 
   assert.equal(parsed.enrichedErrors[0].explanation, '');
 });
 
+test('parseEnrichmentResponse prefers LLM-provided offsets when they match the quoted fragment', () => {
+  // Two occurrences of "Krakowie" — the LLM correctly points to the SECOND one.
+  // indexOf returns 42 for the second "Krakowie"; endOffset is exclusive.
+  const text = 'Byłem w Krakowie i moi znajomi byli też w Krakowie w zeszłym roku.';
+  const fakeErrs = [];
+  const fake = JSON.stringify({
+    enrichments: [],
+    styleAndVocabularyErrors: [
+      {
+        originalText: 'Krakowie',
+        correction: 'Krakowie',
+        explanation: 'locative form is correct here',
+        category: 'vocabulary',
+        startOffset: 42,
+        endOffset: 50,
+      },
+    ],
+    constructionReplacements: [],
+  });
+  const parsed = parseEnrichmentResponse(fake, text, fakeErrs);
+  assert.equal(parsed.enrichedErrors.length, 1);
+  // Must resolve to offset 42 (the LLM's offset), not 8 (the first occurrence).
+  assert.equal(parsed.enrichedErrors[0].startOffset, 42);
+  assert.equal(parsed.enrichedErrors[0].endOffset, 50);
+});
+
+test('parseEnrichmentResponse falls back to fuzzy indexOf near the LLM offset when it drifts', () => {
+  // LLM points to offset 50 but the slice at 50..57 doesn't match — fall back
+  // to the occurrence closest to that anchor.
+  const text = 'A Krakowie B C D E F G H Krakowie I';
+  const fakeErrs = [];
+  const fake = JSON.stringify({
+    enrichments: [],
+    styleAndVocabularyErrors: [
+      { originalText: 'Krakowie', correction: 'Krakowie', explanation: '', category: 'style', startOffset: 50, endOffset: 58 },
+    ],
+    constructionReplacements: [],
+  });
+  const parsed = parseEnrichmentResponse(fake, text, fakeErrs);
+  // Should land on the second occurrence (closer to anchor 50).
+  assert.equal(text.slice(parsed.enrichedErrors[0].startOffset, parsed.enrichedErrors[0].endOffset), 'Krakowie');
+  assert.ok(parsed.enrichedErrors[0].startOffset >= 25, 'must be the second occurrence');
+});
+
+test('buildDeterministicFinalEvaluation preserves the punctuation category', () => {
+  // Read the source to assert the allowlist includes punctuation. We can't
+  // import buildDeterministicFinalEvaluation directly (it's not exported),
+  // so we verify through the route contract test's string check + by
+  // exercising the wire payload via HTTP when the smoke test runs.
+  const routeSource = readFileSync(new URL('../src/routes/email.js', import.meta.url), 'utf8');
+  assert.match(
+    routeSource,
+    /const ERROR_CATEGORIES = \[[^\]]*'spelling'[^\]]*'punctuation'[^\]]*\]/,
+    'ERROR_CATEGORIES allowlist must include punctuation so deterministic punctuation errors are not silently downgraded to grammar',
+  );
+});
+
 test('buildEnrichmentPrompt tolerates a missing target level (defaults to B1)', () => {
   const f = fixtures[0];
   const errs = discoverErrors(f.userText);

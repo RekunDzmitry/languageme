@@ -42,18 +42,35 @@ export function rangesOverlap(a, b) {
  * @param {Array<{startOffset: number, endOffset: number}>} [accepted]
  * @returns {{startOffset: number, endOffset: number, originalText: string, resolved: boolean}}
  */
-export function resolveErrorSpan(userText, originalText, accepted = []) {
+export function resolveErrorSpan(userText, originalText, accepted = [], preferredStart = 0) {
   const candidates = [originalText, String(originalText || '').trim()]
     .filter((item, idx, arr) => item && arr.indexOf(item) === idx);
+  // Pick the occurrence whose start is closest to (and at or after)
+  // `preferredStart` so a repeated fragment in the email resolves to the
+  // occurrence the LLM meant instead of always the first one. We still skip
+  // any occurrence that overlaps an `accepted` range so we don't double-highlight.
+  let best = null;
+  let bestDistance = Infinity;
+  const anchor = Math.max(0, Number(preferredStart) || 0);
   for (const candidate of candidates) {
     for (const occurrence of findTextOccurrences(userText, candidate)) {
       if (accepted.some(existing => rangesOverlap(existing, occurrence))) continue;
-      return {
-        ...occurrence,
-        originalText: userText.slice(occurrence.startOffset, occurrence.endOffset),
-        resolved: true,
-      };
+      const distance = occurrence.startOffset >= anchor
+        ? occurrence.startOffset - anchor
+        : (anchor - occurrence.startOffset) * 2 + 1; // penalize "before anchor" matches
+      if (distance < bestDistance) {
+        best = occurrence;
+        bestDistance = distance;
+      }
     }
+    if (best) break;
+  }
+  if (best) {
+    return {
+      ...best,
+      originalText: userText.slice(best.startOffset, best.endOffset),
+      resolved: true,
+    };
   }
   return {
     startOffset: -1,
