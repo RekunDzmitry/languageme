@@ -37,7 +37,7 @@ test('fr/vocab.js disambiguates fr_313/314/315 Russian translations', () => {
   const elever = lineWithId(vocab, 'fr_315');
 
   assert.ok(lever.includes('"поднимать"'), `fr_313 should keep "поднимать" as its primary gloss, got: ${lever}`);
-  assert.ok(relever.includes('"отмечать, фиксировать"'), `fr_314 must be "отмечать, фиксировать" (was "поднимать, отмечать"), got: ${relever}`);
+  assert.ok(relever.includes('"подхватывать, принимать"'), `fr_314 must be "подхватывать, принимать", got: ${relever}`);
   assert.ok(elever.includes('"воспитывать, растить"'), `fr_315 must be "воспитывать, растить" (was "воспитывать, поднимать"), got: ${elever}`);
 
   // The user's exact bug: identical primary word. Now each starts with
@@ -63,7 +63,7 @@ test('fr/theme01-conjugations-ru.js has distinct conjugations for lever/relever/
   const eleverLine = conj.split('\n').find((l) => l.trim().startsWith('élever:'));
 
   assert.ok(leverLine?.includes('поднимаю'), 'lever should conjugate to "поднимаю"');
-  assert.ok(releverLine?.includes('отмечаю'), 'relever must conjugate to "отмечаю" (not "поднимаю")');
+  assert.ok(releverLine?.includes('подхватываю'), 'relever must conjugate to "подхватываю"');
   assert.ok(eleverLine?.includes('воспитываю'), 'élever should conjugate to "воспитываю"');
 });
 
@@ -75,7 +75,7 @@ test('fr/theme02-conjugations-ru.js has distinct negative conjugations', () => {
   const eleverLine = conj.split('\n').find((l) => l.trim().startsWith('élever:'));
 
   assert.ok(leverLine?.includes('не поднимаю'));
-  assert.ok(releverLine?.includes('не отмечаю'), 'relever negative must be "не отмечаю" (not "не поднимаю")');
+  assert.ok(releverLine?.includes('не подхватываю'), 'relever negative must be "не подхватываю"');
   assert.ok(eleverLine?.includes('не воспитываю'));
 });
 
@@ -87,7 +87,7 @@ test('fr/theme01-pronouns-present.js verbList disambiguates the three verbs', ()
   const eleverRow = theme.split('\n').find((l) => l.includes("infinitive: 'élever'"));
 
   assert.ok(leverRow?.includes("'поднимать'"));
-  assert.ok(releverRow?.includes("'отмечать, фиксировать'"), 'relever verbList row must say "отмечать, фиксировать"');
+  assert.ok(releverRow?.includes("'подхватывать, принимать'"), 'relever verbList row must say "подхватывать, принимать"');
   assert.ok(eleverRow?.includes("'воспитывать, растить'"), 'élever verbList row must say "воспитывать, растить"');
 });
 
@@ -122,11 +122,12 @@ test('fr-pl/theme01-conjugations-pl.js has lowercase "lever" and the missing ste
 test('Migration 034 exists, applies the disambiguation, and is idempotent', () => {
   const m = read('server/src/db/migrations/034_disambiguate_lever_relever_élever.sql');
   assert.ok(m.length > 0, 'migration 034 must exist');
-  // Each UPDATE is guarded by the OLD value to be idempotent.
-  assert.ok(m.includes("text = 'отмечать, фиксировать'") && m.includes("text = 'поднимать, отмечать'"),
-    'migration must update fr_314 RU from old value to new value');
-  assert.ok(m.includes("text = 'воспитывать, растить'") && m.includes("text = 'воспитывать, поднимать'"),
-    'migration must update fr_315 RU from old value to new value');
+  // Each UPDATE is guarded by the OLD value to be idempotent (single '='
+  // for first-time deploys, IN (...) when an intermediate value exists).
+  assert.ok(m.includes("'подхватывать, принимать'") && m.includes("'поднимать, отмечать'"),
+    'migration must update fr_314 RU to the new value and reference the old value as guard');
+  assert.ok(m.includes("'воспитывать, растить'") && m.includes("'воспитывать, поднимать'"),
+    'migration must update fr_315 RU to the new value and reference the old value as guard');
   // Wrapped in transaction for atomicity (matches the pattern of 029).
   assert.ok(/^BEGIN/m.test(m) && /^COMMIT/m.test(m), 'migration must be wrapped in BEGIN/COMMIT');
 });
@@ -134,12 +135,12 @@ test('Migration 034 exists, applies the disambiguation, and is idempotent', () =
 // ─── 8. Seed migration 004 must show the new values for fresh installs ─
 test('Seed migration 004 carries the disambiguated values', () => {
   const m = read('server/src/db/migrations/004_seed_stem_changing_verbs.sql');
-  assert.ok(m.includes("'fr_314', 'ru', 'отмечать, фиксировать'"),
+  assert.ok(m.includes("'fr_314', 'ru', 'подхватывать, принимать'"),
     'seed migration 004 must carry the new fr_314 RU gloss');
   assert.ok(m.includes("'fr_315', 'ru', 'воспитывать, растить'"),
     'seed migration 004 must carry the new fr_315 RU gloss');
-  assert.ok(!m.includes("'fr_314', 'ru', 'поднимать, отмечать'"),
-    'seed migration 004 must NOT keep the old fr_314 RU gloss');
+  assert.ok(!m.includes("'fr_314', 'ru', 'поднимать, отмечать'") && !m.includes("'fr_314', 'ru', 'отмечать, фиксировать'"),
+    'seed migration 004 must NOT keep either old fr_314 RU gloss');
   assert.ok(!m.includes("'fr_315', 'ru', 'воспитывать, поднимать'"),
     'seed migration 004 must NOT keep the old fr_315 RU gloss');
 });
@@ -148,6 +149,29 @@ test('Seed migration 004 carries the disambiguated values', () => {
 test('fr/hints/ru.js mnemonic for fr_314 matches the new disambiguated meaning', () => {
   const hints = read('src/data/courses/fr/hints/ru.js');
   const line = hints.split('\n').find((l) => l.startsWith('  fr_314:')) || '';
-  assert.ok(line.includes('отмечает') || line.includes('фиксирует'),
-    `fr_314 hint should mention "отмечает" or "фиксирует" to match the new card, got: ${line}`);
+  assert.ok(line.includes('подхват') || line.includes('линз') || line.includes('упавш'),
+    `fr_314 hint should reference the new "подхватывать" sense, got: ${line}`);
+});
+
+
+// ─── 10. Example sentences exist for all three verbs ─────────────────
+test('fr/examples.js has at least 2 examples per verb covering distinct senses', () => {
+  const ex = read('src/data/courses/fr/examples.js');
+  for (const id of ['fr_313', 'fr_314', 'fr_315']) {
+    const block = ex.split(`"${id}":`).slice(1, 2)[0] || '';
+    assert.ok(block.length > 0, `examples must exist for ${id}`);
+    // Count `fr:` occurrences — at least 2 examples
+    const count = (block.match(/{ fr:/g) || []).length;
+    assert.ok(count >= 2, `${id} should have at least 2 example sentences, has ${count}`);
+  }
+  // fr_314 (relever) examples should cover the 4 distinct senses
+  const fr314 = ex.split('"fr_314":').slice(1, 2)[0];
+  // Sense 1: "défi" (challenge) — must be present
+  assert.ok(/défi/i.test(fr314), 'fr_314 examples should include "défi" to illustrate the "take up a challenge" sense');
+  // Sense 2: "patient/qqn" (picking up a person) — must be present
+  assert.ok(/patient|tomb/i.test(fr314), 'fr_314 examples should illustrate the "pick up" sense');
+  // Sense 3: "compteurs" (meter readings) — must be present
+  assert.ok(/compteurs/i.test(fr314), 'fr_314 examples should illustrate the "take readings" sense');
+  // Sense 4: "relève de" (fall under) — must be present
+  assert.ok(/relève du|relève de/i.test(fr314), 'fr_314 examples should illustrate the "falls under" sense');
 });

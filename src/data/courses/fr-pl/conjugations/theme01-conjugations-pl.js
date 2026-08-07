@@ -66,7 +66,7 @@ export const THEME01_PL_CONJUGATIONS = {
   ajouter: ['dodaję', 'dodajesz', 'dodaje', 'dodajemy', 'dodajecie', 'dodają'],
  lever: ['podnoszę', 'podnosisz', 'podnosi', 'podnosimy', 'podnosicie', 'podnoszą'],
  enlever: ['zdejmuję', 'zdejmujesz', 'zdejmuje', 'zdejmujemy', 'zdejmujecie', 'zdejmują'],
- relever: ['odnotowuję', 'odnotowujesz', 'odnotowuje', 'odnotowujemy', 'odnotowujecie', 'odnotowują'],
+  relever: ['podejmuję', 'podejmujesz', 'podejmuje', 'podejmujemy', 'podejmujecie', 'podejmują'],
  élever: ['wychowuję', 'wychowujesz', 'wychowuje', 'wychowujemy', 'wychowujecie', 'wychowują'],
  mener: ['prowadzę', 'prowadzisz', 'prowadzi', 'prowadzimy', 'prowadzicie', 'prowadzą'],
  promener: ['spaceruję', 'spacerujesz', 'spaceruje', 'spacerujemy', 'spacerujecie', 'spacerują'],

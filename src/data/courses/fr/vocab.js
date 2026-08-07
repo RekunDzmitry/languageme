@@ -331,7 +331,7 @@ const _VOCAB = [
   { id: "fr_311", target: "emmener", ipa: "/ɑ̃m.ne/", gender: null, freq: 45, theme: "movement", themeIds: ["fr_theme01"], translations: { ru: "уводить, увозить", en: "to take (person) away" } },
   { id: "fr_312", target: "enlever", ipa: "/ɑ̃l.ve/", gender: null, freq: 40, theme: "actions", themeIds: ["fr_theme01"], translations: { ru: "снимать, убирать", en: "to remove" } },
   { id: "fr_313", target: "lever", ipa: "/lə.ve/", gender: null, freq: 35, theme: "actions", themeIds: ["fr_theme01"], translations: { ru: "поднимать", en: "to raise" } },
-  { id: "fr_314", target: "relever", ipa: "/ʁəl.ve/", gender: null, freq: 55, theme: "actions", themeIds: ["fr_theme01"], translations: { ru: "отмечать, фиксировать", en: "to note / to record" } },
+  { id: "fr_314", target: "relever", ipa: "/ʁəl.ve/", gender: null, freq: 55, theme: "actions", themeIds: ["fr_theme01"], translations: { ru: "подхватывать, принимать", en: "to take up / to pick up" } },
   { id: "fr_315", target: "élever", ipa: "/el.ve/", gender: null, freq: 45, theme: "actions", themeIds: ["fr_theme01"], translations: { ru: "воспитывать, растить", en: "to bring up / to raise (children)" } },
   { id: "fr_316", target: "mener", ipa: "/mə.ne/", gender: null, freq: 30, theme: "actions", themeIds: ["fr_theme01"], translations: { ru: "вести", en: "to lead" } },
   { id: "fr_317", target: "promener", ipa: "/pʁɔm.ne/", gender: null, freq: 55, theme: "movement", themeIds: ["fr_theme01"], translations: { ru: "гулять, выгуливать", en: "to walk (someone)" } },

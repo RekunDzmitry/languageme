@@ -113,8 +113,8 @@ INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_312', 'ru', 'с
 INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_312', 'en', 'to remove') ON CONFLICT DO NOTHING;
 INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_313', 'ru', 'поднимать') ON CONFLICT DO NOTHING;
 INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_313', 'en', 'to raise') ON CONFLICT DO NOTHING;
-INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_314', 'ru', 'отмечать, фиксировать') ON CONFLICT DO NOTHING;
-INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_314', 'en', 'to note / to record') ON CONFLICT DO NOTHING;
+INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_314', 'ru', 'подхватывать, принимать') ON CONFLICT DO NOTHING;
+INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_314', 'en', 'to take up / to pick up') ON CONFLICT DO NOTHING;
 INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_315', 'ru', 'воспитывать, растить') ON CONFLICT DO NOTHING;
 INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_315', 'en', 'to bring up / to raise (children)') ON CONFLICT DO NOTHING;
 INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_316', 'ru', 'вести') ON CONFLICT DO NOTHING;
@@ -369,7 +369,7 @@ INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, v
 INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme01', 'emmener', 'уводить, увозить', NULL, NULL, 'e→è: основа');
 INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme01', 'enlever', 'снимать, убирать', NULL, NULL, 'e→è: основа');
 INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme01', 'lever', 'поднимать', NULL, NULL, 'e→è: основа');
-INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme01', 'relever', 'отмечать, фиксировать', NULL, NULL, 'e→è: основа');
+INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme01', 'relever', 'подхватывать, принимать', NULL, NULL, 'e→è: основа');
 INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme01', 'élever', 'воспитывать, растить', NULL, NULL, 'e→è: основа');
 INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme01', 'mener', 'вести', NULL, NULL, 'e→è: основа');
 INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme01', 'promener', 'гулять, выгуливать', NULL, NULL, 'e→è: основа');

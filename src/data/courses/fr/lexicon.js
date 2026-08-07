@@ -266,9 +266,9 @@ export const LEXICON = {
     semantics: "Lever = поднять (простое физическое действие): lever la main (поднять руку), lever les yeux (поднять глаза). Soulever = приподнять (с усилием). Relever = поднять заново / зафиксировать. Élever = поднять на более высокий уровень (или воспитать)."
   },
   "fr_314": { // relever
-    synonyms: ["noter", "souligner", "ramasser"],
-    usage: "1) Отмечать, фиксировать (официально). 2) Поднимать заново (упавшее). 3) Зависеть (il relève de qqn).",
-    semantics: "Relever — МНОГОЗНАЧНЫЙ: 1) noter un fait (отметить факт), relever une erreur (зафиксировать ошибку); 2) relever quelqu'un (поднять упавшего); 3) relever les compteurs (снять показания); 4) il relève de la fiction (относится к вымыслу). Lever — просто поднять. Élever — поднять на уровень выше / воспитать."
+    synonyms: ["ramasser", "prendre la suite", "souligner"],
+    usage: "1) Подхватывать, принимать (вызов, эстафету). 2) Поднимать (упавшего). 3) Снимать показания (relever les compteurs). 4) Зависеть, относиться (il relève de qqn).",
+    semantics: "Relever = ПОДХВАТИТЬ: 1) принять (вызов/эстафету): relever un défi (принять вызов), relever le flambeau (подхватить знамя); 2) поднять (упавшего человека): relever quelqu'un; 3) снять показания: relever les compteurs, le gaz; 4) il relève de la fiction — относится к вымыслу, подведомственен. Сравните: lever — просто поднять; élever — поднять на уровень выше / воспитать детей. Relever = lever + префикс re- (снова, назад): поднять заново, взять обратно."
   },
   "fr_315": { // élever
     synonyms: ["éduquer", "former", "élever"],
