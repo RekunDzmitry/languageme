@@ -21,6 +21,366 @@
         "total": 7,
         "band": "B1",
         "notes": "Real B1 email with many spelling errors. Content=1 because pt 1 (describe your room) is not directly addressed and pt 2 (roommates) doesn't lemmatize-match the bow. Composition=3: greeting OK, closing fails (Sciskam without Ś). Accuracy=2: ρ ~ 14 lands in the 10-20 band. Vocabulary=1: most words are off-list (B1 seed only has 802 lemmas)."
+      },
+      "discovery": {
+        "totalErrors": 26,
+        "byCategory": {
+          "spelling": 25,
+          "punctuation": 1,
+          "grammar": 0
+        },
+        "errors": [
+          {
+            "id": "err_0",
+            "category": "spelling",
+            "startOffset": 6,
+            "endOffset": 10,
+            "originalText": "Oliu",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "Oliw",
+              "Olku",
+              "Liu"
+            ]
+          },
+          {
+            "id": "err_1",
+            "category": "spelling",
+            "startOffset": 56,
+            "endOffset": 66,
+            "originalText": "przyjchłem",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "przyschłem"
+            ]
+          },
+          {
+            "id": "err_2",
+            "category": "spelling",
+            "startOffset": 116,
+            "endOffset": 126,
+            "originalText": "meiszkania",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "mieszkania"
+            ]
+          },
+          {
+            "id": "err_3",
+            "category": "spelling",
+            "startOffset": 144,
+            "endOffset": 157,
+            "originalText": "jednepokojowe",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "jednopokojowe"
+            ]
+          },
+          {
+            "id": "err_4",
+            "category": "spelling",
+            "startOffset": 160,
+            "endOffset": 164,
+            "originalText": "male",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "malle",
+              "bale",
+              "cale"
+            ]
+          },
+          {
+            "id": "err_5",
+            "category": "spelling",
+            "startOffset": 211,
+            "endOffset": 220,
+            "originalText": "potzebuję",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "potrzebuję"
+            ]
+          },
+          {
+            "id": "err_6",
+            "category": "spelling",
+            "startOffset": 250,
+            "endOffset": 255,
+            "originalText": "łożek",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "łożem",
+              "bożek",
+              "łojek"
+            ]
+          },
+          {
+            "id": "err_7",
+            "category": "spelling",
+            "startOffset": 270,
+            "endOffset": 277,
+            "originalText": "współna",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "wspólna"
+            ]
+          },
+          {
+            "id": "err_8",
+            "category": "spelling",
+            "startOffset": 309,
+            "endOffset": 315,
+            "originalText": "studii",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "studio",
+              "studiu",
+              "studia"
+            ]
+          },
+          {
+            "id": "err_9",
+            "category": "spelling",
+            "startOffset": 415,
+            "endOffset": 423,
+            "originalText": "Wrocława",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "Rocława",
+              "Wrocław",
+              "Wrocławia"
+            ]
+          },
+          {
+            "id": "err_10",
+            "category": "spelling",
+            "startOffset": 454,
+            "endOffset": 468,
+            "originalText": "podrożowaliśmy",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "podróżowaliśmy"
+            ]
+          },
+          {
+            "id": "err_11",
+            "category": "spelling",
+            "startOffset": 472,
+            "endOffset": 479,
+            "originalText": "Francij",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "Franci",
+              "Francie",
+              "Francis"
+            ]
+          },
+          {
+            "id": "err_12",
+            "category": "spelling",
+            "startOffset": 506,
+            "endOffset": 514,
+            "originalText": "Wszystcy",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "Wszyscy"
+            ]
+          },
+          {
+            "id": "err_13",
+            "category": "spelling",
+            "startOffset": 563,
+            "endOffset": 570,
+            "originalText": "studuje",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "studiuje"
+            ]
+          },
+          {
+            "id": "err_14",
+            "category": "spelling",
+            "startOffset": 613,
+            "endOffset": 622,
+            "originalText": "systemnym",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": []
+          },
+          {
+            "id": "err_15",
+            "category": "spelling",
+            "startOffset": 640,
+            "endOffset": 647,
+            "originalText": "Współne",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "Wspólne"
+            ]
+          },
+          {
+            "id": "err_16",
+            "category": "spelling",
+            "startOffset": 648,
+            "endOffset": 653,
+            "originalText": "zycje",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "Zycie"
+            ]
+          },
+          {
+            "id": "err_17",
+            "category": "spelling",
+            "startOffset": 918,
+            "endOffset": 928,
+            "originalText": "Naprzyklad",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": []
+          },
+          {
+            "id": "err_18",
+            "category": "spelling",
+            "startOffset": 981,
+            "endOffset": 988,
+            "originalText": "sluchać",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "słuchać"
+            ]
+          },
+          {
+            "id": "err_19",
+            "category": "spelling",
+            "startOffset": 1009,
+            "endOffset": 1017,
+            "originalText": "wzglęndu",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "względu"
+            ]
+          },
+          {
+            "id": "err_20",
+            "category": "spelling",
+            "startOffset": 1034,
+            "endOffset": 1041,
+            "originalText": "nadzeję",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "nadleję",
+              "nadzieję"
+            ]
+          },
+          {
+            "id": "err_21",
+            "category": "spelling",
+            "startOffset": 1068,
+            "endOffset": 1076,
+            "originalText": "opowiadę",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "opowiada"
+            ]
+          },
+          {
+            "id": "err_22",
+            "category": "spelling",
+            "startOffset": 1099,
+            "endOffset": 1104,
+            "originalText": "życja",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "życia",
+              "Życka"
+            ]
+          },
+          {
+            "id": "err_23",
+            "category": "spelling",
+            "startOffset": 1106,
+            "endOffset": 1113,
+            "originalText": "Sciskam",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "Wciskam",
+              "Ciskam",
+              "Ściskam"
+            ]
+          },
+          {
+            "id": "err_24",
+            "category": "spelling",
+            "startOffset": 1114,
+            "endOffset": 1118,
+            "originalText": "Dima",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "Dimy",
+              "Dina",
+              "Diva"
+            ]
+          },
+          {
+            "id": "err_25",
+            "category": "punctuation",
+            "startOffset": 1117,
+            "endOffset": 1118,
+            "originalText": "a",
+            "severity": 0,
+            "ruleId": null,
+            "message": "brak końca zdania",
+            "suggestions": []
+          }
+        ]
       }
     },
     {
@@ -42,6 +402,395 @@
         "total": 9,
         "band": "B1",
         "notes": "Real B1 email, similar spelling profile. Content=2: pt 1 and pt 2 covered, pt 3 not. Composition=4: greeting matches, closing Ściskam matches. Accuracy=2: ρ ~ 13 in 10-20 band. Vocabulary=1: many low-frequency off-list words."
+      },
+      "discovery": {
+        "totalErrors": 27,
+        "byCategory": {
+          "spelling": 26,
+          "punctuation": 1,
+          "grammar": 0
+        },
+        "errors": [
+          {
+            "id": "err_0",
+            "category": "spelling",
+            "startOffset": 36,
+            "endOffset": 45,
+            "originalText": "ostatmiej",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "ostatniej"
+            ]
+          },
+          {
+            "id": "err_1",
+            "category": "spelling",
+            "startOffset": 145,
+            "endOffset": 154,
+            "originalText": "chciąłbym",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "chciałbym"
+            ]
+          },
+          {
+            "id": "err_2",
+            "category": "spelling",
+            "startOffset": 202,
+            "endOffset": 215,
+            "originalText": "turystyczniej",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "turystycznej",
+              "turystycznie"
+            ]
+          },
+          {
+            "id": "err_3",
+            "category": "spelling",
+            "startOffset": 257,
+            "endOffset": 265,
+            "originalText": "peniędze",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "pieniądze",
+              "pieniędzy"
+            ]
+          },
+          {
+            "id": "err_4",
+            "category": "spelling",
+            "startOffset": 266,
+            "endOffset": 272,
+            "originalText": "mialem",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "dialem",
+              "mailem",
+              "miale"
+            ]
+          },
+          {
+            "id": "err_5",
+            "category": "spelling",
+            "startOffset": 304,
+            "endOffset": 317,
+            "originalText": "klimatyzacjej",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "klimatyzacje"
+            ]
+          },
+          {
+            "id": "err_6",
+            "category": "spelling",
+            "startOffset": 330,
+            "endOffset": 338,
+            "originalText": "mejscami",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "miejscami"
+            ]
+          },
+          {
+            "id": "err_7",
+            "category": "spelling",
+            "startOffset": 343,
+            "endOffset": 351,
+            "originalText": "sedzenia",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "cedzenia",
+              "jedzenia",
+              "sadzenia"
+            ]
+          },
+          {
+            "id": "err_8",
+            "category": "spelling",
+            "startOffset": 353,
+            "endOffset": 358,
+            "originalText": "Jesze",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "Jerze",
+              "Jusze",
+              "Mesze"
+            ]
+          },
+          {
+            "id": "err_9",
+            "category": "spelling",
+            "startOffset": 359,
+            "endOffset": 364,
+            "originalText": "mozna",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "moona",
+              "morna",
+              "mowna"
+            ]
+          },
+          {
+            "id": "err_10",
+            "category": "spelling",
+            "startOffset": 405,
+            "endOffset": 411,
+            "originalText": "każdem",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "każdej",
+              "każdemu",
+              "kaidem"
+            ]
+          },
+          {
+            "id": "err_11",
+            "category": "spelling",
+            "startOffset": 412,
+            "endOffset": 419,
+            "originalText": "miascie",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "biasie",
+              "ciamcie",
+              "ciapcie"
+            ]
+          },
+          {
+            "id": "err_12",
+            "category": "spelling",
+            "startOffset": 530,
+            "endOffset": 538,
+            "originalText": "podobałi",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "podobało",
+              "podobał",
+              "podobała"
+            ]
+          },
+          {
+            "id": "err_13",
+            "category": "spelling",
+            "startOffset": 584,
+            "endOffset": 595,
+            "originalText": "króliewskie",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "królewskie"
+            ]
+          },
+          {
+            "id": "err_14",
+            "category": "spelling",
+            "startOffset": 598,
+            "endOffset": 606,
+            "originalText": "Warszwie",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "Warstwie",
+              "Warszawie",
+              "Warszewie"
+            ]
+          },
+          {
+            "id": "err_15",
+            "category": "spelling",
+            "startOffset": 686,
+            "endOffset": 695,
+            "originalText": "gandliowa",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "handlowa"
+            ]
+          },
+          {
+            "id": "err_16",
+            "category": "spelling",
+            "startOffset": 712,
+            "endOffset": 721,
+            "originalText": "piwowarni",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "Piwowarki"
+            ]
+          },
+          {
+            "id": "err_17",
+            "category": "spelling",
+            "startOffset": 731,
+            "endOffset": 737,
+            "originalText": "mejsce",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "miejsce",
+              "Bejsce"
+            ]
+          },
+          {
+            "id": "err_18",
+            "category": "spelling",
+            "startOffset": 742,
+            "endOffset": 750,
+            "originalText": "szopingu",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "stopingu",
+              "szokingu",
+              "Szopinku"
+            ]
+          },
+          {
+            "id": "err_19",
+            "category": "spelling",
+            "startOffset": 755,
+            "endOffset": 764,
+            "originalText": "wycieczcę",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "wycieczce",
+              "wycieczkę"
+            ]
+          },
+          {
+            "id": "err_20",
+            "category": "spelling",
+            "startOffset": 782,
+            "endOffset": 789,
+            "originalText": "Broneka",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "Breneka",
+              "Bronek",
+              "Bronka"
+            ]
+          },
+          {
+            "id": "err_21",
+            "category": "spelling",
+            "startOffset": 847,
+            "endOffset": 852,
+            "originalText": "liubą",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "limbą",
+              "lubą",
+              "Ciubą"
+            ]
+          },
+          {
+            "id": "err_22",
+            "category": "spelling",
+            "startOffset": 884,
+            "endOffset": 889,
+            "originalText": "lubie",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "kubie",
+              "lobie",
+              "lumie"
+            ]
+          },
+          {
+            "id": "err_23",
+            "category": "spelling",
+            "startOffset": 919,
+            "endOffset": 926,
+            "originalText": "opowiał",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "powiał",
+              "osowiał"
+            ]
+          },
+          {
+            "id": "err_24",
+            "category": "spelling",
+            "startOffset": 1000,
+            "endOffset": 1007,
+            "originalText": "nadzeję",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "nadleję",
+              "nadzieję"
+            ]
+          },
+          {
+            "id": "err_25",
+            "category": "spelling",
+            "startOffset": 1080,
+            "endOffset": 1087,
+            "originalText": "Dzmitry",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "Dymitry"
+            ]
+          },
+          {
+            "id": "err_26",
+            "category": "punctuation",
+            "startOffset": 1086,
+            "endOffset": 1087,
+            "originalText": "y",
+            "severity": 0,
+            "ruleId": null,
+            "message": "brak końca zdania",
+            "suggestions": []
+          }
+        ]
       }
     },
     {
@@ -63,6 +812,277 @@
         "total": 9,
         "band": "B1",
         "notes": "Real B1 email, lower spelling density. Content=2 (2/3 points). Composition=3: closing 'Ściskam Dzmitry' on same line — looksLikeName() catches 'Dzmitry' and returns 'Ściskam' as closing candidate. Accuracy=2: ρ in 10-20 band. Vocabulary=2: slightly more in-list (programmista, klimat)."
+      },
+      "discovery": {
+        "totalErrors": 19,
+        "byCategory": {
+          "spelling": 18,
+          "punctuation": 1,
+          "grammar": 0
+        },
+        "errors": [
+          {
+            "id": "err_0",
+            "category": "spelling",
+            "startOffset": 13,
+            "endOffset": 24,
+            "originalText": "Przeprzszam",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "Przepraszam",
+              "Przeprószam"
+            ]
+          },
+          {
+            "id": "err_1",
+            "category": "spelling",
+            "startOffset": 36,
+            "endOffset": 45,
+            "originalText": "milchenie",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "milczenie"
+            ]
+          },
+          {
+            "id": "err_2",
+            "category": "spelling",
+            "startOffset": 102,
+            "endOffset": 114,
+            "originalText": "zastresowany",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "zestresowany"
+            ]
+          },
+          {
+            "id": "err_3",
+            "category": "spelling",
+            "startOffset": 186,
+            "endOffset": 192,
+            "originalText": "Nvidia",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "Gidia",
+              "Knidia",
+              "nVidia"
+            ]
+          },
+          {
+            "id": "err_4",
+            "category": "spelling",
+            "startOffset": 243,
+            "endOffset": 251,
+            "originalText": "toksycny",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "toksyczny",
+              "toksyny"
+            ]
+          },
+          {
+            "id": "err_5",
+            "category": "spelling",
+            "startOffset": 253,
+            "endOffset": 261,
+            "originalText": "Wszystcy",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "Wszyscy"
+            ]
+          },
+          {
+            "id": "err_6",
+            "category": "spelling",
+            "startOffset": 375,
+            "endOffset": 387,
+            "originalText": "programmista",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "programista"
+            ]
+          },
+          {
+            "id": "err_7",
+            "category": "spelling",
+            "startOffset": 439,
+            "endOffset": 446,
+            "originalText": "dannych",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "danych",
+              "rannych",
+              "Dannych"
+            ]
+          },
+          {
+            "id": "err_8",
+            "category": "spelling",
+            "startOffset": 448,
+            "endOffset": 457,
+            "originalText": "sledzenie",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "scedzenie",
+              "siedzenie",
+              "śledzenie"
+            ]
+          },
+          {
+            "id": "err_9",
+            "category": "spelling",
+            "startOffset": 461,
+            "endOffset": 477,
+            "originalText": "bieśpieczeństwom",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": []
+          },
+          {
+            "id": "err_10",
+            "category": "spelling",
+            "startOffset": 549,
+            "endOffset": 556,
+            "originalText": "kwesfia",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "kwestia"
+            ]
+          },
+          {
+            "id": "err_11",
+            "category": "spelling",
+            "startOffset": 581,
+            "endOffset": 587,
+            "originalText": "pracją",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "oracją",
+              "racją",
+              "gracją"
+            ]
+          },
+          {
+            "id": "err_12",
+            "category": "spelling",
+            "startOffset": 598,
+            "endOffset": 607,
+            "originalText": "codzienie",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "codziennie",
+              "odzienie",
+              "codzienne"
+            ]
+          },
+          {
+            "id": "err_13",
+            "category": "spelling",
+            "startOffset": 634,
+            "endOffset": 641,
+            "originalText": "zespołe",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "zespołu",
+              "zespołem",
+              "zespole"
+            ]
+          },
+          {
+            "id": "err_14",
+            "category": "spelling",
+            "startOffset": 666,
+            "endOffset": 673,
+            "originalText": "Myszłem",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "Marzłem",
+              "Masłem",
+              "Masztem"
+            ]
+          },
+          {
+            "id": "err_15",
+            "category": "spelling",
+            "startOffset": 677,
+            "endOffset": 680,
+            "originalText": "juz",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "jug",
+              "jur",
+              "jut"
+            ]
+          },
+          {
+            "id": "err_16",
+            "category": "spelling",
+            "startOffset": 687,
+            "endOffset": 695,
+            "originalText": "wszystcy",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "wszyscy"
+            ]
+          },
+          {
+            "id": "err_17",
+            "category": "spelling",
+            "startOffset": 790,
+            "endOffset": 797,
+            "originalText": "Dzmitry",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "Dymitry"
+            ]
+          },
+          {
+            "id": "err_18",
+            "category": "punctuation",
+            "startOffset": 796,
+            "endOffset": 797,
+            "originalText": "y",
+            "severity": 0,
+            "ruleId": null,
+            "message": "brak końca zdania",
+            "suggestions": []
+          }
+        ]
       }
     },
     {
@@ -84,6 +1104,42 @@
         "total": 10,
         "band": "B1",
         "notes": "Clean short B1 email. Content=1 even though pt 1 and pt 3 ARE covered (jadę→jechać, chcę→chcieć) — the coverageMultiplier 0.5+0.5*(2/3)=0.83 caps the score. pt 2 (plan/robić) has no match. Composition=4: closing 'Pozdrawiam,' on line above 'Dima' is caught by looksLikeName. Accuracy=3: only the missing-final-period punctuation error (severity 0 in 2026-07-31.2). Vocabulary=2: most content words still off-list."
+      },
+      "discovery": {
+        "totalErrors": 2,
+        "byCategory": {
+          "spelling": 1,
+          "punctuation": 1,
+          "grammar": 0
+        },
+        "errors": [
+          {
+            "id": "err_0",
+            "category": "spelling",
+            "startOffset": 226,
+            "endOffset": 230,
+            "originalText": "Dima",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "Dimy",
+              "Dina",
+              "Diva"
+            ]
+          },
+          {
+            "id": "err_1",
+            "category": "punctuation",
+            "startOffset": 229,
+            "endOffset": 230,
+            "originalText": "a",
+            "severity": 0,
+            "ruleId": null,
+            "message": "brak końca zdania",
+            "suggestions": []
+          }
+        ]
       }
     },
     {
@@ -105,6 +1161,42 @@
         "total": 0,
         "band": "below_B1",
         "notes": "Off-topic — does not address the food task. offTopicByCoverage() fires (no point word match after lemmatization), so the off-topic branch in grade() zeros all four criteria and the total before they're reported."
+      },
+      "discovery": {
+        "totalErrors": 2,
+        "byCategory": {
+          "spelling": 1,
+          "punctuation": 1,
+          "grammar": 0
+        },
+        "errors": [
+          {
+            "id": "err_0",
+            "category": "spelling",
+            "startOffset": 221,
+            "endOffset": 225,
+            "originalText": "Dima",
+            "severity": 1,
+            "ruleId": null,
+            "message": null,
+            "suggestions": [
+              "Dimy",
+              "Dina",
+              "Diva"
+            ]
+          },
+          {
+            "id": "err_1",
+            "category": "punctuation",
+            "startOffset": 224,
+            "endOffset": 225,
+            "originalText": "a",
+            "severity": 0,
+            "ruleId": null,
+            "message": "brak końca zdania",
+            "suggestions": []
+          }
+        ]
       }
     }
   ]
