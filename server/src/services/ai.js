@@ -1,13 +1,13 @@
 // AI provider service: builds prompts, calls the OpenAI-compatible endpoint,
-// and exposes a single runAICall() entry point so both user chat and admin
-// sandbox share exactly the same request/response shape and config.
+// and exposes a single runAICall() entry point so the admin sandbox and
+// Polish email evaluation share the same request/response shape and config.
 
-const AI_BASE_URL = process.env.AI_BASE_URL || process.env.OPENCODE_BASE_URL || 'https://opencode.ai/zen/go/v1';
-const MODEL_NAME = process.env.AI_MODEL || process.env.OPENCODE_MODEL || 'deepseek-v4-flash';
-const AI_PROVIDER = process.env.AI_PROVIDER || (AI_BASE_URL.includes('nvidia.com') ? 'nvidia-nim' : 'opencode-go');
+const AI_BASE_URL = process.env.AI_BASE_URL || 'https://integrate.api.nvidia.com/v1';
+const MODEL_NAME = process.env.AI_MODEL || 'nvidia/nemotron-3-nano-30b-a3b';
+const AI_PROVIDER = process.env.AI_PROVIDER || (AI_BASE_URL.includes('nvidia.com') ? 'nvidia-nim' : 'openai-compatible');
 
-// Default system prompt for the language learning assistant.
-// Admins can pass `systemPromptOverride` from the sandbox to swap it out.
+// Default system prompt for the admin sandbox.
+// Admins pass `systemPromptOverride` from the sandbox to swap it out.
 function buildSystemPrompt(exerciseContext = null, { systemPromptOverride } = {}) {
   if (systemPromptOverride && systemPromptOverride.trim()) {
     return systemPromptOverride;
@@ -50,7 +50,7 @@ function buildSystemPrompt(exerciseContext = null, { systemPromptOverride } = {}
 }
 
 function getApiKey() {
-  return process.env.AI_API_KEY || process.env.NVIDIA_API_KEY || process.env.OPENCODE_API_KEY;
+  return process.env.AI_API_KEY || process.env.NVIDIA_API_KEY;
 }
 
 export function getAIConfig() {
@@ -62,7 +62,7 @@ export function getAIConfig() {
 export async function runAICall({ messages }) {
   const apiKey = getApiKey();
   if (!apiKey) {
-    const err = new Error('AI_API_KEY, NVIDIA_API_KEY, or OPENCODE_API_KEY environment variable is not set');
+    const err = new Error('AI_API_KEY or NVIDIA_API_KEY environment variable is not set');
     err.code = 'NO_API_KEY';
     throw err;
   }

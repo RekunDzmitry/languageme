@@ -7,8 +7,8 @@ import { grade as deterministicGrade, METRIC_VERSION } from '../services/emailSc
 const router = Router();
 
 // OpenAI-compatible AI API configuration
-const AI_BASE_URL = process.env.AI_BASE_URL || process.env.OPENCODE_BASE_URL || 'https://opencode.ai/zen/go/v1';
-const MODEL_NAME = process.env.AI_MODEL || process.env.OPENCODE_MODEL || 'deepseek-v4-flash';
+const AI_BASE_URL = process.env.AI_BASE_URL || 'https://integrate.api.nvidia.com/v1';
+const MODEL_NAME = process.env.AI_MODEL || 'nvidia/nemotron-3-nano-30b-a3b';
 
 // Catch-all theme for corrections the user doesn't attach to a real theme.
 const OTHER_THEME_ID = 'pl_other';
@@ -91,9 +91,9 @@ async function callAIOnce(prompt, apiKey, options = {}) {
 }
 
 async function callAI(prompt, options = {}) {
-  const apiKey = process.env.AI_API_KEY || process.env.NVIDIA_API_KEY || process.env.OPENCODE_API_KEY;
+  const apiKey = process.env.AI_API_KEY || process.env.NVIDIA_API_KEY;
   if (!apiKey) {
-    throw new Error('AI_API_KEY, NVIDIA_API_KEY, or OPENCODE_API_KEY environment variable is not set');
+    throw new Error('AI_API_KEY or NVIDIA_API_KEY environment variable is not set');
   }
 
   let lastErr;

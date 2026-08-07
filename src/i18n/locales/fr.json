@@ -181,11 +181,6 @@
   "import_error": "Erreur d'import : {message}",
   "export_error": "Erreur d'export : {message}",
   "import_file_error": "Impossible de lire le fichier",
-  "ask_ai_helper": "Demander à l'assistant IA",
-  "ai_helper": "Assistant IA",
-  "ai_welcome": "Bonjour ! Je vais vous aider à comprendre ce mot ou cette conjugaison.",
-  "ai_example_question": "Par exemple : « Comment traduire {verb} ? Dans quelles situations l'utiliser ? »",
-  "ai_placeholder": "Posez une question sur le mot ou la conjugaison...",
   "ai_save_as_note": "Enregistrer la conversation comme note",
   "ai_saving": "Enregistrement...",
   "ai_error": "Erreur IA. Veuillez réessayer.",
@@ -251,10 +246,6 @@
   "pack_stat_words": "mots",
   "pack_stat_tasks": "tâches",
   "pack_stat_due": "à réviser",
-  "nav_admin": "Admin",
-  "admin_title": "Panneau d'administration",
-  "admin_tab_logs": "Journaux IA",
-  "admin_tab_sandbox": "Bac à sable",
   "admin_total": "Total des requêtes",
   "admin_24h": "24 dernières heures",
   "admin_sandbox_count": "Depuis le bac à sable",
@@ -301,5 +292,7 @@
   "theme_other": "Mes cartes",
   "optional": "facultatif",
   "saving": "Enregistrement...",
-  "save": "Enregistrer"
+  "save": "Enregistrer",
+  "edit_exercise_note": "Modifier la note",
+  "add_exercise_note": "Ajouter une note"
 }

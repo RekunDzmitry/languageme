@@ -128,55 +128,6 @@ export const studyApi = {
 }
 
 
-// AI Assistant API
-export const aiApi = {
-  // Send a chat message
-  chat: (message, exerciseKey, exerciseType = 'conjugation', exerciseContext = null) =>
-    api.post('/api/ai/chat', { message, exerciseKey, exerciseType, exerciseContext }),
-
-  // Get conversation history for an exercise
-  getConversation: (exerciseKey) =>
-    api.get(`/api/ai/conversations/${encodeURIComponent(exerciseKey)}`),
-
-  // Get all recent conversations
-  getConversations: (limit = 10) =>
-    api.get(`/api/ai/conversations?limit=${limit}`),
-
-  // Get notes
-  getNotes: (exerciseKey) =>
-    api.get(`/api/ai/notes${exerciseKey ? `?exerciseKey=${encodeURIComponent(exerciseKey)}` : ''}`),
-
-  // Save a note
-  saveNote: (exerciseKey, content, title, exerciseType = 'conjugation') =>
-    api.post('/api/ai/notes', { exerciseKey, content, exerciseType, title }),
-
-  // Update a note
-  updateNote: (noteId, content, title = null) =>
-    api.put(`/api/ai/notes/${noteId}`, { content, title }),
-
-  // Delete a note
-  deleteNote: (noteId) =>
-    api.delete(`/api/ai/notes/${noteId}`),
-}
-
-// Admin API (observability + AI sandbox)
-export const adminApi = {
-  listLogs: ({ limit = 50, offset = 0, userId, isSandbox, q } = {}) => {
-    const params = new URLSearchParams();
-    params.set('limit', String(limit));
-    params.set('offset', String(offset));
-    if (userId) params.set('userId', userId);
-    if (isSandbox === true) params.set('isSandbox', 'true');
-    else if (isSandbox === false) params.set('isSandbox', 'false');
-    if (q) params.set('q', q);
-    return api.get(`/api/admin/ai-logs?${params.toString()}`);
-  },
-  getLog: (id) => api.get(`/api/admin/ai-logs/${id}`),
-  getLogsSummary: () => api.get('/api/admin/ai-logs-summary'),
-  runSandbox: ({ systemPrompt, exerciseContext, message, history }) =>
-    api.post('/api/admin/ai-sandbox', { systemPrompt, exerciseContext, message, history }),
-}
-
 // Exercise Notes API (user-authored notes on WriteAnswer exercises)
 export const exerciseNoteApi = {
   // Get notes, optionally filtered by theme

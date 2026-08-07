@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useT } from '../../i18n'
 import { speak } from '../../utils/audio'
 import { useSpeechLang } from '../../hooks/useSpeechLang'
@@ -8,18 +8,24 @@ import { THEME02_RU_CONJUGATIONS } from '../../data/courses/fr/themes/theme02-co
 import { VOCAB } from '../../data/courses/fr/vocab'
 import { getHintsByLang } from '../../data/courses'
 import { useSettings } from '../../stores/SettingsContext'
-import { aiApi } from '../../api/client'
+import { useProgress } from '../../stores/UserProgressContext'
 import SpeakerButton from '../common/SpeakerButton'
-import AIChatButton from '../ai/AIChatButton'
+import ExerciseNotePanel from '../themes/exercises/ExerciseNotePanel'
+
+// Catch-all theme for notes on cards that belong to no specific theme
+// (e.g. the un-scoped /learn conjugation session).
+const GENERAL_NOTE_THEME = 'fr_conjugation_general'
 
 const vocabByTarget = Object.fromEntries(VOCAB.map(w => [w.target, w]))
 
-export default function ConjugationExercise({ item, formType = 'aff', onResult, userMnemonics = {}, onSaveMnemonic }) {
+export default function ConjugationExercise({ item, formType = 'aff', themeId = null, onResult, userMnemonics = {}, onSaveMnemonic }) {
   const { t } = useT()
   const { settings } = useSettings()
   const speechLang = useSpeechLang()
+  const { exerciseNotes, saveExerciseNote, clearExerciseNote } = useProgress()
   const hints = getHintsByLang(settings.nativeLang)
   const [revealed, setRevealed] = useState(false)
+  const [noteOpen, setNoteOpen] = useState(false)
 
   // Use negative conjugations for theme02, affirmative for theme01
   const ruConjugations = formType === 'neg' ? THEME02_RU_CONJUGATIONS : THEME01_RU_CONJUGATIONS
@@ -37,69 +43,16 @@ export default function ConjugationExercise({ item, formType = 'aff', onResult, 
 
   const [editing, setEditing] = useState(false)
   const [editText, setEditText] = useState('')
-  const [aiNotes, setAiNotes] = useState([])
-  const [loadingNotes, setLoadingNotes] = useState(false)
-  const [editingNoteId, setEditingNoteId] = useState(null)
-  const [editingNoteText, setEditingNoteText] = useState('')
-  const [editingNoteTitle, setEditingNoteTitle] = useState('')
 
-  useEffect(() => {
-    setRevealed(false)
-    setEditing(false)
-    setAiNotes([])
-  }, [item.key])
-
-  // Load AI notes for this exercise
-  useEffect(() => {
-    if (revealed && item.key) {
-      loadAiNotes()
-    }
-  }, [revealed, item.key])
-
-  async function loadAiNotes() {
-    setLoadingNotes(true)
-    try {
-      const notes = await aiApi.getNotes(item.key)
-      if (notes && notes.length > 0) {
-        setAiNotes(notes)
-      }
-    } catch (err) {
-      console.log('No AI notes found for this exercise')
-    } finally {
-      setLoadingNotes(false)
-    }
-  }
-
-  function startEditingNote(note) {
-    let content = note.content
-    try {
-      const parsed = JSON.parse(note.content)
-      content = parsed.summary || parsed.messages?.[parsed.messages?.length - 1]?.content || note.content
-    } catch {}
-    setEditingNoteId(note.id)
-    setEditingNoteText(content)
-    setEditingNoteTitle(note.title || '')
-  }
-
-  async function saveNoteEdit(noteId) {
-    try {
-      await aiApi.updateNote(noteId, editingNoteText, editingNoteTitle)
-      setEditingNoteId(null)
-      loadAiNotes()
-    } catch (err) {
-      console.error('Failed to update note:', err)
-    }
-  }
-
-  async function deleteNote(noteId) {
-    if (!confirm('Удалить эту заметку?')) return
-    try {
-      await aiApi.deleteNote(noteId)
-      setAiNotes(prev => prev.filter(n => n.id !== noteId))
-    } catch (err) {
-      console.error('Failed to delete note:', err)
-    }
-  }
+  const noteThemeId = themeId || GENERAL_NOTE_THEME
+  // Notes are namespaced by theme to match the write-exercise flow in
+  // ExerciseSection and TrainingPage (which read `exerciseNotes[themeId:key]`
+  // and save under the same composite). Without the prefix, saveExerciseNote
+  // would write to `exerciseNotes[item.key]` while the read happens at
+  // `exerciseNotes[${noteThemeId}:${item.key}]` — the dict lookup misses
+  // and the saved note appears empty on the next reveal.
+  const noteKey = `${noteThemeId}:${item.key}`
+  const note = exerciseNotes[noteKey] || null
 
   function handleReveal() {
     setRevealed(true)
@@ -108,19 +61,11 @@ export default function ConjugationExercise({ item, formType = 'aff', onResult, 
 
   return (
     <div className="flex flex-col items-center gap-5">
-      {/* Badge + AI Button */}
-      <div className="flex items-center justify-between w-full max-w-sm">
+      {/* Badge */}
+      <div className="flex items-center justify-end w-full max-w-sm">
         <div className="bg-surface border border-border rounded-lg px-3 py-1 text-xs font-semibold text-accent">
           {t('ru_to_fr')}
         </div>
-        <AIChatButton 
-          exerciseKey={item.key} 
-          exerciseType="conjugation" 
-          verb={item.verb}
-          prompt={prompt}
-          answer={fullAnswer}
-          onNoteSaved={loadAiNotes}
-        />
       </div>
 
       {/* Prompt */}
@@ -136,93 +81,12 @@ export default function ConjugationExercise({ item, formType = 'aff', onResult, 
           {t('study_tap_reveal')}
         </button>
       ) : (
-        <div className="flex flex-col items-center gap-3 animate-fade-in">
+        <div className="flex flex-col items-center gap-3 animate-fade-in w-full">
           <div className="text-text-muted text-sm">{t('correct_answer')}:</div>
           <div className="flex items-center gap-2">
             <span className="text-white text-2xl font-bold">{fullAnswer}</span>
             <SpeakerButton text={fullAnswer} size="sm" />
           </div>
-
-          {/* AI Notes section */}
-          {(aiNotes.length > 0 || loadingNotes) && (
-            <div className="w-full max-w-sm mt-1 space-y-2">
-              {loadingNotes ? (
-                <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-xl p-3 px-4">
-                  <div className="text-[11px] text-cyan-400 font-bold uppercase tracking-wide mb-1">AI Заметки</div>
-                  <div className="text-sm text-text-muted italic">Загрузка...</div>
-                </div>
-              ) : (
-                aiNotes.map(note => {
-                  let noteContent = note.content
-                  try {
-                    const parsed = JSON.parse(note.content)
-                    noteContent = parsed.summary || parsed.messages?.[parsed.messages?.length - 1]?.content || note.content
-                  } catch {}
-                  
-                  const isEditing = editingNoteId === note.id
-                  
-                  return (
-                    <div 
-                      key={note.id}
-                      className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-xl p-3 px-4"
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[11px] text-cyan-400 font-bold uppercase tracking-wide">AI Заметка</span>
-                        {!isEditing ? (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => startEditingNote(note)}
-                              className="text-[10px] text-white/40 hover:text-cyan-400 transition-colors"
-                              title="Редактировать"
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              onClick={() => deleteNote(note.id)}
-                              className="text-[10px] text-white/40 hover:text-red-400 transition-colors"
-                              title="Удалить"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-[10px] text-cyan-400">редактирование...</span>
-                        )}
-                      </div>
-                      
-                      {isEditing ? (
-                        <div className="space-y-2">
-                          <textarea
-                            value={editingNoteText}
-                            onChange={(e) => setEditingNoteText(e.target.value)}
-                            rows={3}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-sm text-white resize-none focus:outline-none focus:border-cyan-500/50"
-                            placeholder="Текст заметки..."
-                          />
-                          <div className="flex gap-2 justify-end">
-                            <button
-                              onClick={() => setEditingNoteId(null)}
-                              className="px-3 py-1 text-xs text-text-muted hover:text-white transition-colors"
-                            >
-                              Отмена
-                            </button>
-                            <button
-                              onClick={() => saveNoteEdit(note.id)}
-                              className="px-3 py-1 text-xs font-bold text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 rounded-lg hover:bg-cyan-500/20 transition-colors"
-                            >
-                              Сохранить
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-sm text-text-muted leading-relaxed whitespace-pre-wrap">{noteContent}</div>
-                      )}
-                    </div>
-                  )
-                })
-              )}
-            </div>
-          )}
 
           {/* Mnemonic section */}
           {(hint || vocabId) && (
@@ -276,6 +140,27 @@ export default function ConjugationExercise({ item, formType = 'aff', onResult, 
               )}
             </div>
           )}
+
+          {/* Notes toggle */}
+          <div className="w-full max-w-sm">
+            {!noteOpen ? (
+              <button
+                onClick={() => setNoteOpen(true)}
+                className="w-full px-3 py-2 rounded-xl text-sm font-semibold text-text-muted bg-surface border border-border hover:border-accent/40 hover:text-white transition-colors"
+              >
+                {note ? '✏️ ' + t('edit_exercise_note', 'Редактировать заметку') : '📝 ' + t('add_exercise_note', 'Добавить заметку')}
+              </button>
+            ) : (
+              <ExerciseNotePanel
+                existingNote={note}
+                exerciseKey={noteKey}
+                themeId={noteThemeId}
+                onSave={saveExerciseNote}
+                onDelete={clearExerciseNote}
+                onClose={() => setNoteOpen(false)}
+              />
+            )}
+          </div>
 
           <div className="text-sm text-text-muted mt-2">{t('study_how_well')}</div>
           <div className="flex gap-3">

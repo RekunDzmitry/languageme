@@ -52,7 +52,7 @@ Key backend files:
 
 **Reference data:** `vocab`, `vocab_translation` (PK: vocab_id+lang), `vocab_hint` (PK: vocab_id+lang), `theme`, `theme_vocab` (many-to-many), `theme_section` (JSONB content), `theme_verb`
 
-**User data:** `user` (UUID PK, email+bcrypt auth), `refresh_token`, `srs_card` (PK: user_id+vocab_id), `theme_progress` (PK: user_id+theme_id), `user_mnemonic`, `review` (BIGSERIAL, every review), `user_daily_stat` (PK: user_id+study_date), `ai_conversation`, `ai_message`, `ai_note`
+**User data:** `user` (UUID PK, email+bcrypt auth), `refresh_token`, `srs_card` (PK: user_id+vocab_id), `theme_progress` (PK: user_id+theme_id), `user_mnemonic`, `review` (BIGSERIAL, every review), `user_daily_stat` (PK: user_id+study_date)
 
 ### API Endpoints
 
@@ -71,14 +71,6 @@ GET|PUT|DELETE /api/mnemonics[/:vocabId]       User mnemonics (auth)
 GET /api/stats[/history]                       Streak, counts, daily chart (auth)
 POST /api/migrate/import                       One-time localStorage import (auth)
 GET /api/admin/users|analytics                 Admin endpoints (admin)
-
-# AI Assistant (chat + notes)
-POST /api/ai/chat                              Send message to AI (auth)
-GET  /api/ai/conversations/:exerciseKey        Get conversation history (auth)
-GET  /api/ai/conversations                     Get all recent conversations (auth)
-GET  /api/ai/notes                             Get all notes (auth)
-POST /api/ai/notes                             Save a structured note (auth)
-DELETE /api/ai/notes/:id                       Delete a note (auth)
 ```
 
 ### Three Language Dimensions
@@ -204,13 +196,3 @@ Tailwind v4 with custom theme tokens in `src/index.css` under `@theme` (colors: 
 - `program.md` in project root contains the 30-step French curriculum plan (in Russian)
 - `french_learning_app.jsx` is the original prototype (preserved for reference)
 - Backend env vars: `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `PORT` (see `server/.env.example`)
-
-### AI Assistant
-
-An AI helper that allows users to chat about vocabulary and conjugation exercises.
-
-**Backend:** `server/src/routes/ai.js` with OpenAI-compatible API
-**Frontend:** `src/components/ai/AIChatButton.jsx`, `AIChatModal.jsx`
-**Config:** Set `AI_API_KEY` environment variable (requires restart)
-
-**Use case:** User clicks "AI" button on a conjugation exercise, asks questions about the word (meaning, context, examples), and can save the conversation as a structured note.

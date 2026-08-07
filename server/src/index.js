@@ -9,7 +9,6 @@ import { errorHandler } from './middleware/error.js';
 import './services/passport.js';
 
 import authRoutes from './routes/auth.js';
-import aiRoutes from './routes/ai.js';
 import userRoutes from './routes/user.js';
 import vocabRoutes from './routes/vocab.js';
 import themesRoutes from './routes/themes.js';
@@ -43,7 +42,6 @@ app.use('/api', (req, res, next) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/ai', aiRoutes);
 app.use('/api', userRoutes);
 app.use('/api/vocab', vocabRoutes);
 app.use('/api/themes', themesRoutes);
