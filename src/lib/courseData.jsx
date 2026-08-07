@@ -2,81 +2,113 @@
 //
 // Course data provider. Replaces the old src/data/courses/ JS bundles.
 // Fetches the full course (themes, vocab, hints, examples, lexicon,
-// conjugation tables) from the API once per target language and exposes
-// it through React context so the rest of the app can read it
-// synchronously the same way it used to read VOCAB / THEMES / hints.
+// conjugation tables) for ALL target languages in a single round-trip
+// and exposes it via React context so components can read synchronously.
 //
-// The shape mirrors the legacy JS module surface:
-//   - VOCAB:        array of { id, target, ipa, gender, freq, theme, themeIds,
-//                              translations: { ru, en }, hint }
-//   - THEMES:       array of theme objects with sections[], verbs[]
-//   - hints:        map of vocabId -> mnemonic text (per native_lang)
-//   - examples:     map of vocabId -> [{ fr, ru }]
-//   - lexicon:      map of vocabId -> { synonyms, usage, semantics }
-//   - conjugations: map of themeId -> { verb: [forms] }
-//
-// API contract: GET /api/courses/:lang returns the entire bundle in one
-// round-trip. The server packs themes + theme_vocab + theme_section +
-// theme_verb + vocab + vocab_translation + vocab_hint + vocab_example +
-// vocab_lexicon + theme_conjugation into a single JSON document.
+// API contract: GET /api/courses/all?native_lang=ru returns a map of
+// lang → bundle.
 
 import { createContext, useContext, useEffect, useState, useMemo } from 'react'
 import { api } from '../api/client'
 
 const CourseDataContext = createContext(null)
 
+// Module-level cache. Keyed by `all|${nativeLang}`.
+const bundleCache = new Map()
+const inflight = new Map()
+
+async function loadAllBundles(nativeLang) {
+  const key = `all|${nativeLang}`
+  if (bundleCache.has(key)) return bundleCache.get(key)
+  if (inflight.has(key)) return inflight.get(key)
+  const p = api.get(`/api/courses/all?native_lang=${nativeLang}`)
+    .then(data => {
+      bundleCache.set(key, data)
+      inflight.delete(key)
+      return data
+    })
+    .catch(err => {
+      inflight.delete(key)
+      throw err
+    })
+  inflight.set(key, p)
+  return p
+}
+
+// Preload helper used by App.jsx. Loads all langs in one request so
+// pages that show packs across both FR and PL (DashboardPage, etc.)
+// have the data on mount.
+export async function preloadBundle(_targetLang, nativeLang) {
+  return loadAllBundles(nativeLang || 'ru')
+}
+
 export function CourseDataProvider({ children, targetLang, nativeLang }) {
-  const [bundle, setBundle] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [all, setAll] = useState(() => {
+    const key = `all|${nativeLang}`
+    return bundleCache.get(key) || null
+  })
+  const [loading, setLoading] = useState(() => {
+    const key = `all|${nativeLang}`
+    return !bundleCache.has(key)
+  })
 
   useEffect(() => {
+    const key = `all|${nativeLang}`
+    if (bundleCache.has(key)) {
+      setAll(bundleCache.get(key))
+      setLoading(false)
+      return
+    }
     let cancelled = false
     setLoading(true)
-    setError(null)
-    api.get(`/api/courses/${targetLang}?native_lang=${nativeLang}`)
-      .then((data) => {
+    loadAllBundles(nativeLang)
+      .then(data => {
         if (!cancelled) {
-          setBundle(data)
+          setAll(data)
           setLoading(false)
         }
       })
-      .catch((err) => {
+      .catch(err => {
         if (!cancelled) {
-          setError(err)
           setLoading(false)
+          // eslint-disable-next-line no-console
+          console.error('course data load failed', err)
         }
       })
     return () => { cancelled = true }
-  }, [targetLang, nativeLang])
+  }, [nativeLang])
+
+  // Pick the bundle for the active target lang; the others stay
+  // available on the cache for pages that show packs across langs.
+  const activeBundle = (all && all[targetLang]) || null
 
   const value = useMemo(() => {
-    if (!bundle) return null
+    const empty = {
+      targetLang,
+      nativeLang,
+      loading,
+      vocab: [],
+      themes: [],
+      hintsByVocab: {},
+      examplesByVocab: {},
+      lexiconByVocab: {},
+      conjugationsByTheme: {},
+    }
+    if (!activeBundle) return empty
     return {
       targetLang,
       nativeLang,
-      vocab: bundle.vocab || [],
-      themes: bundle.themes || [],
-      // map-shaped data for O(1) lookup in components
-      hintsByVocab: bundle.hintsByVocab || {},
-      examplesByVocab: bundle.examplesByVocab || {},
-      lexiconByVocab: bundle.lexiconByVocab || {},
-      conjugationsByTheme: bundle.conjugationsByTheme || {},
       loading,
-      error,
+      vocab: activeBundle.vocab || [],
+      themes: activeBundle.themes || [],
+      hintsByVocab: activeBundle.hintsByVocab || {},
+      examplesByVocab: activeBundle.examplesByVocab || {},
+      lexiconByVocab: activeBundle.lexiconByVocab || {},
+      conjugationsByTheme: activeBundle.conjugationsByTheme || {},
+      // Cross-lang access for pages like Dashboard that render all packs
+      allByLang: all || {},
     }
-  }, [bundle, targetLang, nativeLang, loading, error])
-
-  if (loading || !value) {
-    // The host page should show its own loading state via the hook's
-    // loading field; we render children but components reading the
-    // context should check `loading` first.
-    return (
-      <CourseDataContext.Provider value={value}>
-        {children}
-      </CourseDataContext.Provider>
-    )
-  }
+  }, [activeBundle, all, targetLang, nativeLang, loading])
 
   return (
     <CourseDataContext.Provider value={value}>
@@ -93,31 +125,15 @@ export function useCourseData() {
   return ctx
 }
 
-// Selector helpers (replace getVocab / getThemes / getHintsByLang / getExamples)
-export function getVocab(ctx) {
-  return ctx.vocab
-}
-
-export function getThemes(ctx) {
-  return ctx.themes
-}
-
-export function getHintsByLang(ctx) {
-  return ctx.hintsByVocab
-}
-
-export function getExamples(ctx) {
-  return ctx.examplesByVocab
-}
-
-export function getLexicon(ctx) {
-  return ctx.lexiconByVocab
-}
-
+// Convenience selectors
+export function getVocab(ctx) { return ctx.vocab }
+export function getThemes(ctx) { return ctx.themes }
+export function getHintsByLang(ctx) { return ctx.hintsByVocab }
+export function getExamples(ctx) { return ctx.examplesByVocab }
+export function getLexicon(ctx) { return ctx.lexiconByVocab }
 export function getConjugations(ctx, themeId) {
   return ctx.conjugationsByTheme[themeId] || {}
 }
-
 export function getThemeTitle(theme) {
   return theme.titleRu || theme.title
 }

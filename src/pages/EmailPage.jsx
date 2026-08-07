@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useT } from '../i18n'
 import { useSettings } from '../stores/SettingsContext'
-import { getThemes } from '../data/courses'
+import { useCourseData } from '../lib/courseData'
 import { filterThemesByPack, PACK_IDS } from '../data/lessonPacks'
 import EmailExercise from '../components/email/EmailExercise'
 
@@ -11,6 +11,7 @@ export default function EmailPage() {
   const navigate = useNavigate()
   const { t } = useT()
   const { settings, updateSettings } = useSettings()
+  const course = useCourseData()
   const targetLang = 'pl'
 
   useEffect(() => {
@@ -19,7 +20,10 @@ export default function EmailPage() {
     }
   }, [settings.activePackId, settings.targetLang, targetLang, updateSettings])
 
-  const themes = useMemo(() => filterThemesByPack(getThemes(targetLang), PACK_IDS.PL_TELC, targetLang), [targetLang])
+  const themes = useMemo(
+    () => filterThemesByPack(course.allByLang[targetLang]?.themes || course.themes, PACK_IDS.PL_TELC, targetLang),
+    [course.themes, course.allByLang, targetLang]
+  )
 
   const emailThemes = useMemo(() =>
     themes.filter(th =>

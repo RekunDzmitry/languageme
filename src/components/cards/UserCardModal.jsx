@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useT } from '../../i18n'
-import { getThemeTitle } from '../../data/courses'
 import { filterThemesByPack } from '../../data/lessonPacks'
+import { getThemeTitle } from '../../lib/courseData'
 
 // Per-language catch-all ids from migration 025. Kept for backward
 // compat with rows created before migration 026; the modal itself

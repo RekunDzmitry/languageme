@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useT } from '../i18n'
 import { useProgress } from '../stores/UserProgressContext'
 import { useSettings } from '../stores/SettingsContext'
-import { getVocab, getHintsByLang, getThemes, getThemeTitle, getExamples } from '../data/courses'
+import { useCourseData, getThemeTitle } from '../lib/courseData'
 import { filterThemesByPack } from '../data/lessonPacks'
 import { getCardStatus, formatDueDate, STATUS_COLORS } from '../utils/cardStatus'
 import UserCardModal from '../components/cards/UserCardModal'
@@ -23,10 +23,11 @@ const LEGACY_OTHER_THEME_IDS = {
  export default function CardsPage() {
    const { t } = useT()
    const { settings } = useSettings()
+   const course = useCourseData()
    const targetLang = settings.targetLang
-   const hints = getHintsByLang(settings.nativeLang)
-   const allThemes = getThemes(targetLang)
-  const examples = getExamples(targetLang)
+   const hints = course.hintsByVocab
+   const allThemes = course.themes
+  const examples = course.examplesByVocab
    const themes = useMemo(
      () => filterThemesByPack(allThemes, settings.activePackId, targetLang),
      [allThemes, settings.activePackId, targetLang]
@@ -43,10 +44,9 @@ const LEGACY_OTHER_THEME_IDS = {
   // what the user can actually study. User cards are NOT pack-scoped —
   // a learner on the FR pack 1 should still see their own card filed
   // under fr_other. We build the two halves separately and concat, so
-  // the existing filter/sort code (which is downstream) can stay generic.
   const staticVocab = useMemo(
-    () => getVocab(targetLang).filter((word) => word.themeIds?.some((themeId) => activeThemeIds.has(themeId))),
-    [targetLang, activeThemeIds]
+    () => course.vocab.filter((word) => word.themeIds?.some((themeId) => activeThemeIds.has(themeId))),
+    [course.vocab, activeThemeIds]
   )
 
   const {

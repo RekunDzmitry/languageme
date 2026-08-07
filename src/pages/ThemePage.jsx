@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 import { useT } from '../i18n'
 import { useProgress } from '../stores/UserProgressContext'
 import { useSettings } from '../stores/SettingsContext'
-import { getThemes, getThemeTitle } from '../data/courses'
+import { useCourseData, getThemeTitle } from '../lib/courseData'
 import { getPackForThemeId } from '../data/lessonPacks'
 import ThemeView from '../components/themes/ThemeView'
 
@@ -11,10 +11,11 @@ export default function ThemePage() {
   const { id } = useParams()
   const { t } = useT()
   const { settings, updateSettings } = useSettings()
+  const course = useCourseData()
   const targetLang = settings.targetLang
   const inferredPack = getPackForThemeId(id)
   const resolvedTargetLang = inferredPack?.langPrefix || targetLang
-  const allThemes = getThemes(resolvedTargetLang)
+  const allThemes = course.themes
   const { updateThemeProgress } = useProgress()
   const navigate = useNavigate()
 

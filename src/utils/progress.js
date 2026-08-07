@@ -1,14 +1,13 @@
-import { VOCAB } from '../data/courses/fr/vocab'
 import { conjCardKey } from './conjugation'
 
-export function getDueCards(cards) {
-  return VOCAB
+export function getDueCards(cards, vocab) {
+  return vocab
     .filter(w => cards[w.id]?.due <= Date.now())
     .sort((a, b) => cards[a.id].due - cards[b.id].due)
 }
 
-export function getNewCards(cards, limit = 5) {
-  return VOCAB
+export function getNewCards(cards, vocab, limit = 5) {
+  return vocab
     .filter(w => !cards[w.id] || cards[w.id].reps === 0)
     .sort((a, b) => a.freq - b.freq)
     .slice(0, limit)

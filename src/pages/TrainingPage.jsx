@@ -4,14 +4,13 @@ import { useT } from '../i18n'
 import { exerciseApi } from '../api/client'
 import { useProgress } from '../stores/UserProgressContext'
 import { useSettings } from '../stores/SettingsContext'
-import { getThemes, getThemeTitle, getVocab } from '../data/courses'
+import { useCourseData, getThemeTitle } from '../lib/courseData'
 import { filterThemesByPack, getLessonPack, PACK_IDS } from '../data/lessonPacks'
 import { getThemeConjugationMastery, getConjugationDueCount, getExerciseMastery, getExerciseDueCountByTheme, getVocabMastery, getVocabDueCount } from '../utils/progress'
 import { conjCardKey, PRONOUNS } from '../utils/conjugation'
 import ExerciseSection from '../components/themes/ExerciseSection'
 import ExerciseNoteModal from '../components/themes/exercises/ExerciseNoteModal'
 import VocabNoteModal from '../components/themes/exercises/VocabNoteModal'
-
 // Polish pronouns for targetLang 'pl'
 const PL_PRONOUNS = [
   { pl: 'ja', translation: 'я' },
@@ -303,12 +302,10 @@ function EmailTabContent({ emailThemes, navigate }) {
 
 export default function TrainingPage() {
   const { conjugationCards, exerciseCards, cards, exerciseNotes, vocabNotes, saveExerciseNote, clearExerciseNote, saveVocabNote, clearVocabNote } = useProgress()
-  const { settings } = useSettings()
-  const targetLang = settings.targetLang
-  const activePackId = settings.activePackId
+  const course = useCourseData()
   const activePack = getLessonPack(activePackId, targetLang)
-  const themes = filterThemesByPack(getThemes(targetLang), activePackId, targetLang)
-  const vocab = getVocab(targetLang)
+  const themes = filterThemesByPack(course.themes, activePackId, targetLang)
+  const vocab = course.vocab
   const { t } = useT()
   const navigate = useNavigate()
   const [expandedThemeId, setExpandedThemeId] = useState(null)
