@@ -242,7 +242,7 @@ export function findPunctuationErrors(text) {
   for (const rule of PUNCT_RULES) {
     try {
       const found = rule.test(text);
-      for (const f of found) errs.push(f);
+      for (const f of found) errs.push({ ...f, ruleId: rule.id });
     } catch {}
   }
   return errs;

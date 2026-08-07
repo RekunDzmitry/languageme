@@ -3,6 +3,15 @@ import { Router } from 'express';
 import { pool } from '../db/pool.js';
 import { authenticate as requireAuth, optionallyAuthenticate } from '../middleware/auth.js';
 import { grade as deterministicGrade, METRIC_VERSION } from '../services/emailScoring.js';
+import { discoverErrors } from '../services/emailDiscovery.js';
+import {
+  buildEnrichmentPrompt,
+  buildEnrichmentRequestBody,
+  parseEnrichmentResponse,
+  fallbackEnrichment,
+  ENRICHMENT_MAX_TOKENS,
+} from '../services/emailEnrichment.js';
+import { findTextOccurrences, rangesOverlap, resolveErrorSpan } from '../services/emailSpanHelpers.js';
 
 const router = Router();
 
@@ -112,518 +121,14 @@ async function callAI(prompt, options = {}) {
 }
 
 // ============================================================================
-// Build evaluation prompt
+// Small helpers used by both routes
 // ============================================================================
 
-const LANG_LABELS = { ru: 'Russian', en: 'English', pl: 'Polish', fr: 'French' };
 const EMAIL_TARGET_LEVELS = ['B1', 'B2'];
+const ERROR_CATEGORIES = ['spelling', 'grammar', 'style', 'vocabulary'];
 
 function normalizeTargetLevel(targetLevel) {
   return EMAIL_TARGET_LEVELS.includes(targetLevel) ? targetLevel : 'B1';
-}
-
-function clampTelcScore(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return 0;
-  return Math.max(0, Math.min(5, Math.round(n)));
-}
-
-function telcBand(total) {
-  if (total >= 15) return 'B2';
-  if (total >= 7) return 'B1';
-  return 'below_B1';
-}
-
-function normalizePointRating(value, covered) {
-  if (['++', '+', '0'].includes(value)) return value;
-  if (['Ø', 'O', 'o'].includes(value)) return '0';
-  return covered ? '+' : '0';
-}
-
-function normalizeTelcRubric(evaluation, pointsCount) {
-  const raw = evaluation.telcRubric || {};
-  const criteria = raw.criteria || {};
-  const fallbackCoverage = evaluation.taskCoverage || {};
-
-  const normalizedCriteria = {
-    content: {
-      score: clampTelcScore(criteria.content?.score ?? raw.contentScore ?? 0),
-      comment: criteria.content?.comment || '',
-    },
-    composition: {
-      score: clampTelcScore(criteria.composition?.score ?? raw.compositionScore ?? 0),
-      comment: criteria.composition?.comment || '',
-    },
-    accuracy: {
-      score: clampTelcScore(criteria.accuracy?.score ?? raw.accuracyScore ?? 0),
-      comment: criteria.accuracy?.comment || '',
-    },
-    vocabulary: {
-      score: clampTelcScore(criteria.vocabulary?.score ?? raw.vocabularyScore ?? 0),
-      comment: criteria.vocabulary?.comment || '',
-    },
-  };
-
-  const pointRatings = {};
-  for (let i = 1; i <= pointsCount; i++) {
-    const key = `point${i}`;
-    const rawPoint = raw.pointRatings?.[key] || {};
-    const fallbackPoint = fallbackCoverage[key] || {};
-    pointRatings[key] = {
-      rating: normalizePointRating(rawPoint.rating, fallbackPoint.covered === true),
-      snippet: rawPoint.snippet || fallbackPoint.snippet || '',
-      comment: rawPoint.comment || fallbackPoint.feedback || '',
-    };
-  }
-
-  const total = Object.values(normalizedCriteria).reduce((sum, item) => sum + item.score, 0);
-
-  return {
-    criteria: normalizedCriteria,
-    pointRatings,
-    total,
-    maxTotal: 20,
-    percentage: Math.round((total / 20) * 100),
-    // Always derive the CEFR band from the criterion total so the points and
-    // the band label can never disagree. The model's own cefrBand is ignored
-    // because it sometimes contradicts the points it assigned (e.g. 10/20 → below_B1).
-    cefrBand: telcBand(total),
-    offTopic: raw.offTopic === true,
-    taskMisunderstood: raw.taskMisunderstood === true,
-    examinerSummary: raw.examinerSummary || '',
-  };
-}
-
-function buildEvaluationPrompt(userText, taskDescription, points, register, etiquetteHint, nativeLang, targetLevel) {
-  // For B1/B2 exercises, all feedback is in Polish
-  const langLabel = 'Polish';
-  // Word translations go in the learner's native language so added cards are useful
-  const nativeLabel = LANG_LABELS[nativeLang] || 'Russian';
-
-  const pointsList = points && points.length > 0
-    ? points.map((p, i) => `  ${i + 1}. ${p}`).join('\n')
-    : 'No specific points required.';
-
-  const registerInfo = register
-    ? `The expected register is: ${register} (${register === 'nieformalny' ? 'informal — casual, friendly tone' : register === 'półformalny' ? 'semi-formal — polite but not stiff' : 'formal — official, professional tone'}). Evaluate whether the register used matches this requirement.`
-    : '';
-
-  // Construction replacement instructions — direction depends on target level
-  const userLevel = normalizeTargetLevel(targetLevel);
-  const replacementInstructions = userLevel === 'B2'
-    ? `The learner is targeting B2 level. Identify 2–4 constructions in their text that are too simple (A2/B1 level) and suggest more sophisticated B2-level alternatives. For each, explain why the B2 version sounds more natural or precise.`
-    : `The learner is targeting B1 level. Identify 2–4 constructions in their text that are overly complex (B2/C1 level attempts that didn't quite work) and suggest simpler, more natural B1-level alternatives. For each, explain why the simpler version is clearer and more appropriate.`;
-
-  const errorAlternativeInstructions = userLevel === 'B2'
-    ? `For every error, propose 1–3 B2-level alternatives that are correct, natural, and richer or more precise than the learner's erroneous version. Alternatives may be single words, short phrases, or constructions.`
-    : `For every error, propose 1–3 B1-level alternatives that are correct, natural, clear, and exam-safe. Prefer simple phrasing over complex constructions. Alternatives may be single words, short phrases, or constructions.`;
-
-  // Real catalogue of themes the learner is studying, so the AI files each
-  // correction under an EXISTING theme instead of inventing IDs.
-  return `Evaluate the following email written by a learner of Polish.
-The learner's native language is ${nativeLabel}.
-All human-readable feedback and comments must be in ${langLabel}.
-The learner's current CEFR target level is ${userLevel}.
-
-WRITING TASK:
-"${taskDescription}"
-
-MANDATORY POINTS (the learner must address ALL of them):
-${pointsList}
-
-REGISTER: ${register || 'unspecified'}
-${registerInfo}
-
-${etiquetteHint || ''}
-
-Here is the email they wrote:
----
-${userText}
----
-
-Return a JSON object with this exact structure:
-{
-  "telcRubric": {
-    "criteria": {
-      "content": { "score": <integer 0-5>, "comment": "<TELC-style examiner comment in ${langLabel}>" },
-      "composition": { "score": <integer 0-5>, "comment": "<comment on structure, coherence, greeting/closing, register in ${langLabel}>" },
-      "accuracy": { "score": <integer 0-5>, "comment": "<comment on grammar, spelling, punctuation in ${langLabel}>" },
-      "vocabulary": { "score": <integer 0-5>, "comment": "<comment on range and precision of vocabulary in ${langLabel}>" }
-    },
-    "pointRatings": {
-      "point1": { "rating": "++|+|0", "snippet": "<quote from text or empty>", "comment": "<brief content comment in ${langLabel}>" },
-      "point2": { "rating": "++|+|0", "snippet": "<quote from text or empty>", "comment": "<brief content comment in ${langLabel}>" },
-      "point3": { "rating": "++|+|0", "snippet": "<quote from text or empty>", "comment": "<brief content comment in ${langLabel}>" }
-    },
-    "offTopic": <true|false>,
-    "taskMisunderstood": <true|false>,
-    "examinerSummary": "<strict TELC-style summary in ${langLabel}, 1-2 sentences>"
-  },
-  "taskCoverage": {
-    "point1": { "covered": <true|false>, "snippet": "<quote from text showing coverage or empty if not covered>", "feedback": "<brief comment in ${langLabel}>" },
-    "point2": { "covered": <true|false>, "snippet": "...", "feedback": "..." },
-    "point3": { "covered": <true|false>, "snippet": "...", "feedback": "..." }
-  },
-  "etiquetteCheck": {
-    "greeting": <true|false>,
-    "closing": <true|false>,
-    "greetingText": "<the greeting used or empty>",
-    "closingText": "<the closing used or empty>",
-    "feedback": "<comment in ${langLabel}>"
-  },
-  "registerMatch": <true|false>,
-  "overallFeedback": "<brief encouraging summary in ${langLabel}, 2-3 sentences>",
-  "errors": [
-    {
-      "originalText": "<the erroneous fragment from the email>",
-      "correction": "<corrected version>",
-      "explanation": "<clear explanation in ${langLabel} of what is wrong and why>",
-      "category": "spelling|grammar|style|vocabulary",
-      "startOffset": <character index where the error starts in the original email text>,
-      "endOffset": <character index where the error ends>,
-      "proposedWords": [
-        {
-          "target": "<the corrected Polish word or short phrase to learn>",
-        "translation": "<translation in ${nativeLabel}>"
-        }
-      ],
-      "alternatives": [
-        {
-          "text": "<alternative corrected wording at ${userLevel} level>",
-          "type": "word|phrase|construction",
-          "level": "${userLevel}",
-          "explanation": "<brief explanation in ${langLabel} why this alternative fits ${userLevel}>"
-        }
-      ]
-    }
-  ],
-  "constructionReplacements": [
-    {
-      "originalText": "<the user's original phrase from the email>",
-      "suggestedText": "<the suggested alternative at ${userLevel} level>",
-      "originalLevel": "<estimated CEFR level of the original: A2, B1, B2, or C1>",
-      "suggestedLevel": "${userLevel}",
-      "explanation": "<brief explanation in ${langLabel} of the level difference and why the suggested version fits better>"
-    }
-  ]
-}
-
-IMPORTANT RULES:
-- Score the writing like telc Język polski B1·B2 Szkoła. Use the 4 official writing criteria: I Treść/content, II Kompozycja/composition, III Poprawność/accuracy, IV Słownictwo/vocabulary.
-- Each TELC criterion must be an integer from 0 to 5.
-- For telcRubric.pointRatings use TELC content marks: "++" means clear, developed, and task-appropriate; "+" means understandable and task-appropriate but not developed; "0" means missing, unclear, or not task-appropriate.
-- Content score should follow the point ratings strictly: three developed points deserve 5; three merely adequate points are around 3; missing/unclear points must lower the content score substantially.
-- If the text is completely off topic, set offTopic true and give 0 for all four TELC criteria.
-- If the task is misunderstood but the text is still a Polish email, set taskMisunderstood true, give content 0, but still score composition, accuracy, and vocabulary.
-- Composition includes logical order, cohesion, paragraphing, appropriate greeting/closing, and matching the required register (${register || 'unspecified'}).
-- Accuracy is not an error count. Judge whether grammar, spelling, word order, cases, conjugation, and punctuation interfere with communication at B1/B2 level.
-- Vocabulary is not just rare words. Judge range, precision, idiomatic suitability, repetition, and lexical mistakes for the task.
-- startOffset and endOffset must be exact character positions in the email text (0-indexed)
-- For "taskCoverage": evaluate whether each mandatory point was addressed. Set "covered" to true if the user mentions the topic, false if completely missing. Include a short quote from their text as "snippet".
-- For "etiquetteCheck": check if the email has an appropriate greeting at the beginning and sign-off at the end, suitable for the given register.
-- For "registerMatch": set to true if the overall tone matches the expected register, false if it's too formal or too casual.
-- For "proposedWords": ALWAYS include at least one item per error — the corrected word or short phrase as "target", with its "translation" in ${nativeLabel}. Add up to 2 more if the error reveals a related vocabulary gap. Never leave proposedWords empty.
-- For "errors": analyze spelling, grammar, style, and vocabulary. Do NOT flag things the learner got right. Only flag actual mistakes.
-- You MUST iterate over every item in "errors" and fill "alternatives" for each one. ${errorAlternativeInstructions}
-- For "alternatives": use type "word" for one-word lexical replacements, "phrase" for short multi-word replacements, and "construction" for grammar/sentence-pattern rewrites. Never return more than 3 alternatives per error.
-- For "constructionReplacements": ${replacementInstructions} Focus on constructions that are grammatically correct but stylistically mismatched to the learner's level. Do NOT include constructions that already have errors (those are covered in "errors").
-- If there are no constructions worth replacing, return an empty constructionReplacements array.
-- Be constructive and encouraging in overallFeedback.
-- Return ONLY the JSON object, no other text, no markdown code fences.`;
-}
-
-// Streaming prompts use strict line-oriented text for providers that do not
-// reliably honor JSON mode. If the model drifts from the requested format, the
-// parsers default missing fields instead of failing the whole evaluation.
-const PLAIN_AI_OPTIONS = {
-  json: false,
-  maxTokens: 2500,
-  systemPrompt: 'You are a Polish language tutor. Return plain text only. Follow the requested line format exactly. Do not use JSON, markdown, bullets, or extra commentary.'
-};
-
-const ERROR_CATEGORIES = ['spelling', 'grammar', 'style', 'vocabulary'];
-
-function taskContext({ userText, taskDescription, points, register, etiquetteHint, nativeLang, targetLevel }) {
-  const nativeLabel = LANG_LABELS[nativeLang] || 'Russian';
-  const level = normalizeTargetLevel(targetLevel);
-  const pointsList = points?.length ? points.map((p, i) => `${i + 1}. ${p}`).join('\n') : 'No specific points required.';
-  return `Learner native language: ${nativeLabel}
-Feedback language: Polish
-Target level: ${level}
-Task: ${taskDescription}
-Mandatory points:
-${pointsList}
-Register: ${register || 'unspecified'}
-Etiquette hint: ${etiquetteHint || 'none'}
-Email:
-<<<EMAIL
-${userText}
-EMAIL`;
-}
-
-function parseBool(value) {
-  return /^(yes|true|tak|1)$/i.test(String(value || '').trim());
-}
-
-function parseScore(value) {
-  return clampTelcScore(String(value || '').match(/\d+/)?.[0]);
-}
-
-function parseKeyLines(text) {
-  const data = {};
-  for (const line of String(text || '').split(/\r?\n/)) {
-    const idx = line.indexOf(':');
-    if (idx <= 0) continue;
-    const key = line.slice(0, idx).trim().toUpperCase();
-    const value = line.slice(idx + 1).trim();
-    if (key) data[key] = value;
-  }
-  return data;
-}
-
-function parseBlocks(text, startMarker, endMarker = 'END') {
-  const blocks = [];
-  let current = null;
-  for (const rawLine of String(text || '').split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (line.toUpperCase() === startMarker) {
-      current = {};
-      continue;
-    }
-    if (line.toUpperCase() === endMarker) {
-      if (current) blocks.push(current);
-      current = null;
-      continue;
-    }
-    if (!current) continue;
-    const idx = rawLine.indexOf(':');
-    if (idx <= 0) continue;
-    const key = rawLine.slice(0, idx).trim().toUpperCase();
-    current[key] = rawLine.slice(idx + 1).trim();
-  }
-  return blocks;
-}
-
-function parsePipeLine(value, fields) {
-  const parts = String(value || '').split('|').map(part => part.trim());
-  return fields.reduce((item, field, idx) => {
-    item[field] = parts[idx] || '';
-    return item;
-  }, {});
-}
-
-function findTextOccurrences(text, needle) {
-  if (!text || !needle) return [];
-  const occurrences = [];
-  let fromIndex = 0;
-  while (fromIndex <= text.length) {
-    const index = text.indexOf(needle, fromIndex);
-    if (index === -1) break;
-    occurrences.push({ startOffset: index, endOffset: index + needle.length });
-    fromIndex = index + Math.max(needle.length, 1);
-  }
-  return occurrences;
-}
-
-function rangesOverlap(a, b) {
-  return a.startOffset < b.endOffset && b.startOffset < a.endOffset;
-}
-
-function resolveErrorSpan(userText, originalText, accepted = []) {
-  const candidates = [originalText, String(originalText || '').trim()]
-    .filter((item, idx, arr) => item && arr.indexOf(item) === idx);
-  for (const candidate of candidates) {
-    for (const occurrence of findTextOccurrences(userText, candidate)) {
-      if (accepted.some(existing => rangesOverlap(existing, occurrence))) continue;
-      return { ...occurrence, originalText: userText.slice(occurrence.startOffset, occurrence.endOffset), resolved: true };
-    }
-  }
-  return { startOffset: -1, endOffset: -1, originalText: String(originalText || '').trim(), resolved: false };
-}
-
-function parseRubricResponse(text, pointsCount) {
-  const data = parseKeyLines(text);
-  const pointRatings = {};
-  for (let i = 1; i <= pointsCount; i++) {
-    const rating = data[`POINT_${i}_RATING`];
-    pointRatings[`point${i}`] = {
-      rating: normalizePointRating(rating, parseBool(data[`POINT_${i}_COVERED`])),
-      covered: parseBool(data[`POINT_${i}_COVERED`]),
-      snippet: data[`POINT_${i}_SNIPPET`] || '',
-      comment: data[`POINT_${i}_COMMENT`] || ''
-    };
-  }
-  return {
-    telcRubric: {
-      criteria: {
-        content: { score: parseScore(data.CONTENT_SCORE), comment: data.CONTENT_COMMENT || '' },
-        composition: { score: parseScore(data.COMPOSITION_SCORE), comment: data.COMPOSITION_COMMENT || '' },
-        accuracy: { score: parseScore(data.ACCURACY_SCORE), comment: data.ACCURACY_COMMENT || '' },
-        vocabulary: { score: parseScore(data.VOCABULARY_SCORE), comment: data.VOCABULARY_COMMENT || '' },
-      },
-      pointRatings,
-      examinerSummary: data.EXAMINER_SUMMARY || ''
-    },
-    taskCoverage: Object.fromEntries(Object.entries(pointRatings).map(([key, value]) => [
-      key,
-      { covered: value.covered, snippet: value.snippet, feedback: value.comment }
-    ])),
-    etiquetteCheck: {
-      greeting: parseBool(data.ETIQUETTE_GREETING),
-      closing: parseBool(data.ETIQUETTE_CLOSING),
-      greetingText: data.GREETING_TEXT || '',
-      closingText: data.CLOSING_TEXT || '',
-      feedback: data.ETIQUETTE_FEEDBACK || ''
-    },
-    registerMatch: parseBool(data.REGISTER_MATCH),
-    overallFeedback: data.OVERALL_FEEDBACK || data.EXAMINER_SUMMARY || '',
-    offTopic: parseBool(data.OFF_TOPIC),
-    taskMisunderstood: parseBool(data.TASK_MISUNDERSTOOD)
-  };
-}
-
-function parseErrorDiscovery(text, category, userText, acceptedRanges) {
-  return parseBlocks(text, 'ERROR').map(block => {
-    const span = resolveErrorSpan(userText, block.TEXT || block.ORIGINAL || '', acceptedRanges);
-    if (span.resolved) acceptedRanges.push(span);
-    return {
-      category,
-      originalText: span.originalText,
-      startOffset: span.startOffset,
-      endOffset: span.endOffset,
-      discoveryNote: block.WHY || '',
-      resolved: span.resolved
-    };
-  });
-}
-
-function parseEnrichment(text, err, nativeLang, targetLevel) {
-  const lines = String(text || '').split(/\r?\n/);
-  const data = parseKeyLines(text);
-  const proposedWords = [];
-  const alternatives = [];
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.toUpperCase().startsWith('PROPOSED:')) {
-      proposedWords.push(parsePipeLine(trimmed.slice(trimmed.indexOf(':') + 1), ['target', 'translation']));
-    }
-    if (trimmed.toUpperCase().startsWith('ALTERNATIVE:')) {
-      alternatives.push(parsePipeLine(trimmed.slice(trimmed.indexOf(':') + 1), ['text', 'type', 'level', 'explanation']));
-    }
-  }
-  const correction = data.CORRECTION || err.originalText;
-  return {
-    ...err,
-    correction,
-    explanation: data.EXPLANATION || err.discoveryNote || '',
-    proposedWords: proposedWords
-      .filter(item => item.target && item.translation)
-      .slice(0, 3),
-    alternatives: alternatives
-      .filter(item => item.text)
-      .slice(0, 3)
-      .map(item => ({
-        text: item.text,
-        type: ['word', 'phrase', 'construction'].includes(item.type) ? item.type : 'phrase',
-        level: EMAIL_TARGET_LEVELS.includes(item.level) ? item.level : normalizeTargetLevel(targetLevel),
-        explanation: item.explanation || ''
-      })),
-    nativeLang
-  };
-}
-
-function parseConstructionResponse(text, targetLevel) {
-  return parseBlocks(text, 'CONSTRUCTION').map(block => ({
-    originalText: block.ORIGINAL || '',
-    suggestedText: block.SUGGESTED || '',
-    originalLevel: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].includes(block.ORIGINAL_LEVEL) ? block.ORIGINAL_LEVEL : 'B1',
-    suggestedLevel: normalizeTargetLevel(targetLevel),
-    explanation: block.EXPLANATION || ''
-  })).filter(item => item.originalText && item.suggestedText).slice(0, 4);
-}
-
-function buildRubricPrompt(context, pointsCount) {
-  const pointLines = Array.from({ length: pointsCount }, (_, idx) => `POINT_${idx + 1}_COVERED: yes|no
-POINT_${idx + 1}_RATING: ++|+|0
-POINT_${idx + 1}_SNIPPET: exact short quote or empty
-POINT_${idx + 1}_COMMENT: Polish comment`).join('\n');
-  return `${context}
-
-Score TELC Polish B1/B2 writing. Return these lines exactly:
-CONTENT_SCORE: 0-5
-CONTENT_COMMENT: Polish comment
-COMPOSITION_SCORE: 0-5
-COMPOSITION_COMMENT: Polish comment
-ACCURACY_SCORE: 0-5
-ACCURACY_COMMENT: Polish comment
-VOCABULARY_SCORE: 0-5
-VOCABULARY_COMMENT: Polish comment
-${pointLines}
-ETIQUETTE_GREETING: yes|no
-GREETING_TEXT: exact greeting or empty
-ETIQUETTE_CLOSING: yes|no
-CLOSING_TEXT: exact closing or empty
-ETIQUETTE_FEEDBACK: Polish comment
-REGISTER_MATCH: yes|no
-OFF_TOPIC: yes|no
-TASK_MISUNDERSTOOD: yes|no
-EXAMINER_SUMMARY: 1-2 Polish sentences
-OVERALL_FEEDBACK: 2-3 constructive Polish sentences`;
-}
-
-function buildErrorDiscoveryPrompt(context, category) {
-  return `${context}
-
-Find only ${category} mistakes. Return no corrections and no offsets.
-For each mistake, use:
-ERROR
-TEXT: exact mistaken fragment copied from the email
-WHY: short Polish reason
-END
-If there are no ${category} mistakes, return exactly:
-NO_ERRORS`;
-}
-
-function buildEnrichmentPrompt(context, err, nativeLang, targetLevel) {
-  const nativeLabel = LANG_LABELS[nativeLang] || 'Russian';
-  const level = normalizeTargetLevel(targetLevel);
-  return `${context}
-
-Enrich this ${err.category} mistake:
-TEXT: ${err.originalText}
-REASON: ${err.discoveryNote || ''}
-
-Return these lines:
-CORRECTION: corrected Polish fragment
-EXPLANATION: short Polish explanation
-PROPOSED: corrected Polish word or short phrase | ${nativeLabel} translation
-Optional up to two more PROPOSED lines.
-ALTERNATIVE: ${level}-level alternative wording | word|phrase|construction | ${level} | short Polish explanation
-Return 1-3 ALTERNATIVE lines.`;
-}
-
-function buildConstructionPrompt(context, targetLevel, errors) {
-  const level = normalizeTargetLevel(targetLevel);
-  const errorTexts = errors.map(err => `- ${err.originalText}`).join('\n') || '(none)';
-  const direction = level === 'B2'
-    ? 'Find correct but too-simple A2/B1 constructions and suggest richer B2 alternatives.'
-    : 'Find correct but over-complex B2/C1 attempts and suggest simpler natural B1 alternatives.';
-  return `${context}
-
-Already handled erroneous fragments:
-${errorTexts}
-
-${direction}
-Do not include fragments that contain actual mistakes.
-Use:
-CONSTRUCTION
-ORIGINAL: exact original phrase
-SUGGESTED: suggested replacement
-ORIGINAL_LEVEL: A1|A2|B1|B2|C1|C2
-EXPLANATION: short Polish explanation
-END
-If none, return exactly:
-NO_CONSTRUCTIONS`;
 }
 
 async function updateEvaluationStep({ attemptId, userId, steps, key, patch, status }) {
@@ -643,47 +148,6 @@ async function updateEvaluationStep({ attemptId, userId, steps, key, patch, stat
     [attemptId, userId, JSON.stringify(nextSteps), status || null]
   );
   return nextSteps;
-}
-
-function writeStreamEvent(res, type, payload = {}) {
-  res.write(`${JSON.stringify({ type, ...payload })}\n`);
-}
-
-function buildFinalEvaluation({ rubricData, errors, constructionReplacements, pointsCount, targetLevel }) {
-  const evaluationForRubric = {
-    telcRubric: {
-      ...(rubricData.telcRubric || {}),
-      offTopic: rubricData.offTopic,
-      taskMisunderstood: rubricData.taskMisunderstood
-    },
-    taskCoverage: rubricData.taskCoverage,
-  };
-  const telcRubric = normalizeTelcRubric(evaluationForRubric, pointsCount);
-  const finalErrors = errors
-    .filter(err => err.resolved && err.startOffset >= 0 && err.endOffset > err.startOffset)
-    .sort((a, b) => a.startOffset - b.startOffset)
-    .map((err, idx) => ({
-      id: `err_${idx}`,
-      originalText: err.originalText,
-      correction: err.correction || err.originalText,
-      explanation: err.explanation || '',
-      category: ERROR_CATEGORIES.includes(err.category) ? err.category : 'grammar',
-      startOffset: err.startOffset,
-      endOffset: err.endOffset,
-      proposedWords: Array.isArray(err.proposedWords) ? err.proposedWords : [],
-      alternatives: Array.isArray(err.alternatives) ? err.alternatives : []
-    }));
-  return {
-    score: telcRubric.percentage,
-    telcRubric,
-    taskCoverage: rubricData.taskCoverage || {},
-    etiquetteCheck: rubricData.etiquetteCheck || {},
-    registerMatch: rubricData.registerMatch === true,
-    overallFeedback: rubricData.overallFeedback || 'Evaluation completed.',
-    targetLevel: normalizeTargetLevel(targetLevel),
-    errors: finalErrors,
-    constructionReplacements: constructionReplacements || []
-  };
 }
 
 // Build the per-criterion streaming event payload from a deterministic
@@ -777,6 +241,140 @@ function buildDeterministicFinalEvaluation({ gradeResult, errors = [], construct
 }
 
 // ============================================================================
+// Shared evaluation core (used by /evaluate and /evaluate-stream)
+// ============================================================================
+//
+// The pipeline:
+//   1. Deterministic rubric via `deterministicGrade` (no LLM).
+//   2. Deterministic error discovery via `discoverErrors` (Hunspell +
+//      punctuation + grammar rules). Byte-precise offsets, no LLM.
+//   3. ONE enrichment call: LLM annotates each deterministic error with
+//      explanation + correction + proposedWords + alternatives, plus any
+//      style/vocabulary errors the deterministic stack can't see, plus up to
+//      4 constructionReplacements. The LLM sees the whole email and the full
+//      error list in one prompt — no more fragment-only guessing.
+//   4. Wire-payload assembly via `buildDeterministicFinalEvaluation`.
+//   5. Optional streaming event hook so the streaming route can emit NDJSON.
+//
+// The optional `onEvent` callback lets the streaming route emit progress
+// events without coupling the core to Express. Each event is a plain object
+// with `type` plus arbitrary payload fields.
+//
+// On LLM failure the core returns the deterministic errors with empty
+// enrichment fields — the wire payload is still valid, the attempt still
+// saves, the user still gets their scores and the deterministic errors.
+
+async function evaluateEmailCore({
+  userText,
+  taskDescription,
+  nativeLang,
+  points,
+  register,
+  etiquetteHint,
+  targetLevel,
+  onEvent,
+  signal,
+}) {
+  const trimmedText = userText.trim();
+  const userNativeLang = nativeLang || 'ru';
+  const normalizedTargetLevel = normalizeTargetLevel(targetLevel);
+  const taskPoints = Array.isArray(points) ? points : [];
+
+  // ---- Step 1: deterministic rubric ----
+  onEvent?.({ type: 'step_started', step: 'rubric' });
+  const gradeResult = deterministicGrade(trimmedText, {
+    points: taskPoints,
+    register: register || 'nieformalny',
+    targetLevel: normalizedTargetLevel,
+  });
+  const rubricEventData = deterministicRubricEventData(gradeResult);
+  onEvent?.({
+    type: 'step_completed',
+    step: 'rubric',
+    data: rubricEventData,
+    metricVersion: gradeResult.metricVersion,
+  });
+
+  // ---- Step 2: deterministic error discovery ----
+  onEvent?.({ type: 'step_started', step: 'discovery' });
+  const discoveredErrors = discoverErrors(trimmedText);
+  onEvent?.({
+    type: 'step_completed',
+    step: 'discovery',
+    data: discoveredErrors,
+    counts: {
+      total: discoveredErrors.length,
+      spelling: discoveredErrors.filter(e => e.category === 'spelling').length,
+      punctuation: discoveredErrors.filter(e => e.category === 'punctuation').length,
+      grammar: discoveredErrors.filter(e => e.category === 'grammar').length,
+    },
+  });
+
+  // ---- Step 3: single LLM enrichment call ----
+  let enrichedErrors = fallbackEnrichment(discoveredErrors).enrichedErrors;
+  let constructionReplacements = [];
+  let llmError = null;
+  let enrichmentRaw = null;
+
+  onEvent?.({ type: 'step_started', step: 'enrichment' });
+  try {
+    const prompt = buildEnrichmentPrompt({
+      userText: trimmedText,
+      taskDescription,
+      points: taskPoints,
+      register: register || '',
+      etiquetteHint: etiquetteHint || '',
+      nativeLang: userNativeLang,
+      targetLevel: normalizedTargetLevel,
+      discoveredErrors,
+    });
+    enrichmentRaw = await callAI(prompt, {
+      json: !USE_NVIDIA_NIM,
+      maxTokens: ENRICHMENT_MAX_TOKENS,
+      signal,
+    });
+    const parsed = parseEnrichmentResponse(enrichmentRaw, trimmedText, discoveredErrors);
+    enrichedErrors = parsed.enrichedErrors;
+    constructionReplacements = parsed.constructionReplacements;
+    onEvent?.({
+      type: 'step_completed',
+      step: 'enrichment',
+      data: enrichedErrors,
+      constructionReplacements,
+      counts: {
+        total: enrichedErrors.length,
+        llmAdded: enrichedErrors.length - discoveredErrors.length,
+      },
+    });
+  } catch (err) {
+    llmError = err.message;
+    console.warn('LLM enrichment failed; using deterministic errors only:', err.message);
+    onEvent?.({
+      type: 'step_failed',
+      step: 'enrichment',
+      error: err.message,
+      deterministicFallback: true,
+    });
+  }
+
+  // ---- Step 4: wire payload assembly ----
+  const evaluation = buildDeterministicFinalEvaluation({
+    gradeResult,
+    errors: enrichedErrors,
+    constructionReplacements,
+  });
+  evaluation.targetLevel = normalizedTargetLevel;
+  return {
+    evaluation,
+    discoveredErrors,
+    enrichedErrors,
+    constructionReplacements,
+    llmError,
+    enrichmentRaw,
+  };
+}
+
+// ============================================================================
 // POST /api/email/evaluate-stream — progressive persisted evaluation
 // ============================================================================
 router.post('/evaluate-stream', requireAuth, async (req, res) => {
@@ -790,18 +388,6 @@ router.post('/evaluate-stream', requireAuth, async (req, res) => {
   if (!Number.isInteger(parsedExerciseIdx)) return res.status(400).json({ error: 'exerciseIdx must be an integer' });
 
   const trimmedText = userText.trim();
-  const userNativeLang = nativeLang || 'ru';
-  const normalizedTargetLevel = normalizeTargetLevel(targetLevel);
-  const taskPoints = Array.isArray(points) ? points : [];
-  const context = taskContext({
-    userText: trimmedText,
-    taskDescription,
-    points: taskPoints,
-    register: register || '',
-    etiquetteHint: etiquetteHint || '',
-    nativeLang: userNativeLang,
-    targetLevel: normalizedTargetLevel
-  });
 
   const { rows } = await pool.query(
     `INSERT INTO email_attempt
@@ -820,127 +406,46 @@ router.post('/evaluate-stream', requireAuth, async (req, res) => {
 
   const requestController = new AbortController();
   const requestTimeout = setTimeout(() => requestController.abort(), EMAIL_EVALUATION_TIMEOUT_MS);
-  const aiOptions = { ...PLAIN_AI_OPTIONS, signal: requestController.signal };
+
+  // Bridge core events to NDJSON output + DB persistence. The core emits
+  // {type, step, ...} events; we mirror them on the wire and snapshot them
+  // into email_attempt.evaluation_steps so a refresh / retry can replay the
+  // last finished state.
+  const onEvent = (evt) => {
+    writeStreamEvent(res, evt.type, evt);
+    if (evt.type === 'step_started' || evt.type === 'step_completed' || evt.type === 'step_failed') {
+      const step = evt.step;
+      const patch = {
+        status: evt.type === 'step_started' ? 'running'
+              : evt.type === 'step_failed'  ? 'failed'
+              : 'complete',
+        ...(evt.type === 'step_completed' ? { completedAt: new Date().toISOString() } : {}),
+        ...(evt.type === 'step_started'  ? { startedAt:  new Date().toISOString() } : {}),
+        ...(evt.data !== undefined ? { data: evt.data } : {}),
+        ...(evt.error ? { error: evt.error } : {}),
+        ...(evt.counts ? { counts: evt.counts } : {}),
+        ...(evt.metricVersion ? { metricVersion: evt.metricVersion } : {}),
+      };
+      updateEvaluationStep({ attemptId: attempt.id, userId, steps, key: step, patch })
+        .then(nextSteps => { steps = nextSteps; })
+        .catch(dbErr => console.error(`Failed to persist step ${step}:`, dbErr.message));
+    }
+  };
 
   try {
-    // Rubric step is now deterministic — no LLM. Same input → same rubric.
-    writeStreamEvent(res, 'step_started', { step: 'rubric' });
-    steps = await updateEvaluationStep({ attemptId: attempt.id, userId, steps, key: 'rubric', patch: { status: 'running', startedAt: new Date().toISOString() } });
-    const gradeResult = deterministicGrade(trimmedText, {
-      points: taskPoints,
-      register: register || 'nieformalny',
-      targetLevel: normalizedTargetLevel,
+    const result = await evaluateEmailCore({
+      userText: trimmedText,
+      taskDescription,
+      nativeLang,
+      points: Array.isArray(points) ? points : [],
+      register: register || '',
+      etiquetteHint: etiquetteHint || '',
+      targetLevel,
+      onEvent,
+      signal: requestController.signal,
     });
-    const rubricData = deterministicRubricEventData(gradeResult);
-    steps = await updateEvaluationStep({
-      attemptId: attempt.id,
-      userId,
-      steps,
-      key: 'rubric',
-      patch: {
-        status: 'complete',
-        completedAt: new Date().toISOString(),
-        data: rubricData,
-        metricVersion: gradeResult.metricVersion,
-      },
-    });
-    writeStreamEvent(res, 'step_completed', { step: 'rubric', data: rubricData });
-    const acceptedRanges = [];
-    const discoveredErrors = [];
-    for (const category of ERROR_CATEGORIES) {
-      const step = `errors_${category}`;
-      writeStreamEvent(res, 'step_started', { step });
-      steps = await updateEvaluationStep({ attemptId: attempt.id, userId, steps, key: step, patch: { status: 'running', startedAt: new Date().toISOString() } });
-    }
 
-    const discoveryResults = await Promise.all(
-      ERROR_CATEGORIES.map(async (category) => ({
-        category,
-        step: `errors_${category}`,
-        raw: await callAI(buildErrorDiscoveryPrompt(context, category), aiOptions)
-      }))
-    );
-
-    for (const { category, step, raw } of discoveryResults) {
-      const parsed = parseErrorDiscovery(raw, category, trimmedText, acceptedRanges);
-      discoveredErrors.push(...parsed);
-      steps = await updateEvaluationStep({
-        attemptId: attempt.id,
-        userId,
-        steps,
-        key: step,
-        patch: { status: 'complete', completedAt: new Date().toISOString(), raw, data: parsed }
-      });
-      writeStreamEvent(res, 'step_completed', { step, data: parsed });
-    }
-
-    const enrichmentJobs = [];
-    for (let i = 0; i < discoveredErrors.length; i++) {
-      const err = discoveredErrors[i];
-      const step = `enrichment_${i + 1}`;
-      if (!err.resolved) {
-        steps = await updateEvaluationStep({ attemptId: attempt.id, userId, steps, key: step, patch: { status: 'skipped', data: err } });
-        continue;
-      }
-      writeStreamEvent(res, 'step_started', { step, errorIndex: i });
-      steps = await updateEvaluationStep({ attemptId: attempt.id, userId, steps, key: step, patch: { status: 'running', startedAt: new Date().toISOString(), error: err } });
-      enrichmentJobs.push({
-        index: i,
-        step,
-        err,
-        run: callAI(buildEnrichmentPrompt(context, err, userNativeLang, normalizedTargetLevel), aiOptions)
-      });
-    }
-
-    const enrichedErrors = [];
-    const enrichmentResults = await Promise.allSettled(enrichmentJobs.map(job => job.run));
-    for (let i = 0; i < enrichmentJobs.length; i++) {
-      const { step, err } = enrichmentJobs[i];
-      const result = enrichmentResults[i];
-      if (result.status === 'fulfilled') {
-        const raw = result.value;
-        const enriched = parseEnrichment(raw, err, userNativeLang, normalizedTargetLevel);
-        enrichedErrors.push(enriched);
-        steps = await updateEvaluationStep({
-          attemptId: attempt.id,
-          userId,
-          steps,
-          key: step,
-          patch: { status: 'complete', completedAt: new Date().toISOString(), raw, data: enriched }
-        });
-        writeStreamEvent(res, 'step_completed', { step, data: enriched });
-      } else {
-        const errStep = result.reason;
-        steps = await updateEvaluationStep({
-          attemptId: attempt.id,
-          userId,
-          steps,
-          key: step,
-          patch: { status: 'failed', completedAt: new Date().toISOString(), error: errStep.message, data: err }
-        });
-        writeStreamEvent(res, 'step_failed', { step, error: errStep.message });
-      }
-    }
-
-    writeStreamEvent(res, 'step_started', { step: 'constructionReplacements' });
-    steps = await updateEvaluationStep({ attemptId: attempt.id, userId, steps, key: 'constructionReplacements', patch: { status: 'running', startedAt: new Date().toISOString() } });
-    const constructionRaw = await callAI(buildConstructionPrompt(context, normalizedTargetLevel, enrichedErrors), aiOptions);
-    const constructionReplacements = parseConstructionResponse(constructionRaw, normalizedTargetLevel);
-    steps = await updateEvaluationStep({
-      attemptId: attempt.id,
-      userId,
-      steps,
-      key: 'constructionReplacements',
-      patch: { status: 'complete', completedAt: new Date().toISOString(), raw: constructionRaw, data: constructionReplacements }
-    });
-    writeStreamEvent(res, 'step_completed', { step: 'constructionReplacements', data: constructionReplacements });
-
-    const finalEvaluation = buildDeterministicFinalEvaluation({
-      gradeResult,
-      errors: enrichedErrors,
-      constructionReplacements,
-    });
-    finalEvaluation.targetLevel = normalizedTargetLevel;
+    const finalEvaluation = result.evaluation;
     steps = await updateEvaluationStep({ attemptId: attempt.id, userId, steps, key: 'final', patch: { status: 'complete', completedAt: new Date().toISOString(), data: finalEvaluation }, status: 'complete' });
     await pool.query(
       `UPDATE email_attempt
@@ -948,10 +453,10 @@ router.post('/evaluate-stream', requireAuth, async (req, res) => {
            ai_evaluation = $4::jsonb,
            deterministic_signals = $5::jsonb,
            metric_version = $6,
-           evaluation_error = NULL,
+           evaluation_error = $7,
            updated_at = NOW()
        WHERE id = $1 AND user_id = $2`,
-      [attempt.id, userId, finalEvaluation.score, JSON.stringify(finalEvaluation), JSON.stringify(finalEvaluation.deterministicSignals || {}), METRIC_VERSION]
+      [attempt.id, userId, finalEvaluation.score, JSON.stringify(finalEvaluation), JSON.stringify(finalEvaluation.deterministicSignals || {}), METRIC_VERSION, result.llmError || null]
     );
     const autoAdded = await autoAddCorrectionExercises(userId, attempt.id, finalEvaluation);
     writeStreamEvent(res, 'evaluation_complete', { attemptId: attempt.id, evaluation: finalEvaluation, autoAdded });
@@ -988,130 +493,26 @@ router.post('/evaluate', optionallyAuthenticate, async (req, res) => {
       return res.status(400).json({ error: 'taskDescription is required' });
     }
 
-    const userNativeLang = nativeLang || 'ru';
-    const normalizedTargetLevel = normalizeTargetLevel(targetLevel);
-
-    // Build prompt and call AI
-    const prompt = buildEvaluationPrompt(
-      userText.trim(),
-      taskDescription,
-      points || [],
-      register || '',
-      etiquetteHint || '',
-      userNativeLang,
-      normalizedTargetLevel
-    );
-    let rawResponse;
+    // The legacy one-shot endpoint now shares the same core pipeline as the
+    // streaming route: deterministic rubric, deterministic discovery, single
+    // enrichment LLM call. The wire payload shape is unchanged.
+    let result;
     try {
-      rawResponse = await callAI(prompt);
-    } catch (aiErr) {
-      console.error('AI call failed:', aiErr.message);
-      return res.status(502).json({ error: 'AI evaluation service unavailable', details: aiErr.message });
+      result = await evaluateEmailCore({
+        userText,
+        taskDescription,
+        nativeLang,
+        points: points || [],
+        register: register || '',
+        etiquetteHint: etiquetteHint || '',
+        targetLevel,
+      });
+    } catch (coreErr) {
+      console.error('Email evaluation core error:', coreErr.message);
+      return res.status(500).json({ error: 'Failed to evaluate email', details: coreErr.message });
     }
 
-    // Parse AI response
-    let evaluation;
-    try {
-      // Try to extract JSON from response (handle possible code fences)
-      const jsonMatch = rawResponse.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        evaluation = JSON.parse(jsonMatch[0]);
-      } else {
-        evaluation = JSON.parse(rawResponse);
-      }
-    } catch {
-      console.error('Failed to parse AI response:', rawResponse.substring(0, 500));
-      return res.status(502).json({ error: 'AI returned invalid response format', rawPreview: rawResponse.substring(0, 200) });
-    }
-
-    // Validate evaluation structure
-    if (typeof evaluation.score !== 'number' || !Array.isArray(evaluation.errors)) {
-      evaluation.score = evaluation.score ?? 0;
-      evaluation.errors = Array.isArray(evaluation.errors) ? evaluation.errors : [];
-      evaluation.overallFeedback = evaluation.overallFeedback || 'Evaluation completed.';
-    }
-
-    // Normalize taskCoverage
-    const pointsCount = (points || []).length;
-    const normalizedTaskCoverage = {};
-    for (let i = 1; i <= pointsCount; i++) {
-      const key = `point${i}`;
-      const raw = evaluation.taskCoverage?.[key] || {};
-      normalizedTaskCoverage[key] = {
-        covered: raw.covered === true,
-        snippet: raw.snippet || '',
-        feedback: raw.feedback || '',
-      };
-    }
-
-    const telcRubric = normalizeTelcRubric(evaluation, pointsCount);
-    // Deterministic grade overrides the LLM-emitted scores. The LLM still
-    // contributes errors and constructionReplacements below; the rubric
-    // itself is reproducible.
-    const gradeResult = deterministicGrade(userText.trim(), {
-      points: points || [],
-      register: register || 'nieformalny',
-      targetLevel: normalizedTargetLevel,
-      offTopic: typeof evaluation.offTopic === 'boolean' ? evaluation.offTopic : null,
-      taskMisunderstood: typeof evaluation.taskMisunderstood === 'boolean' ? evaluation.taskMisunderstood : null,
-    });
-
-    // Normalize etiquetteCheck
-    const rawEtiquette = evaluation.etiquetteCheck || {};
-    const normalizedEtiquette = {
-      greeting: rawEtiquette.greeting === true,
-      closing: rawEtiquette.closing === true,
-      greetingText: rawEtiquette.greetingText || '',
-      closingText: rawEtiquette.closingText || '',
-      feedback: rawEtiquette.feedback || '',
-    };
-
-    // Normalize errors
-    evaluation.errors = evaluation.errors.map((err, idx) => ({
-      id: `err_${idx}`,
-      originalText: err.originalText || '',
-      correction: err.correction || '',
-      explanation: err.explanation || '',
-      category: ['spelling', 'grammar', 'style', 'vocabulary'].includes(err.category) ? err.category : 'grammar',
-      startOffset: typeof err.startOffset === 'number' ? err.startOffset : 0,
-      endOffset: typeof err.endOffset === 'number' ? err.endOffset : 0,
-      proposedWords: Array.isArray(err.proposedWords)
-          ? err.proposedWords.slice(0, 3).map(w => ({
-            target: w.target || '',
-            translation: w.translation || '',
-          }))
-        : [],
-      alternatives: Array.isArray(err.alternatives)
-        ? err.alternatives.slice(0, 3).map(alt => ({
-            text: alt.text || '',
-            type: ['word', 'phrase', 'construction'].includes(alt.type) ? alt.type : 'phrase',
-            level: EMAIL_TARGET_LEVELS.includes(alt.level) ? alt.level : normalizedTargetLevel,
-            explanation: alt.explanation || '',
-          })).filter(alt => alt.text)
-        : [],
-    }));
-
-    // Deduplicate and sort errors by position
-    evaluation.errors.sort((a, b) => a.startOffset - b.startOffset);
-
-    // Normalize constructionReplacements
-    const constructionReplacements = Array.isArray(evaluation.constructionReplacements)
-      ? evaluation.constructionReplacements.map(cr => ({
-          originalText: cr.originalText || '',
-          suggestedText: cr.suggestedText || '',
-          originalLevel: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].includes(cr.originalLevel) ? cr.originalLevel : 'B1',
-          suggestedLevel: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].includes(cr.suggestedLevel) ? cr.suggestedLevel : normalizedTargetLevel,
-          explanation: cr.explanation || '',
-        }))
-      : [];
-
-    const finalEvaluation = buildDeterministicFinalEvaluation({
-      gradeResult,
-      errors: Array.isArray(evaluation.errors) ? evaluation.errors : [],
-      constructionReplacements: constructionReplacements,
-    });
-    finalEvaluation.targetLevel = normalizedTargetLevel;
-    return res.json(finalEvaluation);
+    return res.json(result.evaluation);
   } catch (err) {
     console.error('Email evaluation error:', err);
     res.status(500).json({ error: 'Failed to evaluate email', details: err.message });
