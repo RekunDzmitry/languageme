@@ -64,7 +64,12 @@ export const THEME01_PL_CONJUGATIONS = {
   // ── e→è: основа ──
   achever: ['kończę', 'kończysz', 'kończy', 'kończymy', 'kończycie', 'kończą'],
   ajouter: ['dodaję', 'dodajesz', 'dodaje', 'dodajemy', 'dodajecie', 'dodają'],
- Lever: ['podnoszę', 'podnosisz', 'podnosi', 'podnosimy', 'podnosicie', 'podnoszą'],
+ lever: ['podnoszę', 'podnosisz', 'podnosi', 'podnosimy', 'podnosicie', 'podnoszą'],
+ enlever: ['zdejmuję', 'zdejmujesz', 'zdejmuje', 'zdejmujemy', 'zdejmujecie', 'zdejmują'],
+  relever: ['podejmuję', 'podejmujesz', 'podejmuje', 'podejmujemy', 'podejmujecie', 'podejmują'],
+ élever: ['wychowuję', 'wychowujesz', 'wychowuje', 'wychowujemy', 'wychowujecie', 'wychowują'],
+ mener: ['prowadzę', 'prowadzisz', 'prowadzi', 'prowadzimy', 'prowadzicie', 'prowadzą'],
+ promener: ['spaceruję', 'spacerujesz', 'spaceruje', 'spacerujemy', 'spacerujecie', 'spacerują'],
   peser: ['ważę', 'ważysz', 'waży', 'ważymy', 'ważycie', 'ważą'],
  celer: ['ukrywam', 'ukrywasz', 'ukrywa', 'ukrywamy', 'ukrywacie', 'ukrywają'],
   geler: ['zamarzam', 'zamarzasz', 'zamarza', 'zamarzamy', 'zamarzacie', 'zamarzają'],

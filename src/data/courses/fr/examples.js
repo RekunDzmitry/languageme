@@ -911,4 +911,20 @@ export const EXAMPLES = {
   "fr_305": [ // voter
     { fr: "Les citoyens votent dimanche prochain.", ru: "Граждане голосуют в следующее воскресенье." },
   ],
+  "fr_313": [ // lever — to raise (physical, basic)
+    { fr: "Lève la main si tu connais la réponse.", ru: "Подними руку, если знаешь ответ." },
+    { fr: "Elle lève les yeux vers le ciel.", ru: "Она поднимает глаза к небу." },
+    { fr: "Il lève son verre et dit 'Santé !'", ru: "Он поднимает бокал и говорит 'За здоровье!'" },
+  ],
+  "fr_314": [ // relever — to take up / to pick up / to fall under
+    { fr: "Elle relève le défi et gagne la course.", ru: "Она принимает вызов и выигрывает гонку." },
+    { fr: "L'infirmière relève le patient après sa chute.", ru: "Медсестра поднимает пациента после его падения." },
+    { fr: "Le technicien relève les compteurs chaque mois.", ru: "Техник снимает показания счётчиков каждый месяц." },
+    { fr: "Cette décision relève du directeur, pas de moi.", ru: "Это решение в ведении директора, а не моём." },
+  ],
+  "fr_315": [ // élever — to raise (to a higher level) / to bring up (children)
+    { fr: "Ils élèvent leurs enfants en parlant trois langues.", ru: "Они воспитывают своих детей, говоря на трёх языках." },
+    { fr: "Elle a élevé la voix pour se faire entendre.", ru: "Она повысила голос, чтобы её услышали." },
+    { fr: "Ce roman élève le débat littéraire.", ru: "Этот роман поднимает уровень литературной дискуссии." },
+  ],
 }

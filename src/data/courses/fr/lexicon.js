@@ -259,6 +259,23 @@ export const LEXICON = {
     semantics: "Augmenter = увеличить (нейтрально, повседневно): augmenter le prix. Accroître = наращивать (формально, книжно): accroître la productivité."
   },
 
+  // ─── lever / relever / élever ──────────────────────────────────────
+  "fr_313": { // lever
+    synonyms: ["soulever", "élever", "relever"],
+    usage: "Поднимать (физически, конкретный объект: руку, голову, глаза). Базовый глагол.",
+    semantics: "Lever = поднять (простое физическое действие): lever la main (поднять руку), lever les yeux (поднять глаза). Soulever = приподнять (с усилием). Relever = поднять заново / зафиксировать. Élever = поднять на более высокий уровень (или воспитать)."
+  },
+  "fr_314": { // relever
+    synonyms: ["ramasser", "prendre la suite", "souligner"],
+    usage: "1) Подхватывать, принимать (вызов, эстафету). 2) Поднимать (упавшего). 3) Снимать показания (relever les compteurs). 4) Зависеть, относиться (il relève de qqn).",
+    semantics: "Relever = ПОДХВАТИТЬ: 1) принять (вызов/эстафету): relever un défi (принять вызов), relever le flambeau (подхватить знамя); 2) поднять (упавшего человека): relever quelqu'un; 3) снять показания: relever les compteurs, le gaz; 4) il relève de la fiction — относится к вымыслу, подведомственен. Сравните: lever — просто поднять; élever — поднять на уровень выше / воспитать детей. Relever = lever + префикс re- (снова, назад): поднять заново, взять обратно."
+  },
+  "fr_315": { // élever
+    synonyms: ["éduquer", "former", "élever"],
+    usage: "Воспитывать (детей); растить; поднимать (уровень, голос, температуру).",
+    semantics: "Élever = 1) воспитывать: élever des enfants (воспитать детей); 2) поднимать (уровень): élever le débat, élever la voix (повысить голос). Lever — поднять физически. Relever — зафиксировать / поднять заново. Distinction: élever un enfant ≈ растить; élever un débat ≈ поднять на новый уровень."
+  },
+
   // ─── demander / prier ──────────────────────────────────────────────
   "fr_085": { // demander
     synonyms: ["prier", "interroger", "questionner"],
