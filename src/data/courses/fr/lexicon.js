@@ -259,6 +259,23 @@ export const LEXICON = {
     semantics: "Augmenter = увеличить (нейтрально, повседневно): augmenter le prix. Accroître = наращивать (формально, книжно): accroître la productivité."
   },
 
+  // ─── lever / relever / élever ──────────────────────────────────────
+  "fr_313": { // lever
+    synonyms: ["soulever", "élever", "relever"],
+    usage: "Поднимать (физически, конкретный объект: руку, голову, глаза). Базовый глагол.",
+    semantics: "Lever = поднять (простое физическое действие): lever la main (поднять руку), lever les yeux (поднять глаза). Soulever = приподнять (с усилием). Relever = поднять заново / зафиксировать. Élever = поднять на более высокий уровень (или воспитать)."
+  },
+  "fr_314": { // relever
+    synonyms: ["noter", "souligner", "ramasser"],
+    usage: "1) Отмечать, фиксировать (официально). 2) Поднимать заново (упавшее). 3) Зависеть (il relève de qqn).",
+    semantics: "Relever — МНОГОЗНАЧНЫЙ: 1) noter un fait (отметить факт), relever une erreur (зафиксировать ошибку); 2) relever quelqu'un (поднять упавшего); 3) relever les compteurs (снять показания); 4) il relève de la fiction (относится к вымыслу). Lever — просто поднять. Élever — поднять на уровень выше / воспитать."
+  },
+  "fr_315": { // élever
+    synonyms: ["éduquer", "former", "élever"],
+    usage: "Воспитывать (детей); растить; поднимать (уровень, голос, температуру).",
+    semantics: "Élever = 1) воспитывать: élever des enfants (воспитать детей); 2) поднимать (уровень): élever le débat, élever la voix (повысить голос). Lever — поднять физически. Relever — зафиксировать / поднять заново. Distinction: élever un enfant ≈ растить; élever un débat ≈ поднять на новый уровень."
+  },
+
   // ─── demander / prier ──────────────────────────────────────────────
   "fr_085": { // demander
     synonyms: ["prier", "interroger", "questionner"],
