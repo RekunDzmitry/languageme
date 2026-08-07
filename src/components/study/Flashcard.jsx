@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
 import { useT } from '../../i18n'
-import { getHintsByLang } from '../../data/courses'
 import { useSettings } from '../../stores/SettingsContext'
+import { useCourseData } from '../../lib/courseData'
+import { resolveHint } from '../../lib/displayHint'
 import { useSpeechLang } from '../../hooks/useSpeechLang'
 import SpeakerButton from '../common/SpeakerButton'
 import { speak } from '../../utils/audio'
@@ -9,11 +10,12 @@ import { speak } from '../../utils/audio'
 export default function Flashcard({ word, flipped, onFlip, userMnemonic, vocabNote, onNoteClick, onRate }) {
   const { t } = useT()
   const { settings } = useSettings()
+  const course = useCourseData()
   const speechLang = useSpeechLang()
   const nativeLang = settings.nativeLang
   const targetLang = settings.targetLang
-  const hints = getHintsByLang(nativeLang)
-  const hint = userMnemonic || word.hint || hints[word.id] || ''
+  const builtinHint = word.hint || course.hintsByVocab[word.id] || ''
+  const hint = resolveHint({ userMnemonic, builtinHint })
   const translation =
     word.translations?.[nativeLang] || word.translations?.ru || word.translations?.en || ''
 

@@ -24,6 +24,7 @@ import exerciseNotesRoutes from './routes/exerciseNotes.js';
 import vocabNotesRoutes from './routes/vocabNotes.js';
 import userCardsRoutes from './routes/userCards.js';
 import emailRoutes from './routes/email.js';
+import coursesRoutes from './routes/courses.js';
 
 const app = express();
 
@@ -57,6 +58,7 @@ app.use('/api/exercise-notes', exerciseNotesRoutes);
 app.use('/api/vocab-notes', vocabNotesRoutes);
 app.use('/api/user-cards', userCardsRoutes);
 app.use('/api/email', emailRoutes);
+app.use('/api/courses', coursesRoutes);
 
 // Health check
 app.get('/api/health', async (req, res) => {

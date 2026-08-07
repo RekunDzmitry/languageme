@@ -29,75 +29,79 @@ async function resolveTargetLang(client, vocabId, userId) {
   return null;
 }
 
-// All user's SRS cards (optionally filtered by target language)
+// All user's SRS cards. Excludes archived rows by default — the Cards
+// page should never show rows whose vocab id was dropped from the
+// reference set. Pass ?include_archived=true to inspect the full set
+// (used by export and admin tooling).
 router.get('/cards', authenticate, async (req, res, next) => {
   try {
-    const target = req.query.target || 'fr';
+    const target = req.query.target || 'fr'
     if (target !== 'fr' && target !== 'pl') {
-      return res.status(400).json({ error: 'target must be "fr" or "pl"' });
+      return res.status(400).json({ error: 'target must be "fr" or "pl"' })
     }
-    // Filter on target_lang (NOT NULL since migration 025) rather than
-    // parsing the vocab_id prefix. User cards and seed cards are now
-    // both selected uniformly.
-    const userId = req.user.sub;
+    const userId = req.user.sub
+    const includeArchived = req.query.include_archived === 'true'
+    const archivedFilter = includeArchived ? '' : ' AND archived_at IS NULL'
     const { rows } = await pool.query(
-      'SELECT vocab_id, ease, interval_days, reps, due, last_reviewed FROM srs_card WHERE user_id = $1 AND target_lang = $2',
+      `SELECT vocab_id, ease, interval_days, reps, due, last_reviewed, archived_at
+       FROM srs_card WHERE user_id = $1 AND target_lang = $2${archivedFilter}`,
       [userId, target]
-    );
-    console.log('[study] srs_db_fetch', {
-      userId,
-      target,
-      count: rows.length,
-      rows: rows.map((r) => ({
-        vocab_id: r.vocab_id,
-        reps: r.reps,
-        last_reviewed: r.last_reviewed,
-        due: r.due,
-      })),
-    });
-    res.json(rows);
+    )
+    res.json(rows)
   } catch (err) { next(err); }
 });
 
-// Due cards
+// Due cards. Excludes archived rows (srs_card rows for vocab ids that no
+// longer exist in the rebuilt reference set). Includes per-native-lang
+// hint so the client renders the mnemonic without a second round-trip.
 router.get('/due', authenticate, async (req, res, next) => {
   try {
+    const nativeLang = req.query.native_lang || 'ru'
     let query = `
       SELECT sc.*, v.target, v.ipa, v.gender, v.theme,
-        json_agg(json_build_object('lang', vt.lang, 'text', vt.text)) AS translations
+        COALESCE(
+          json_agg(json_build_object('lang', vt.lang, 'text', vt.text))
+            FILTER (WHERE vt.lang IS NOT NULL),
+          '[]'::json
+        ) AS translations,
+        (SELECT text FROM vocab_hint WHERE vocab_id = v.id AND lang = $3 LIMIT 1) AS hint
       FROM srs_card sc
       JOIN vocab v ON v.id = sc.vocab_id
       LEFT JOIN vocab_translation vt ON vt.vocab_id = sc.vocab_id
-      WHERE sc.user_id = $1 AND sc.due <= NOW()
-    `;
-    const params = [req.user.sub];
-
+      WHERE sc.user_id = $1 AND sc.due <= NOW() AND sc.archived_at IS NULL
+    `
+    const params = [req.user.sub, null, nativeLang]
     if (req.query.themeId) {
-      query += ' AND sc.vocab_id IN (SELECT vocab_id FROM theme_vocab WHERE theme_id = $2)';
-      params.push(req.query.themeId);
+      query += ' AND sc.vocab_id IN (SELECT vocab_id FROM theme_vocab WHERE theme_id = $2)'
     }
-
-    query += ' GROUP BY sc.user_id, sc.vocab_id, v.id ORDER BY sc.due LIMIT 50';
-
-    const { rows } = await pool.query(query, params);
-    res.json(rows);
+    query += ' GROUP BY sc.user_id, sc.vocab_id, v.id ORDER BY sc.due LIMIT 50'
+    const { rows } = await pool.query(query, params)
+    res.json(rows)
   } catch (err) { next(err); }
 });
-
-// New/unseen cards
+// New/unseen cards. Excludes archived srs_card rows and adds a
+// per-native-lang hint so the client renders mnemonic without a second
+// round-trip.
 router.get('/new', authenticate, async (req, res, next) => {
   try {
-    const limit = Math.min(20, Math.max(1, parseInt(req.query.limit) || 5));
+    const limit = Math.min(20, Math.max(1, parseInt(req.query.limit) || 5))
+    const nativeLang = req.query.native_lang || 'ru'
     const { rows } = await pool.query(
-      `SELECT v.*, json_agg(json_build_object('lang', vt.lang, 'text', vt.text)) AS translations
+      `SELECT v.*,
+        COALESCE(
+          json_agg(json_build_object('lang', vt.lang, 'text', vt.text))
+            FILTER (WHERE vt.lang IS NOT NULL),
+          '[]'::json
+        ) AS translations,
+        (SELECT text FROM vocab_hint WHERE vocab_id = v.id AND lang = $2 LIMIT 1) AS hint
        FROM vocab v
        LEFT JOIN vocab_translation vt ON vt.vocab_id = v.id
        WHERE v.source = 'seed'
-         AND v.id NOT IN (SELECT vocab_id FROM srs_card WHERE user_id = $1)
-       GROUP BY v.id ORDER BY v.freq LIMIT $2`,
-      [req.user.sub, limit]
-    );
-    res.json(rows);
+         AND v.id NOT IN (SELECT vocab_id FROM srs_card WHERE user_id = $1 AND archived_at IS NULL)
+       GROUP BY v.id ORDER BY v.freq LIMIT $3`,
+      [req.user.sub, nativeLang, limit]
+    )
+    res.json(rows)
   } catch (err) { next(err); }
 });
 

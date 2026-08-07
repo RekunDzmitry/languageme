@@ -16,14 +16,7 @@ import { SettingsProvider } from './stores/SettingsContext'
 import { AuthProvider } from './stores/AuthContext'
 import { UserProgressProvider } from './stores/UserProgressContext'
 import RequireAuth from './components/common/RequireAuth'
-import { getThemes } from './data/courses'
-import { assertPackInvariants } from './data/lessonPacks'
 import './index.css'
-
-// Run once on boot: every theme id should carry a language prefix and
-// belong to exactly one pack. Without this a mis-prefixed or orphaned
-// theme would disappear from every pack-scoped view with no error.
-assertPackInvariants({ fr: getThemes('fr'), pl: getThemes('pl') })
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
