@@ -202,7 +202,7 @@ export default function ConjugationSession({ themeId = null, formType = 'aff' })
         </button>
       </div>
 
-      <ConjugationExercise item={current} formType={formType} themeId={themeId} onResult={handleResult} userMnemonics={userMnemonics} onSaveMnemonic={saveMnemonic} />
+      <ConjugationExercise key={current.key} item={current} formType={formType} themeId={themeId} onResult={handleResult} userMnemonics={userMnemonics} onSaveMnemonic={saveMnemonic} />
     </div>
   )
 }
