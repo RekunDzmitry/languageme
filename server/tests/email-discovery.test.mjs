@@ -286,6 +286,29 @@ test('buildEnrichmentPrompt includes every discovered error with offsets', () =>
   }
 });
 
+
+test('parseEnrichmentResponse ignores leading reasoning tokens and finds the balanced JSON object', () => {
+  // Simulates the NVIDIA NIM response shape: reasoning leak + JSON.
+  const text = '<think>the user wrote ostatmiej which should be ostatniej...</think>{\n  "enrichments": [\n    { "id": "err_0", "correction": "ostatniej", "explanation": "Polish explanation" }\n  ],\n  "styleAndVocabularyErrors": [],\n  "constructionReplacements": []\n}';
+  const fakeErrs = [{ id: 'err_0', category: 'spelling', startOffset: 0, endOffset: 9, originalText: 'ostatmiej', severity: 1, ruleId: null, message: null, suggestions: [] }];
+  const parsed = parseEnrichmentResponse(text, 'ostatmiej rest of email', fakeErrs);
+  assert.equal(parsed.enrichedErrors.length, 1);
+  assert.equal(parsed.enrichedErrors[0].correction, 'ostatniej');
+  assert.equal(parsed.enrichedErrors[0].explanation, 'Polish explanation');
+});
+
+test('parseEnrichmentResponse returns no enrichments when response is truncated mid-array', () => {
+  // Truncated JSON: the response cut off before closing brackets.
+  const text = '{\n  "enrichments": [\n    { "id": "err_0", "correction": "x"';
+  const fakeErrs = [{ id: 'err_0', category: 'spelling', startOffset: 0, endOffset: 1, originalText: 'x', severity: 1, ruleId: null, message: null, suggestions: [] }];
+  const parsed = parseEnrichmentResponse(text, 'x', fakeErrs);
+  // No balanced object found → enrichment fails gracefully. The deterministic
+  // record survives with its empty enrichment fields.
+  assert.equal(parsed.enrichedErrors.length, 1);
+  assert.equal(parsed.enrichedErrors[0].correction, 'x');
+  assert.equal(parsed.enrichedErrors[0].explanation, '');
+});
+
 test('buildEnrichmentPrompt tolerates a missing target level (defaults to B1)', () => {
   const f = fixtures[0];
   const errs = discoverErrors(f.userText);

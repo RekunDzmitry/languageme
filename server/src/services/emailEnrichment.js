@@ -279,17 +279,46 @@ export function parseEnrichmentResponse(rawText, userText, discoveredErrors) {
 
 function extractJson(text) {
   if (!text) return null;
-  // Tolerate ```json ... ``` fences.
+  // Tolerate ```json ... ``` fences and stray reasoning leaks like
+  // `</think>{...}`. Find the first balanced { ... } block so we never
+  // grab an unmatched `{` and the document's last `}`.
   const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const candidate = fence ? fence[1].trim() : text.trim();
-  // Take the first balanced { ... } block.
-  const match = candidate.match(/\{[\s\S]*\}/);
-  if (!match) return null;
+  const balanced = extractFirstBalancedObject(candidate);
+  if (!balanced) return null;
   try {
-    return JSON.parse(match[0]);
+    return JSON.parse(balanced);
   } catch {
     return null;
   }
+}
+
+// Walk the string from the first `{` and return the longest prefix that
+// forms a balanced JSON object. Tracks nesting depth across strings (with
+// proper escape handling) so braces inside JSON strings don't unbalance us.
+// Returns null if no balanced object is found.
+function extractFirstBalancedObject(text) {
+  const start = text.indexOf('{');
+  if (start === -1) return null;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (escape) { escape = false; continue; }
+    if (inString) {
+      if (ch === '\\') { escape = true; continue; }
+      if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') { inString = true; continue; }
+    if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null;
 }
 
 function normalizeProposedWords(raw) {

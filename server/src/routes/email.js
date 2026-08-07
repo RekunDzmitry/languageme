@@ -149,6 +149,9 @@ async function updateEvaluationStep({ attemptId, userId, steps, key, patch, stat
   );
   return nextSteps;
 }
+function writeStreamEvent(res, type, payload = {}) {
+  res.write(`${JSON.stringify({ type, ...payload })}\n`);
+}
 
 // Build the per-criterion streaming event payload from a deterministic
 // grade result. Mirrors the shape of `parseRubricResponse` so the existing
