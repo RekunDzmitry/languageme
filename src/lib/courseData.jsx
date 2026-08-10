@@ -17,6 +17,15 @@ const CourseDataContext = createContext(null)
 const bundleCache = new Map()
 const inflight = new Map()
 
+// Expose an invalidate hook so displayHint.js (and other
+// helpers) can bust the cache without importing the provider.
+if (typeof window !== 'undefined') {
+  window.__lmInvalidateCourseBundleCache = () => {
+    bundleCache.clear()
+    inflight.clear()
+  }
+}
+
 async function loadAllBundles(nativeLang) {
   const key = `all|${nativeLang}`
   if (bundleCache.has(key)) return bundleCache.get(key)

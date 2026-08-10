@@ -2,21 +2,36 @@ import { useState } from 'react'
 import { useT } from '../../i18n'
 import { useSettings } from '../../stores/SettingsContext'
 import { useCourseData } from '../../lib/courseData'
-import { resolveHint } from '../../lib/displayHint'
+import { resolveHint, resolveTranslation } from '../../lib/displayHint'
 import SpeakerButton from '../common/SpeakerButton'
 
-export default function VocabCard({ word, card, userMnemonic, onSaveMnemonic, onClearMnemonic }) {
+export default function VocabCard({ word, card, userMnemonic, onSaveMnemonic, onClearMnemonic, userTranslation, onSaveTranslation, onClearTranslation }) {
   const { t } = useT()
   const { settings } = useSettings()
   const course = useCourseData()
   const [expanded, setExpanded] = useState(false)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
+  const [transEditing, setTransEditing] = useState(false)
+  const [transDraft, setTransDraft] = useState('')
+
+  const startTranslationEdit = () => {
+    setTransDraft(userTranslation || translation || '')
+    setTransEditing(true)
+  }
+  const saveTranslationEdit = () => {
+    onSaveTranslation?.(word.id, settings.nativeLang, transDraft.trim())
+    setTransEditing(false)
+  }
 
   const mastered = card?.reps >= 3
   const inProgress = card?.reps > 0 && card?.reps < 3
   const status = mastered ? '✅' : inProgress ? '🔄' : '🆕'
-  const translation = word.translations?.[settings.nativeLang] || word.translations?.ru || word.translations?.en || ''
+  const translation = resolveTranslation({
+    translations: word.translations,
+    nativeLang: settings.nativeLang,
+    fallback: userTranslation,
+  })
   const builtinHint = word.hint || course.hintsByVocab[word.id] || ''
   const hint = resolveHint({ userMnemonic, builtinHint })
   const examples = course.examplesByVocab[word.id] || []
@@ -49,7 +64,18 @@ export default function VocabCard({ word, card, userMnemonic, onSaveMnemonic, on
         <div className="text-base font-extrabold text-white">{word.target}</div>
         <SpeakerButton text={word.target} size="sm" />
       </div>
-      <div className="text-xs text-blue-400 font-medium mb-1">{translation}</div>
+      <div className="flex items-center justify-between mb-1">
+        <div className="text-xs text-blue-400 font-medium">{translation}</div>
+        {onSaveTranslation && (
+          <button
+            onClick={(e) => { e.stopPropagation(); startTranslationEdit() }}
+            className="text-[10px] text-blue-300/50 hover:text-blue-300"
+            title={t('edit_translation', 'Изменить перевод')}
+          >
+            {userTranslation ? '✎ custom' : '✎'}
+          </button>
+        )}
+      </div>
       <div className="text-[11px] text-text-muted font-mono mb-1">{word.ipa}</div>
 
       {expanded && (
@@ -91,6 +117,39 @@ export default function VocabCard({ word, card, userMnemonic, onSaveMnemonic, on
                 {userMnemonic && <span className="text-[9px] text-accent/60">{t('custom')}</span>}
               </div>
               <div className="text-xs text-text-muted leading-relaxed">{hint}</div>
+            </div>
+          )}
+
+          {/* Edit translation (in expanded view) */}
+          {transEditing && (
+            <div className="space-y-1.5">
+              <div className="text-[10px] text-white/30">
+                <span className="font-semibold">seed:</span> {translation}
+              </div>
+              <textarea
+                value={transDraft}
+                onChange={e => setTransDraft(e.target.value)}
+                placeholder={t('translation_placeholder', 'Ваш перевод')}
+                className="w-full bg-black/30 border border-blue-400/30 rounded-lg px-2 py-1.5 text-xs text-text-primary outline-none focus:border-blue-400 resize-none"
+                rows={2}
+                autoFocus
+              />
+              <div className="flex gap-1.5">
+                <button
+                  onClick={saveTranslationEdit}
+                  className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-1 rounded-md hover:bg-blue-500/30"
+                >{t('save', 'Сохранить')}</button>
+                {userTranslation && onClearTranslation && (
+                  <button
+                    onClick={() => { onClearTranslation(word.id, settings.nativeLang); setTransEditing(false) }}
+                    className="text-[10px] text-red-300 px-2 py-1 rounded-md hover:bg-red-500/10"
+                  >{t('reset', 'Сбросить')}</button>
+                )}
+                <button
+                  onClick={() => setTransEditing(false)}
+                  className="text-[10px] text-white/40 px-2 py-1 rounded-md hover:text-white/60"
+                >✕</button>
+              </div>
             </div>
           )}
 

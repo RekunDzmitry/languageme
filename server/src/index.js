@@ -25,6 +25,8 @@ import vocabNotesRoutes from './routes/vocabNotes.js';
 import userCardsRoutes from './routes/userCards.js';
 import emailRoutes from './routes/email.js';
 import coursesRoutes from './routes/courses.js';
+import translationOverridesRoutes from './routes/translationOverrides.js';
+import exerciseAnswerOverridesRoutes from './routes/exerciseAnswerOverrides.js';
 
 const app = express();
 
@@ -59,6 +61,8 @@ app.use('/api/vocab-notes', vocabNotesRoutes);
 app.use('/api/user-cards', userCardsRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/courses', coursesRoutes);
+app.use('/api/translation-overrides', translationOverridesRoutes);
+app.use('/api/exercise-answer-overrides', exerciseAnswerOverridesRoutes);
 
 // Health check
 app.get('/api/health', async (req, res) => {

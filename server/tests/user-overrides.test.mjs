@@ -49,8 +49,18 @@ let authToken
 let userId
 
 async function startServer() {
-  // Start the real Express app on a random port.
-  const env = { ...process.env, DATABASE_URL: dbUrl, PORT: '0' }
+  // Pick a free port and bind to it explicitly so the test never races
+  // with another instance of the server on the same machine.
+  const net = await import('node:net')
+  const port = await new Promise((resolve, reject) => {
+    const s = net.createServer()
+    s.on('error', reject)
+    s.listen(0, '127.0.0.1', () => {
+      const p = s.address().port
+      s.close(() => resolve(p))
+    })
+  })
+  const env = { ...process.env, DATABASE_URL: dbUrl, PORT: String(port) }
   const proc = spawn(process.execPath, [new URL('../src/index.js', import.meta.url).pathname], {
     env,
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -63,11 +73,10 @@ async function startServer() {
       baseUrl = `http://127.0.0.1:${m[1]}`
     }
   })
-  // The app exits on fatal error; resolve once the banner is parsed or error.
   for (let i = 0; i < 50 && !baseUrl; i++) {
     await new Promise(r => setTimeout(r, 100))
   }
-  if (!baseUrl) throw new Error('Server never came up. stdout so far:')
+  if (!baseUrl) throw new Error('Server never came up.')
   app = proc
 }
 
@@ -173,8 +182,9 @@ test('PUT /api/translation-overrides/:vocabId upserts and GET returns it', async
     headers: { 'content-type': 'application/json', authorization: `Bearer ${authToken}` },
     body: JSON.stringify({ text: 'мОЁ приветствие' }),
   })
-  assert.equal(put.status, 200, await put.text())
-  const putJson = await put.json()
+  const putText = await put.text()
+  assert.equal(put.status, 200, putText)
+  const putJson = JSON.parse(putText)
   assert.equal(putJson.vocab_id, 'fr_001')
   assert.equal(putJson.text, 'мОЁ приветствие')
 
@@ -255,13 +265,16 @@ test('GET /api/courses/all injects user_translation_override over the seed trans
   const fr = bundle.fr || bundle
   const v = fr.vocab.find(w => w.id === 'fr_001')
   assert.ok(v, 'fr_001 not in bundle')
-  assert.equal(v.translations.ru, '!!!USER_OVERRIDE!!!')
-  assert.notEqual(v.translations.ru, seedText, 'override must replace seed')
+  // vocab[].translations is an array of { lang, text } per the bundle shape
+  const ru = (v.translations || []).find(t => t.lang === 'ru')
+  assert.ok(ru, 'ru translation not in bundle')
+  assert.equal(ru.text, '!!!USER_OVERRIDE!!!')
+  assert.notEqual(ru.text, seedText, 'override must replace seed')
 })
 
 test('GET /api/courses/all injects user_exercise_answer_override into the exercises[]', async () => {
-  // Put the override
-  const key = 'fr_theme01:0'
+  // pl_theme01 carries write_answer exercises in the canonical seed.
+  const key = 'pl_theme01:0'
   await fetch(`${baseUrl}/api/exercise-answer-overrides/${encodeURIComponent(key)}`, {
     method: 'PUT',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${authToken}` },
@@ -272,12 +285,13 @@ test('GET /api/courses/all injects user_exercise_answer_override into the exerci
     headers: { authorization: `Bearer ${authToken}` },
   })
   const bundle = await get.json()
-  const fr = bundle.fr || bundle
-  const theme = fr.themes.find(t => t.id === 'fr_theme01')
+  const pl = bundle.pl || bundle
+  const theme = pl.themes.find(t => t.id === 'pl_theme01')
   assert.ok(theme, 'fr_theme01 missing from bundle')
   const exerciseSections = (theme.sections || []).filter(s => s.type === 'exercises')
-  assert.ok(exerciseSections.length, 'no exercises section in fr_theme01')
-  const ex0 = exerciseSections[0].exercises[0]
+  assert.ok(exerciseSections.length, 'no exercises section in pl_theme01')
+  // The seed stores the exercises array inside the section's content JSONB
+  const ex0 = exerciseSections[0].content.exercises[0]
   // The expected answer is replaced
   if (Array.isArray(ex0.answers)) {
     assert.ok(ex0.answers.includes('!!!MY_ANSWER!!!'),

@@ -24,6 +24,7 @@ export default function StudyPage() {
   const themeVocab = useMemo(() => {
     let staticVocab
     let scopeThemeIds
+    if (themeId) {
       const theme = course.themes.find(th => th.id === themeId)
       const ids = theme?.vocabIds
       staticVocab = ids?.length

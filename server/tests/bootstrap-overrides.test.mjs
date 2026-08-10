@@ -43,7 +43,17 @@ let baseUrl
 let authToken
 
 async function startServer(databaseUrl) {
-  const env = { ...process.env, DATABASE_URL: databaseUrl, PORT: '0' }
+  // Pick a free port so the test never races with another server on port 3000.
+  const net = await import('node:net')
+  const port = await new Promise((resolve, reject) => {
+    const s = net.createServer()
+    s.on('error', reject)
+    s.listen(0, '127.0.0.1', () => {
+      const p = s.address().port
+      s.close(() => resolve(p))
+    })
+  })
+  const env = { ...process.env, DATABASE_URL: databaseUrl, PORT: String(port) }
   const proc = spawn(process.execPath, [new URL('../src/index.js', import.meta.url).pathname], {
     env, stdio: ['ignore', 'pipe', 'pipe'],
   })
@@ -197,7 +207,9 @@ test('Seed can change a translation without affecting the user override', async 
   const bundle = await get.json()
   const fr = bundle.fr || bundle
   const v = fr.vocab.find(w => w.id === vocabId)
-  assert.equal(v.translations.ru, 'MY_OVERRIDE')
+  const ru = (v.translations || []).find(t => t.lang === 'ru')
+  assert.ok(ru, 'ru translation missing from bundle')
+  assert.equal(ru.text, 'MY_OVERRIDE')
 })
 
 test('Bootstrap SQL is self-contained (no external files referenced)', async () => {

@@ -24,6 +24,8 @@ const defaultProgress = {
   userVocab: {},          // user-authored flashcards keyed by usr_<uuid>
   themeProgress: {},
   userMnemonics: {},
+  translationOverrides: {},  // user_translation_override rows: { [vocabId|lang]: text }
+  exerciseAnswerOverrides: {}, // user_exercise_answer_override rows: { [exerciseKey]: answers[] }
   stats: { streak: 0, totalReviewed: 0, lastStudyDate: null, reviewHistory: [] },
   themeUnlockStatus: {}, // { themeId: { unlocked: bool, reason?: string } }
 }
@@ -75,6 +77,8 @@ export function UserProgressProvider({ children }) {
       api.get('/api/stats').catch(() => null),
       api.get('/api/progress/themes').catch(() => null),
       api.get('/api/mnemonics').catch(() => null),
+      api.get('/api/translation-overrides').catch(() => null),
+      api.get('/api/exercise-answer-overrides').catch(() => null),
       api.get(`/api/study/cards?target=${targetLang}`).catch(() => null),
       api.get('/api/study/conjugation').catch(() => null),  // Fetch from PostgreSQL
       api.get('/api/progress/themes/unlock-status').catch(() => null),
@@ -82,7 +86,7 @@ export function UserProgressProvider({ children }) {
       api.get('/api/exercise-notes').catch(() => null),  // Exercise notes
       api.get('/api/vocab-notes').catch(() => null),  // Vocabulary notes
       api.get(`/api/user-cards?target=${targetLang}`).catch(() => null),  // User-authored cards
-    ]).then(([statsData, themesData, mnemonicsData, cardsData, conjCardsData, unlockData, exCardsData, exNotesData, vocabNotesData, userCardsData]) => {
+    ]).then(([statsData, themesData, mnemonicsData, cardsData, conjCardsData, unlockData, exCardsData, exNotesData, vocabNotesData, userCardsData, translationOverridesData, exerciseAnswerOverridesData]) => {
       setProgress(prev => {
         const next = { ...prev }
 
@@ -110,6 +114,21 @@ export function UserProgressProvider({ children }) {
           next.userMnemonics = {}
           mnemonicsData.forEach(m => {
             next.userMnemonics[m.vocab_id || m.vocabId] = m.text || m.mnemonic
+          })
+        }
+
+        if (Array.isArray(translationOverridesData)) {
+          next.translationOverrides = {}
+          translationOverridesData.forEach(o => {
+            const key = `${o.vocab_id || o.vocabId}|${o.native_lang || o.nativeLang}`
+            next.translationOverrides[key] = o.text
+          })
+        }
+
+        if (Array.isArray(exerciseAnswerOverridesData)) {
+          next.exerciseAnswerOverrides = {}
+          exerciseAnswerOverridesData.forEach(o => {
+            next.exerciseAnswerOverrides[o.exercise_key || o.exerciseKey] = o.answers || []
           })
         }
 
@@ -373,6 +392,62 @@ export function UserProgressProvider({ children }) {
     }
   }, [isAuthenticated])
 
+  const saveTranslationOverride = useCallback((vocabId, nativeLang, text) => {
+    setProgress(prev => ({
+      ...prev,
+      translationOverrides: {
+        ...prev.translationOverrides,
+        [`${vocabId}|${nativeLang}`]: text,
+      },
+    }))
+
+    if (isAuthenticated) {
+      api.put(`/api/translation-overrides/${vocabId}?native_lang=${nativeLang}`, { text })
+        .catch(err => console.error('Translation override save failed:', err))
+    }
+  }, [isAuthenticated])
+
+  const clearTranslationOverride = useCallback((vocabId, nativeLang) => {
+    setProgress(prev => {
+      const next = { ...prev.translationOverrides }
+      delete next[`${vocabId}|${nativeLang}`]
+      return { ...prev, translationOverrides: next }
+    })
+
+    if (isAuthenticated) {
+      api.delete(`/api/translation-overrides/${vocabId}?native_lang=${nativeLang}`)
+        .catch(err => console.error('Translation override delete failed:', err))
+    }
+  }, [isAuthenticated])
+
+  const saveExerciseAnswerOverride = useCallback((exerciseKey, answers) => {
+    setProgress(prev => ({
+      ...prev,
+      exerciseAnswerOverrides: {
+        ...prev.exerciseAnswerOverrides,
+        [exerciseKey]: [...answers],
+      },
+    }))
+
+    if (isAuthenticated) {
+      api.put(`/api/exercise-answer-overrides/${encodeURIComponent(exerciseKey)}`, { answers })
+        .catch(err => console.error('Exercise answer override save failed:', err))
+    }
+  }, [isAuthenticated])
+
+  const clearExerciseAnswerOverride = useCallback((exerciseKey) => {
+    setProgress(prev => {
+      const next = { ...prev.exerciseAnswerOverrides }
+      delete next[exerciseKey]
+      return { ...prev, exerciseAnswerOverrides: next }
+    })
+
+    if (isAuthenticated) {
+      api.delete(`/api/exercise-answer-overrides/${encodeURIComponent(exerciseKey)}`)
+        .catch(err => console.error('Exercise answer override delete failed:', err))
+    }
+  }, [isAuthenticated])
+
   const resetCard = useCallback((wordId) => {
     setProgress(prev => ({
       ...prev,
@@ -552,6 +627,10 @@ export function UserProgressProvider({ children }) {
     updateThemeProgress,
     saveMnemonic,
     clearMnemonic,
+    saveTranslationOverride,
+    clearTranslationOverride,
+    saveExerciseAnswerOverride,
+    clearExerciseAnswerOverride,
     saveExerciseNote,
     clearExerciseNote,
     saveVocabNote,
@@ -584,6 +663,10 @@ export function UserProgressProvider({ children }) {
     updateThemeProgress,
     saveMnemonic,
     clearMnemonic,
+    saveTranslationOverride,
+    clearTranslationOverride,
+    saveExerciseAnswerOverride,
+    clearExerciseAnswerOverride,
     saveExerciseNote,
     clearExerciseNote,
     saveVocabNote,

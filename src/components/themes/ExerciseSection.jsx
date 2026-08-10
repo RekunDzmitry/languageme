@@ -32,7 +32,7 @@ function buildInitialQueue(exercises, themeId, cards) {
 
 export default function ExerciseSection({ section, themeId, onExerciseAnswer }) {
   const { t } = useT()
-  const { rateExercise, updateThemeProgress, exerciseCards, exerciseNotes, saveExerciseNote, clearExerciseNote } = useProgress()
+  const { rateExercise, updateThemeProgress, exerciseCards, exerciseNotes, saveExerciseNote, clearExerciseNote, exerciseAnswerOverrides, saveExerciseAnswerOverride, clearExerciseAnswerOverride } = useProgress()
   const exercises = useMemo(() => section.exercises || [], [section.exercises])
 
   const [queueRevision, setQueueRevision] = useState(0)
@@ -275,6 +275,9 @@ export default function ExerciseSection({ section, themeId, onExerciseAnswer }) 
         note={exerciseNotes[`${themeId}:${currentIdx}`] || null}
         onNoteSave={saveExerciseNote}
         onNoteDelete={clearExerciseNote}
+        userAnswerOverride={exerciseAnswerOverrides[`${themeId}:${currentIdx}`]}
+        onSaveAnswerOverride={saveExerciseAnswerOverride}
+        onClearAnswerOverride={clearExerciseAnswerOverride}
       />
     </div>
   )

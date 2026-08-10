@@ -18,7 +18,93 @@ import { pool } from '../db/pool.js'
 
 const router = Router()
 
-async function bundleFor(lang, nativeLang) {
+/**
+ * Apply a (vocab_id -> { lang -> text }) override map on top of the
+ * vocab rows the bundle already carries. The mutations are in place
+ * because vocab was just built one row ago.
+ */
+function applyTranslationOverrides(vocab, overrides) {
+  if (!overrides || overrides.size === 0) return
+  for (const v of vocab) {
+    const ovr = overrides.get(v.id)
+    if (!ovr) continue
+    const arr = Array.isArray(v.translations) ? v.translations : []
+    const langSet = new Set(arr.map(t => t.lang))
+    for (const [lang, text] of ovr) {
+      const existing = arr.find(t => t.lang === lang)
+      if (existing) existing.text = text
+      else { arr.push({ lang, text }); langSet.add(lang) }
+    }
+    v.translations = arr
+  }
+}
+
+/**
+ * Apply a (exercise_key -> answers[]) override map on top of every
+ * exercises section in the themes the bundle carries. The seed shape
+ * is `exercises[i].answer` (string) or `exercises[i].answers` (array);
+ * we keep the shape that the seed used and just replace the value.
+ */
+function applyExerciseAnswerOverrides(themes, overrides) {
+  if (!overrides || overrides.size === 0) return
+  for (const theme of themes) {
+    const sections = theme.sections || []
+    for (const section of sections) {
+      if (section.type !== 'exercises') continue
+      const content = section.content || {}
+      const exercises = content.exercises || []
+      for (let i = 0; i < exercises.length; i++) {
+        const key = `${theme.id}:${i}`
+        const override = overrides.get(key)
+        if (!override) continue
+        const ex = exercises[i] || {}
+        if (Array.isArray(ex.answers)) {
+          ex.answers = [...override]
+        } else if ('answer' in ex) {
+          ex.answer = override[0] || ''
+        } else {
+          // No existing key — pick the array shape
+          ex.answers = [...override]
+        }
+        exercises[i] = ex
+      }
+      content.exercises = exercises
+      section.content = content
+    }
+  }
+}
+
+/**
+ * Load a user's translation + exercise-answer overrides in one round-trip
+ * per table. Returns Maps keyed by vocab_id / exercise_key.
+ */
+async function loadUserOverrides(userId) {
+  if (!userId) return { translations: new Map(), answers: new Map() }
+  const [tRes, aRes] = await Promise.all([
+    pool.query(
+      `SELECT vocab_id, native_lang, text
+         FROM user_translation_override
+        WHERE user_id = $1`,
+      [userId]
+    ),
+    pool.query(
+      `SELECT exercise_key, answers
+         FROM user_exercise_answer_override
+        WHERE user_id = $1`,
+      [userId]
+    ),
+  ])
+  const translations = new Map()
+  for (const r of tRes.rows) {
+    if (!translations.has(r.vocab_id)) translations.set(r.vocab_id, new Map())
+    translations.get(r.vocab_id).set(r.native_lang, r.text)
+  }
+  const answers = new Map()
+  for (const r of aRes.rows) answers.set(r.exercise_key, r.answers)
+  return { translations, answers }
+}
+
+async function bundleFor(lang, nativeLang, userId = null) {
   const { rows: vocabRows } = await pool.query(
     `SELECT v.id, v.target, v.ipa, v.gender, v.freq, v.theme,
             COALESCE(
@@ -140,6 +226,12 @@ async function bundleFor(lang, nativeLang) {
   const hintsByVocab = {}
   for (const v of vocab) if (v.hint) hintsByVocab[v.id] = v.hint
 
+  if (userId) {
+    const overrides = await loadUserOverrides(userId)
+    applyTranslationOverrides(vocab, overrides.translations)
+    applyExerciseAnswerOverrides(themes, overrides.answers)
+  }
+
   return {
     lang,
     nativeLang,
@@ -151,25 +243,29 @@ async function bundleFor(lang, nativeLang) {
     conjugationsByTheme,
   }
 }
-router.get('/all', async (req, res, next) => {
+import { optionallyAuthenticate as optionalAuth } from '../middleware/auth.js'
+
+router.get('/all', optionalAuth, async (req, res, next) => {
   try {
     const nativeLang = req.query.native_lang || 'ru'
+    const userId = req.user?.sub || null
     const out = {}
     for (const lang of ['fr', 'pl']) {
-      out[lang] = await bundleFor(lang, nativeLang)
+      out[lang] = await bundleFor(lang, nativeLang, userId)
     }
     res.json(out)
   } catch (err) { next(err); }
 })
 
-router.get('/:lang', async (req, res, next) => {
+router.get('/:lang', optionalAuth, async (req, res, next) => {
   try {
     const lang = req.params.lang
     if (lang !== 'fr' && lang !== 'pl') {
       return res.status(400).json({ error: 'lang must be "fr" or "pl"' })
     }
     const nativeLang = req.query.native_lang || 'ru'
-    res.json(await bundleFor(lang, nativeLang))
+    const userId = req.user?.sub || null
+    res.json(await bundleFor(lang, nativeLang, userId))
   } catch (err) { next(err); }
 })
 
