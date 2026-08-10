@@ -148,6 +148,7 @@ CREATE TABLE IF NOT EXISTS "user" (
   ui_lang VARCHAR(5) DEFAULT 'ru',
   auto_play_audio BOOLEAN DEFAULT true,
   is_admin BOOLEAN DEFAULT false,
+  google_id VARCHAR(255) UNIQUE,
   migrated_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -199,6 +200,47 @@ CREATE TABLE IF NOT EXISTS user_mnemonic (
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   PRIMARY KEY (user_id, vocab_id)
 );
+
+-- Per-user vocab translation override. Used by the UI to let a user
+-- replace the seed translation for a (vocab_id, native_lang) pair.
+-- The application reads this and writes it into the vocab.translations
+-- bag that /api/courses/all serves, so the UI never has to know the
+-- override came from this table rather than vocab_translation.
+CREATE TABLE IF NOT EXISTS user_translation_override (
+  user_id UUID NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+  vocab_id VARCHAR(50) NOT NULL,
+  native_lang VARCHAR(5) NOT NULL,
+  text TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, vocab_id, native_lang),
+  CONSTRAINT user_translation_override_vocab_id_prefix_check CHECK (
+    vocab_id LIKE 'fr\_%'  ESCAPE '\'
+    OR vocab_id LIKE 'pl\_%'  ESCAPE '\'
+    OR vocab_id LIKE 'usr\_%' ESCAPE '\'
+  ),
+  CONSTRAINT user_translation_override_native_lang_check CHECK (
+    native_lang IN ('en', 'ru', 'pl', 'de', 'fr')
+  )
+);
+CREATE INDEX IF NOT EXISTS idx_user_translation_override_user
+  ON user_translation_override (user_id);
+
+-- Per-user write-answer expected-answers override. The seed lives
+-- inside theme_section.content->'exercises'[].answer/answers. The
+-- application reads this table and injects the user's answers into
+-- the exercises[] the UI renders, so the WriteAnswer component
+-- grades against the user override before falling back to the seed.
+CREATE TABLE IF NOT EXISTS user_exercise_answer_override (
+  user_id UUID NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+  exercise_key VARCHAR(255) NOT NULL,
+  answers TEXT[] NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, exercise_key)
+);
+CREATE INDEX IF NOT EXISTS idx_user_exercise_answer_override_user
+  ON user_exercise_answer_override (user_id);
 
 CREATE TABLE IF NOT EXISTS review (
   id BIGSERIAL PRIMARY KEY,

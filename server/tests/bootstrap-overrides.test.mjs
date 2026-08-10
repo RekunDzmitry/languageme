@@ -209,10 +209,10 @@ test('Bootstrap SQL is self-contained (no external files referenced)', async () 
   assert.ok(!/\\\\i\b|\\copy\b|LOAD_FILE/i.test(sql),
     'bootstrap must not use \\copy or LOAD_FILE (must be portable)')
   // Every CREATE TABLE in the user schema must be IF NOT EXISTS
-  const userTables = [...sql.matchAll(/CREATE TABLE IF NOT EXISTS (\w+)/g)].map(m => m[1])
-  for (const required of ['"user"', 'srs_card', 'theme_progress', 'user_mnemonic',
+  const userTables = [...sql.matchAll(/CREATE TABLE IF NOT EXISTS ("?\w+"?)/g)].map(m => m[1])
+  for (const required of ['user', 'srs_card', 'theme_progress', 'user_mnemonic',
     'user_translation_override', 'user_exercise_answer_override']) {
-    const found = userTables.find(t => t.replace(/"/g, '') === required.replace(/"/g, ''))
+    const found = userTables.find(t => t.replace(/"/g, '') === required)
     assert.ok(found, `${required} must be CREATE TABLE IF NOT EXISTS`)
   }
 })
