@@ -271,7 +271,10 @@ CREATE TABLE IF NOT EXISTS conjugation_card (
   card_key VARCHAR(64) NOT NULL,
   ease REAL DEFAULT 2.5,
   interval_days INT DEFAULT 1,
+  reps INT DEFAULT 0,
+  due TIMESTAMPTZ DEFAULT NOW(),
   last_reviewed TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (user_id, card_key)
 );
 

@@ -25,11 +25,20 @@ router.get('/:id', async (req, res, next) => {
     // back as objects, so `content` is ready for the client. Older versions
     // returned strings — guard against that case so the client never has to
     // JSON.parse.
-    const sectionsOut = sections.map(s => ({
-      type: s.type,
-      sort_order: s.sort_order,
-      content: typeof s.content === 'string' ? JSON.parse(s.content) : s.content,
-    }))
+    //
+    // The component layer (ExerciseSection, GrammarSection, VocabSection)
+    // reads section.exercises / section.notes / section.tables /
+    // section.vocabIds at the section's top level, the same shape the old
+    // src/data/courses/ JS bundles used. Flatten content so we keep one
+    // canonical shape across the API.
+    const sectionsOut = sections.map(s => {
+      const content = typeof s.content === 'string' ? JSON.parse(s.content) : (s.content || {})
+      return {
+        type: s.type,
+        sort_order: s.sort_order,
+        ...content,
+      }
+    })
 
     const { rows: verbs } = await pool.query(
       'SELECT infinitive, ru, participe_passe, auxiliaire, verb_group FROM theme_verb WHERE theme_id = $1',

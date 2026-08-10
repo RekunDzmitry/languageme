@@ -19,6 +19,9 @@ export default function ThemesListPage() {
   // a theme in pl-a1-a2 displays as 1 or 2, not as its old global order
   // (11, 12) from the pre-pack layout.
   const allThemes = filterThemesByPack(course.themes, settings.activePackId, targetLang)
+  // Per-pack 1-based display order: position in the active pack, not the
+  // theme's own global `order` field which can collide across packs.
+  const numberedThemes = allThemes.map((theme, idx) => ({ ...theme, displayOrder: idx + 1 }))
   const { isAuthenticated } = useAuth()
   const { themeProgress, themeUnlockStatus } = useProgress()
   const navigate = useNavigate()

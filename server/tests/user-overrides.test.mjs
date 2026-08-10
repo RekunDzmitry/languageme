@@ -290,8 +290,9 @@ test('GET /api/courses/all injects user_exercise_answer_override into the exerci
   assert.ok(theme, 'fr_theme01 missing from bundle')
   const exerciseSections = (theme.sections || []).filter(s => s.type === 'exercises')
   assert.ok(exerciseSections.length, 'no exercises section in pl_theme01')
-  // The seed stores the exercises array inside the section's content JSONB
-  const ex0 = exerciseSections[0].content.exercises[0]
+  // courses.js flattens theme_section.content into the section object so
+  // ex0 sits at section.exercises[0], not section.content.exercises[0]
+  const ex0 = exerciseSections[0].exercises[0]
   // The expected answer is replaced
   if (Array.isArray(ex0.answers)) {
     assert.ok(ex0.answers.includes('!!!MY_ANSWER!!!'),

@@ -14,6 +14,9 @@ function getPackStats(pack, progress, course) {
   const langBundle = course.allByLang[pack.langPrefix] || { vocab: [], themes: [] }
   const themes = filterThemesByPack(langBundle.themes, pack.id, pack.langPrefix)
   const vocab = langBundle.vocab
+  // Build the pack's theme set once so the vocab filter below can test
+  // membership without re-iterating the themes array per word.
+  const themeIds = new Set(themes.map((t) => t.id))
   const vocabIds = vocab
     .filter((word) => word.themeIds?.some((themeId) => themeIds.has(themeId)))
     .map((word) => word.id)

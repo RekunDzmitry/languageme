@@ -187,6 +187,45 @@ CREATE TABLE IF NOT EXISTS user_mnemonic (
   PRIMARY KEY (user_id, vocab_id)
 );
 
+-- Per-user vocab translation override. The application reads this and
+-- writes it into the vocab.translations bag that /api/courses/all
+-- serves, so the UI never has to know the override came from this
+-- table rather than vocab_translation.
+CREATE TABLE IF NOT EXISTS user_translation_override (
+  user_id UUID NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+  vocab_id VARCHAR(50) NOT NULL,
+  native_lang VARCHAR(5) NOT NULL,
+  text TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, vocab_id, native_lang),
+  CONSTRAINT user_translation_override_vocab_id_prefix_check CHECK (
+    vocab_id LIKE 'fr\_%'  ESCAPE '\'
+    OR vocab_id LIKE 'pl\_%'  ESCAPE '\'
+    OR vocab_id LIKE 'usr\_%' ESCAPE '\'
+  ),
+  CONSTRAINT user_translation_override_native_lang_check CHECK (
+    native_lang IN ('en', 'ru', 'pl', 'de', 'fr')
+  )
+);
+CREATE INDEX IF NOT EXISTS idx_user_translation_override_user
+  ON user_translation_override (user_id);
+
+-- Per-user write-answer expected-answers override. The application
+-- reads this and injects the user's answers into the exercises[]
+-- the UI renders, so the WriteAnswer component grades against the
+-- user override before falling back to the seed.
+CREATE TABLE IF NOT EXISTS user_exercise_answer_override (
+  user_id UUID NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+  exercise_key VARCHAR(255) NOT NULL,
+  answers TEXT[] NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, exercise_key)
+);
+CREATE INDEX IF NOT EXISTS idx_user_exercise_answer_override_user
+  ON user_exercise_answer_override (user_id);
+
 CREATE TABLE IF NOT EXISTS review (
   id BIGSERIAL PRIMARY KEY,
   user_id UUID REFERENCES "user"(id) ON DELETE CASCADE,
@@ -216,7 +255,10 @@ CREATE TABLE IF NOT EXISTS conjugation_card (
   card_key VARCHAR(64) NOT NULL,
   ease REAL DEFAULT 2.5,
   interval_days INT DEFAULT 1,
+  reps INT DEFAULT 0,
+  due TIMESTAMPTZ DEFAULT NOW(),
   last_reviewed TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (user_id, card_key)
 );
 

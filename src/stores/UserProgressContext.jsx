@@ -86,7 +86,7 @@ export function UserProgressProvider({ children }) {
       api.get('/api/exercise-notes').catch(() => null),  // Exercise notes
       api.get('/api/vocab-notes').catch(() => null),  // Vocabulary notes
       api.get(`/api/user-cards?target=${targetLang}`).catch(() => null),  // User-authored cards
-    ]).then(([statsData, themesData, mnemonicsData, cardsData, conjCardsData, unlockData, exCardsData, exNotesData, vocabNotesData, userCardsData, translationOverridesData, exerciseAnswerOverridesData]) => {
+    ]).then(([statsData, themesData, mnemonicsData, translationOverridesData, exerciseAnswerOverridesData, cardsData, conjCardsData, unlockData, exCardsData, exNotesData, vocabNotesData, userCardsData]) => {
       setProgress(prev => {
         const next = { ...prev }
 

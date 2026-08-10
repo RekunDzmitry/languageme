@@ -51,8 +51,9 @@ function applyExerciseAnswerOverrides(themes, overrides) {
     const sections = theme.sections || []
     for (const section of sections) {
       if (section.type !== 'exercises') continue
-      const content = section.content || {}
-      const exercises = content.exercises || []
+      // After the section.flatten() pass in bundleFor(), section.exercises
+      // is the top-level array; section.content is gone.
+      const exercises = section.exercises || []
       for (let i = 0; i < exercises.length; i++) {
         const key = `${theme.id}:${i}`
         const override = overrides.get(key)
@@ -68,8 +69,7 @@ function applyExerciseAnswerOverrides(themes, overrides) {
         }
         exercises[i] = ex
       }
-      content.exercises = exercises
-      section.content = content
+      section.exercises = exercises
     }
   }
 }
@@ -156,10 +156,15 @@ async function bundleFor(lang, nativeLang, userId = null) {
   const sectionsByTheme = new Map()
   for (const s of sectionRows) {
     if (!sectionsByTheme.has(s.theme_id)) sectionsByTheme.set(s.theme_id, [])
+    // Flatten theme_section.content (JSONB) into the section object so
+    // the React components can read section.exercises / section.notes /
+    // section.tables / section.vocabIds directly, the same shape the
+    // old src/data/courses/ JS bundles used to expose.
+    const content = typeof s.content === 'string' ? JSON.parse(s.content) : (s.content || {})
     sectionsByTheme.get(s.theme_id).push({
       type: s.type,
       sort_order: s.sort_order,
-      content: typeof s.content === 'string' ? JSON.parse(s.content) : s.content,
+      ...content,
     })
   }
 
