@@ -184,7 +184,7 @@ async function bundleFor(lang, nativeLang, userId = null) {
   const themes = themeRows.map(t => ({
     ...t,
     sections: sectionsByTheme.get(t.id) || [],
-    verbs: verbsByTheme.get(t.id) || [],
+    verbList: verbsByTheme.get(t.id) || [],
     vocabIds: (themeIdsByVocab.size === 0
       ? []
       : Array.from(themeIdsByVocab.entries())
