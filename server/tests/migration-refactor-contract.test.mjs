@@ -114,3 +114,18 @@ test('dashboard and themes list define derived variables before rendering', () =
     'ThemesListPage must derive numberedThemes before rendering'
   )
 })
+
+test('course bundle exposes theme verbs as verbList for conjugation consumers', () => {
+  const courses = read('../src/routes/courses.js')
+
+  assert.match(
+    courses,
+    /verbList:\s*verbsByTheme\.get\(t\.id\)\s*\|\|\s*\[\]/,
+    '/api/courses/all must expose theme verbs as theme.verbList, matching the old JS bundle shape'
+  )
+  assert.doesNotMatch(
+    courses,
+    /\n\s*verbs:\s*verbsByTheme\.get\(t\.id\)/,
+    'theme.verbs is not read by the frontend conjugation views; use theme.verbList'
+  )
+})

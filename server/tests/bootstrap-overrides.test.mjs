@@ -12,11 +12,16 @@
 // These tests do not assume the table schemas exist — they are the
 // TRUTH SOURCE for what columns the UI/API commits must build.
 
-import { test, before, after } from 'node:test'
+import { test as nodeTest, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { Client } from 'pg'
 import { readFileSync } from 'node:fs'
+
+const hasDatabaseUrlBase = !!process.env.DATABASE_URL_BASE
+const test = hasDatabaseUrlBase
+  ? nodeTest
+  : (name, fn) => nodeTest(name, { skip: 'Set DATABASE_URL_BASE to a postgres URL with CREATEDB rights' }, fn)
 
 function runMigrate(databaseUrl) {
   return new Promise((resolve, reject) => {
@@ -73,7 +78,7 @@ let serverProc
 
 before(async () => {
   const base = process.env.DATABASE_URL_BASE
-  if (!base) throw new Error('Set DATABASE_URL_BASE')
+  if (!base) return
   dbName = `lm_bstrap_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
   const admin = new Client({ connectionString: base })
   await admin.connect()
