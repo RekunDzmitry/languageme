@@ -188,8 +188,8 @@ async function bundleFor(lang, nativeLang, userId = null) {
     vocabIds: (themeIdsByVocab.size === 0
       ? []
       : Array.from(themeIdsByVocab.entries())
-          .filter(([_, ids]) => ids.includes(t.id))
-          .map(([vid]) => vid)),
+          .filter(([, ids]) => ids.includes(t.id))
+          .map(([, vid]) => vid)),
   }))
 
   const { rows: conjRows } = await pool.query(

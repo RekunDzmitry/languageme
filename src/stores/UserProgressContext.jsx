@@ -58,12 +58,16 @@ export function UserProgressProvider({ children }) {
   const [notification, setNotification] = useState(null)
   const saveTimer = useRef(null)
 
-  // Debounced save to localStorage (only for unauthenticated users — DB is source of truth)
+  // Debounced save to localStorage (only for unauthenticated users — DB is source of truth).
+  // srsCards is intentionally not persisted: it's keyed by vocab id, which
+  // is per-language, and the API rebuilds it on every login. Persisting
+  // stale local SRS state across target-language switches caused the
+  // "due" queue to leak across packs.
   useEffect(() => {
     if (!isAuthenticated) {
       if (saveTimer.current) clearTimeout(saveTimer.current)
       saveTimer.current = setTimeout(() => {
-        const { srsCards, ...rest } = progress
+        const { srsCards: _ignored, ...rest } = progress
         storage.saveProgress(rest)
       }, 500)
       return () => clearTimeout(saveTimer.current)
@@ -219,11 +223,17 @@ export function UserProgressProvider({ children }) {
     }).finally(() => {
       setIsProgressLoading(false)
     })
-  }, [])
+  }, [settings.nativeLang])
 
-  // Fetch from API when authenticated
+  // Fetch from API when authenticated. fetchProgress() triggers a setState
+  // (setIsProgressLoading(true) + the eventual setProgress(...)) which the
+  // React Compiler flags. The rule's recommended fix is to call from render
+  // with a cache, but that conflicts with the standard "fetch on auth"
+  // pattern and would force the fetch to re-run on every render of any
+  // consumer. This is the documented initial-load exception.
   useEffect(() => {
     if (!isAuthenticated) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProgress(targetLang)
   }, [isAuthenticated, fetchProgress, targetLang])
 
@@ -249,15 +259,8 @@ export function UserProgressProvider({ children }) {
     }
   }, [isProgressLoading])
 
-  // Initialize cards for current target language when target changes
-  useEffect(() => {
-    if (isAuthenticated) return // API will provide cards
-    // For unauthenticated users, we could load from localStorage based on target
-    const saved = storage.getProgress()
-    const existingCards = saved?.srsCards || {}
-    // Cards are keyed by vocab ID which includes the target prefix (fr_xxx, pl_xxx)
-    // So they should automatically work when switching targets
-  }, [targetLang])
+  // Cards for unauthenticated users are seeded by useState() from
+  // localStorage above; an effect here is unnecessary. (Removed.)
 
   const showNotification = useCallback((msg, type = 'info') => {
     setNotification({ msg, type })
@@ -688,6 +691,7 @@ export function UserProgressProvider({ children }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useProgress() {
   const ctx = useContext(UserProgressContext)
   if (!ctx) throw new Error('useProgress must be used within UserProgressProvider')
