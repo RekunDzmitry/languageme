@@ -6,9 +6,7 @@ import ConjugationSession from '../components/study/ConjugationSession'
 import StudySession from '../components/study/StudySession'
 import { useCourseData } from '../lib/courseData'
 import { filterThemesByPack, getPackForThemeId } from '../data/lessonPacks'
-
-// Theme IDs that use negative forms (French)
-const NEGATIVE_THEMES = ['fr_theme02']
+import { themeFormType } from '../utils/conjugation'
 
 export default function LearnPage() {
   const { themeId } = useParams()
@@ -65,6 +63,6 @@ export default function LearnPage() {
     return <StudySession themeVocab={themeVocab} route="learn" themeId={settings.activePackId} />
   }
 
-  const formType = themeId && NEGATIVE_THEMES.includes(themeId) ? 'neg' : 'aff'
+  const formType = themeId ? themeFormType(themeId) : 'aff'
   return <ConjugationSession themeId={themeId || null} formType={formType} />
 }

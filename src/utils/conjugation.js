@@ -9,6 +9,15 @@ const PRONOUNS = [
 
 export { PRONOUNS }
 
+// Themes that drill the negative form (ne ... pas). Their theme_conjugation
+// gloss tables hold negative Russian forms ("не говорю"), so anything that
+// reads those tables has to know which form type a table belongs to.
+export const NEGATIVE_THEMES = ['fr_theme02']
+
+export function themeFormType(themeId) {
+  return NEGATIVE_THEMES.includes(themeId) ? 'neg' : 'aff'
+}
+
 export function conjCardKey(verb, pronounIdx, formType = 'aff') {
   const tense = verb.participePasse ? 'pc' : 'pr'
   return `conj:${verb.infinitive}:${tense}:${formType}:${pronounIdx}`

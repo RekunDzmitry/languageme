@@ -16,34 +16,37 @@ import { SettingsProvider } from './stores/SettingsContext'
 import { AuthProvider } from './stores/AuthContext'
 import { UserProgressProvider } from './stores/UserProgressContext'
 import RequireAuth from './components/common/RequireAuth'
+import ErrorBoundary from './components/common/ErrorBoundary'
 import './index.css'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <BrowserRouter>
-      <I18nProvider>
-        <SettingsProvider>
-          <AuthProvider>
-            <UserProgressProvider>
-              <Routes>
-                <Route element={<App />}>
-                  <Route index element={<DashboardPage />} />
-                  <Route path="themes" element={<ThemesListPage />} />
-                  <Route path="themes/:id" element={<ThemePage />} />
-                  <Route path="auth" element={<AuthPage />} />
-                  <Route path="learn" element={<RequireAuth><LearnPage /></RequireAuth>} />
-                  <Route path="learn/:themeId" element={<RequireAuth><LearnPage /></RequireAuth>} />
-                  <Route path="study/:themeId" element={<RequireAuth><StudyPage /></RequireAuth>} />
-                  <Route path="training" element={<RequireAuth><TrainingPage /></RequireAuth>} />
-                  <Route path="cards" element={<RequireAuth><CardsPage /></RequireAuth>} />
-                  <Route path="email" element={<EmailPage />} />
-                  <Route path="email/:themeId" element={<EmailPage />} />
-                </Route>
-              </Routes>
-            </UserProgressProvider>
-          </AuthProvider>
-        </SettingsProvider>
-      </I18nProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <I18nProvider>
+          <SettingsProvider>
+            <AuthProvider>
+              <UserProgressProvider>
+                <Routes>
+                  <Route element={<App />}>
+                    <Route index element={<DashboardPage />} />
+                    <Route path="themes" element={<ThemesListPage />} />
+                    <Route path="themes/:id" element={<ThemePage />} />
+                    <Route path="auth" element={<AuthPage />} />
+                    <Route path="learn" element={<RequireAuth><LearnPage /></RequireAuth>} />
+                    <Route path="learn/:themeId" element={<RequireAuth><LearnPage /></RequireAuth>} />
+                    <Route path="study/:themeId" element={<RequireAuth><StudyPage /></RequireAuth>} />
+                    <Route path="training" element={<RequireAuth><TrainingPage /></RequireAuth>} />
+                    <Route path="cards" element={<RequireAuth><CardsPage /></RequireAuth>} />
+                    <Route path="email" element={<EmailPage />} />
+                    <Route path="email/:themeId" element={<EmailPage />} />
+                  </Route>
+                </Routes>
+              </UserProgressProvider>
+            </AuthProvider>
+          </SettingsProvider>
+        </I18nProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   </StrictMode>
 )

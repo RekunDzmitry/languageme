@@ -32,7 +32,9 @@ export default function StudyPage() {
         : VOCAB.filter(w => w.themeIds?.includes(themeId))
       scopeThemeIds = new Set([themeId])
     } else {
-      const activeThemes = filterThemesByPack(getThemes(targetLang), settings.activePackId, targetLang)
+      // No themeId here, so inferredPack is null and targetLang is
+      // settings.targetLang — exactly the lang course.themes is scoped to.
+      const activeThemes = filterThemesByPack(course.themes, settings.activePackId, targetLang)
       scopeThemeIds = new Set(activeThemes.map(th => th.id))
       // Also include the pack-scoped catch-all so a user card filed
       // under "Мои карточки" while studying this pack shows up in the
@@ -48,7 +50,7 @@ export default function StudyPage() {
       Array.isArray(v.themeIds) && v.themeIds.some(id => scopeThemeIds.has(id))
     )
     return [...staticVocab, ...userForScope]
-  }, [themeId, targetLang, VOCAB, userVocab, settings.activePackId])
+  }, [themeId, targetLang, VOCAB, userVocab, settings.activePackId, course.themes])
 
   return <StudySession themeVocab={themeVocab} route="study" themeId={themeId} />
 }

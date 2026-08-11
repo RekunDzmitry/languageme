@@ -7,7 +7,7 @@ import { useSettings } from '../stores/SettingsContext'
 import { useCourseData, getThemeTitle } from '../lib/courseData'
 import { filterThemesByPack, getLessonPack, PACK_IDS } from '../data/lessonPacks'
 import { getThemeConjugationMastery, getConjugationDueCount, getExerciseMastery, getExerciseDueCountByTheme, getVocabMastery, getVocabDueCount } from '../utils/progress'
-import { conjCardKey, PRONOUNS } from '../utils/conjugation'
+import { conjCardKey, PRONOUNS, themeFormType } from '../utils/conjugation'
 import ExerciseSection from '../components/themes/ExerciseSection'
 import ExerciseNoteModal from '../components/themes/exercises/ExerciseNoteModal'
 import VocabNoteModal from '../components/themes/exercises/VocabNoteModal'
@@ -20,13 +20,6 @@ const PL_PRONOUNS = [
   { pl: 'wy', translation: 'вы' },
   { pl: 'oni/one', translation: 'они' },
 ]
-
-// Themes using negative forms (ne...pas)
-const NEGATIVE_THEMES = ['fr_theme02']
-
-function getFormType(themeId) {
-  return NEGATIVE_THEMES.includes(themeId) ? 'neg' : 'aff'
-}
 
 function formatDueShort(ts) {
   const diff = ts - Date.now()
@@ -303,6 +296,9 @@ function EmailTabContent({ emailThemes, navigate }) {
 export default function TrainingPage() {
   const { conjugationCards, exerciseCards, cards, exerciseNotes, vocabNotes, saveExerciseNote, clearExerciseNote, saveVocabNote, clearVocabNote } = useProgress()
   const course = useCourseData()
+  const { settings } = useSettings()
+  const targetLang = settings.targetLang
+  const activePackId = settings.activePackId
   const activePack = getLessonPack(activePackId, targetLang)
   const themes = filterThemesByPack(course.themes, activePackId, targetLang)
   const vocab = course.vocab
@@ -528,7 +524,7 @@ export default function TrainingPage() {
     const useExerciseMode = isPolish && activeTab === 'exercises' && hasExercises
     const useVocabMode = isPolish && activeTab === 'vocab' && hasVocab
     const isInteractive = hasVerbs || useExerciseMode || useVocabMode
-    const formType = getFormType(theme.id)
+    const formType = themeFormType(theme.id)
     const themeMastery = hasVerbs
       ? getThemeConjugationMastery(conjugationCards, theme.verbList, formType)
       : (useExerciseMode

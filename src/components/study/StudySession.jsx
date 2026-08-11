@@ -16,6 +16,7 @@ export default function StudySession({ themeVocab = null, route = 'learn', theme
   const { settings } = useSettings()
   const { t } = useT()
   const course = useCourseData()
+  const targetLang = settings.targetLang
   const VOCAB = course.vocab
   const seenIdsRef = useRef(new Set())
   const cardsRef = useRef(cards)

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useT } from '../../i18n'
 import { speak } from '../../utils/audio'
 import { useSpeechLang } from '../../hooks/useSpeechLang'
-import { PRONOUNS } from '../../utils/conjugation'
+import { PRONOUNS, themeFormType } from '../../utils/conjugation'
 import { useCourseData } from '../../lib/courseData'
 import { resolveHint } from '../../lib/displayHint'
 import { useSettings } from '../../stores/SettingsContext'
@@ -25,10 +25,38 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
     [course.vocab]
   )
   const [revealed, setRevealed] = useState(false)
-  const ruForms = ruConjugations[item.verb.infinitive]
+
+  // Russian gloss forms come from theme_conjugation, exposed as
+  // conjugationsByTheme[themeId][infinitive] = [6 forms]. Prefer the
+  // active theme's table; fall back to a merged view so the un-scoped
+  // /learn session (themeId === null) and themes that carry verbs but
+  // no table of their own still get a prompt.
+  //
+  // The merged view is filtered by form type: theme02's table holds
+  // negative glosses, and mixing it into an affirmative drill would
+  // prompt "Я не говорю" for the answer "je parle".
+  const ruFormsByInfinitive = useMemo(() => {
+    const byTheme = course.conjugationsByTheme || {}
+    const merged = {}
+    for (const [id, table] of Object.entries(byTheme)) {
+      if (themeFormType(id) !== formType) continue
+      Object.assign(merged, table)
+    }
+    return { scoped: (themeId && byTheme[themeId]) || {}, merged }
+  }, [course.conjugationsByTheme, themeId, formType])
+
+  const infinitive = item.verb.infinitive
+  const ruForms = ruFormsByInfinitive.scoped[infinitive] || ruFormsByInfinitive.merged[infinitive]
   const ruConjugated = ruForms ? ruForms[item.pronounIdx] : ''
   const pronoun = PRONOUNS[item.pronounIdx]
-  const prompt = `${pronoun.ru.charAt(0).toUpperCase() + pronoun.ru.slice(1)} ${ruConjugated}`
+  const subject = pronoun.ru.charAt(0).toUpperCase() + pronoun.ru.slice(1)
+  // theme_conjugation only carries gloss tables for themes 01/02, so verbs
+  // introduced later (themes 07/08) have no per-person Russian form. Fall
+  // back to the infinitive's translation from theme_verb.ru — still a
+  // answerable prompt, instead of a bare pronoun with a blank after it.
+  const prompt = ruConjugated
+    ? `${subject} ${ruConjugated}`
+    : `${subject} (${item.verb.ru || infinitive})`
   const fullAnswer = item.answer
 
   const vocabEntry = vocabByTarget[item.verb.infinitive]
@@ -38,6 +66,7 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
 
   const [editing, setEditing] = useState(false)
   const [editText, setEditText] = useState('')
+  const [noteOpen, setNoteOpen] = useState(false)
 
   const noteThemeId = themeId || GENERAL_NOTE_THEME
   // Notes are namespaced by theme to match the write-exercise flow in
@@ -88,7 +117,7 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
             <div className="w-full max-w-sm mt-1">
               {!editing ? (
                 <div
-                  onClick={() => { setEditing(true); setEditText(userHint || defaultHint || '') }}
+                  onClick={() => { setEditing(true); setEditText(userMnemonics[vocabId] || builtinHint || '') }}
                   className="bg-gradient-to-r from-accent/10 to-purple-500/10 border border-accent/20 rounded-xl p-3 px-4 cursor-pointer hover:border-accent/40 transition-colors"
                 >
                   <div className="flex items-center justify-between mb-1">
