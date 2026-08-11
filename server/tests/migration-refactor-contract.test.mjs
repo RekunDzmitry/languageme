@@ -129,3 +129,21 @@ test('course bundle exposes theme verbs as verbList for conjugation consumers', 
     'theme.verbs is not read by the frontend conjugation views; use theme.verbList'
   )
 })
+
+test('course bundle theme vocabIds are vocab ids, not reverse-map theme id arrays', () => {
+  const courses = read('../src/routes/courses.js')
+  const start = courses.indexOf('vocabIds:')
+  assert.notEqual(start, -1, 'course bundle must expose theme.vocabIds')
+  const block = courses.slice(start, courses.indexOf('}))', start))
+
+  assert.match(
+    block,
+    /\.map\(\(\[\s*vid\s*\]\)\s*=>\s*vid\)/,
+    'themeIdsByVocab.entries() yields [vocabId, themeIds], so theme.vocabIds must map the first tuple item'
+  )
+  assert.doesNotMatch(
+    block,
+    /\.map\(\(\[\s*,\s*vid\s*\]\)\s*=>\s*vid\)/,
+    'mapping the second tuple item returns theme-id arrays instead of vocab ids'
+  )
+})
