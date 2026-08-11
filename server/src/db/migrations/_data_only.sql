@@ -3028,7 +3028,7 @@ INSERT INTO vocab_hint (vocab_id, lang, text) VALUES ('fr_310', 'ru', 'А-МЕН
 INSERT INTO vocab_hint (vocab_id, lang, text) VALUES ('fr_311', 'ru', 'ЭМ-МЕН-Е → эмм... мой друг идёт со мной');
 INSERT INTO vocab_hint (vocab_id, lang, text) VALUES ('fr_312', 'ru', 'АН-Л-Е → унлИ — сними это с себя');
 INSERT INTO vocab_hint (vocab_id, lang, text) VALUES ('fr_313', 'ru', 'ЛЕВ-Е → как ''лев'' — поднимай как лев лапу');
-INSERT INTO vocab_hint (vocab_id, lang, text) VALUES ('fr_314', 'ru', 'РЕ-ЛЕВ-Е → реле поднимает ток');
+INSERT INTO vocab_hint (vocab_id, lang, text) VALUES ('fr_314', 'ru', 'РЕ-ЛЕВ-Е → РЕ-ЛИЗЫ очков: подхватываешь упавшие');
 INSERT INTO vocab_hint (vocab_id, lang, text) VALUES ('fr_316', 'ru', 'МЕН-Е → ментор ведёт, менеджер управляет');
 INSERT INTO vocab_hint (vocab_id, lang, text) VALUES ('fr_317', 'ru', 'ПРО-МЕН-Е → прОгулка — мы ведём собаку');
 INSERT INTO vocab_hint (vocab_id, lang, text) VALUES ('fr_318', 'ru', 'ПЕЗ-Е → пеЗение — звук взвешивания');
