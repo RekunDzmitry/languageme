@@ -60,11 +60,10 @@ function lineForThemeVerb(text, themeId, infinitive) {
 }
 
 function lineForVocabHint(text, vocabId) {
-  const idx = text.indexOf(`'${vocabId}', 'ru', '`)
-  if (idx === -1) return ''
-  const start = text.lastIndexOf('INSERT INTO vocab_hint', idx)
+  const needle = `INSERT INTO vocab_hint (vocab_id, lang, text) VALUES ('${vocabId}', 'ru', '`
+  const start = text.indexOf(needle)
   if (start === -1) return ''
-  const end = text.indexOf(';', idx) + 1
+  const end = text.indexOf(';', start) + 1
   return text.slice(start, end)
 }
 
