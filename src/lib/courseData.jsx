@@ -102,6 +102,9 @@ export function CourseDataProvider({ children, targetLang, nativeLang }) {
       examplesByVocab: {},
       lexiconByVocab: {},
       conjugationsByTheme: {},
+      // Must be present even before the fetch resolves: pages that render
+      // packs across langs (DashboardPage) index into this on first paint.
+      allByLang: all || {},
     }
     if (!activeBundle) return empty
     return {
