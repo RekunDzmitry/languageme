@@ -1628,10 +1628,10 @@ INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_312', 'ru', 'с
 INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_312', 'en', 'to remove');
 INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_313', 'ru', 'поднимать');
 INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_313', 'en', 'to raise');
-INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_314', 'ru', 'поднимать, отмечать');
-INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_314', 'en', 'to raise / to note');
-INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_315', 'ru', 'воспитывать, поднимать');
-INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_315', 'en', 'to raise / to bring up');
+INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_314', 'ru', 'подхватывать, принимать');
+INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_314', 'en', 'to take up / to pick up');
+INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_315', 'ru', 'воспитывать, растить');
+INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_315', 'en', 'to bring up / to raise (children)');
 INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_316', 'ru', 'вести');
 INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_316', 'en', 'to lead');
 INSERT INTO vocab_translation (vocab_id, lang, text) VALUES ('fr_317', 'ru', 'гулять, выгуливать');
@@ -4593,8 +4593,8 @@ INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, v
 INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme01', 'emmener', 'уводить, увозить', NULL, NULL, 'e→è: основа');
 INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme01', 'enlever', 'снимать, убирать', NULL, NULL, 'e→è: основа');
 INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme01', 'lever', 'поднимать', NULL, NULL, 'e→è: основа');
-INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme01', 'relever', 'поднимать, отмечать', NULL, NULL, 'e→è: основа');
-INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme01', 'élever', 'воспитывать, поднимать', NULL, NULL, 'e→è: основа');
+INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme01', 'relever', 'подхватывать, принимать', NULL, NULL, 'e→è: основа');
+INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme01', 'élever', 'воспитывать, растить', NULL, NULL, 'e→è: основа');
 INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme01', 'mener', 'вести', NULL, NULL, 'e→è: основа');
 INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme01', 'promener', 'гулять, выгуливать', NULL, NULL, 'e→è: основа');
 INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme01', 'peser', 'взвешивать', NULL, NULL, 'e→è: основа');
@@ -4727,8 +4727,8 @@ INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, v
 INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme02', 'emmener', 'не уводить, увозить', NULL, NULL, 'e→è: основа');
 INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme02', 'enlever', 'не снимать, убирать', NULL, NULL, 'e→è: основа');
 INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme02', 'lever', 'не поднимать', NULL, NULL, 'e→è: основа');
-INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme02', 'relever', 'не поднимать, отмечать', NULL, NULL, 'e→è: основа');
-INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme02', 'élever', 'не воспитывать, поднимать', NULL, NULL, 'e→è: основа');
+INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme02', 'relever', 'не подхватывать, принимать', NULL, NULL, 'e→è: основа');
+INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme02', 'élever', 'не воспитывать, растить', NULL, NULL, 'e→è: основа');
 INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme02', 'mener', 'не вести', NULL, NULL, 'e→è: основа');
 INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme02', 'promener', 'не гулять, выгуливать', NULL, NULL, 'e→è: основа');
 INSERT INTO theme_verb (theme_id, infinitive, ru, participe_passe, auxiliaire, verb_group) VALUES ('fr_theme02', 'peser', 'не взвешивать', NULL, NULL, 'e→è: основа');
@@ -4914,7 +4914,7 @@ INSERT INTO theme_conjugation (theme_id, infinitive, lang, forms) VALUES ('fr_th
 INSERT INTO theme_conjugation (theme_id, infinitive, lang, forms) VALUES ('fr_theme01', 'emmener', 'ru', '{"увожу","уводишь","уводит","уводим","уводите","уводят"}');
 INSERT INTO theme_conjugation (theme_id, infinitive, lang, forms) VALUES ('fr_theme01', 'enlever', 'ru', '{"снимаю","снимаешь","снимает","снимаем","снимаете","снимают"}');
 INSERT INTO theme_conjugation (theme_id, infinitive, lang, forms) VALUES ('fr_theme01', 'lever', 'ru', '{"поднимаю","поднимаешь","поднимает","поднимаем","поднимаете","поднимают"}');
-INSERT INTO theme_conjugation (theme_id, infinitive, lang, forms) VALUES ('fr_theme01', 'relever', 'ru', '{"поднимаю","поднимаешь","поднимает","поднимаем","поднимаете","поднимают"}');
+INSERT INTO theme_conjugation (theme_id, infinitive, lang, forms) VALUES ('fr_theme01', 'relever', 'ru', '{"подхватываю","подхватываешь","подхватывает","подхватываем","подхватываете","подхватывают"}');
 INSERT INTO theme_conjugation (theme_id, infinitive, lang, forms) VALUES ('fr_theme01', 'élever', 'ru', '{"воспитываю","воспитываешь","воспитывает","воспитываем","воспитываете","воспитывают"}');
 INSERT INTO theme_conjugation (theme_id, infinitive, lang, forms) VALUES ('fr_theme01', 'mener', 'ru', '{"веду","ведёшь","ведёт","ведём","ведёте","ведут"}');
 INSERT INTO theme_conjugation (theme_id, infinitive, lang, forms) VALUES ('fr_theme01', 'promener', 'ru', '{"гуляю","гуляешь","гуляет","гуляем","гуляете","гуляют"}');
@@ -5048,7 +5048,7 @@ INSERT INTO theme_conjugation (theme_id, infinitive, lang, forms) VALUES ('fr_th
 INSERT INTO theme_conjugation (theme_id, infinitive, lang, forms) VALUES ('fr_theme02', 'emmener', 'ru', '{"не увожу","не уводишь","не уводит","не уводим","не уводите","не уводят"}');
 INSERT INTO theme_conjugation (theme_id, infinitive, lang, forms) VALUES ('fr_theme02', 'enlever', 'ru', '{"не снимаю","не снимаешь","не снимает","не снимаем","не снимаете","не снимают"}');
 INSERT INTO theme_conjugation (theme_id, infinitive, lang, forms) VALUES ('fr_theme02', 'lever', 'ru', '{"не поднимаю","не поднимаешь","не поднимает","не поднимаем","не поднимаете","не поднимают"}');
-INSERT INTO theme_conjugation (theme_id, infinitive, lang, forms) VALUES ('fr_theme02', 'relever', 'ru', '{"не поднимаю","не поднимаешь","не поднимает","не поднимаем","не поднимаете","не поднимают"}');
+INSERT INTO theme_conjugation (theme_id, infinitive, lang, forms) VALUES ('fr_theme02', 'relever', 'ru', '{"не подхватываю","не подхватываешь","не подхватывает","не подхватываем","не подхватываете","не подхватывают"}');
 INSERT INTO theme_conjugation (theme_id, infinitive, lang, forms) VALUES ('fr_theme02', 'élever', 'ru', '{"не воспитываю","не воспитываешь","не воспитывает","не воспитываем","не воспитываете","не воспитывают"}');
 INSERT INTO theme_conjugation (theme_id, infinitive, lang, forms) VALUES ('fr_theme02', 'mener', 'ru', '{"не веду","не ведёшь","не ведёт","не ведём","не ведёте","не ведут"}');
 INSERT INTO theme_conjugation (theme_id, infinitive, lang, forms) VALUES ('fr_theme02', 'promener', 'ru', '{"не гуляю","не гуляешь","не гуляет","не гуляем","не гуляете","не гуляют"}');
