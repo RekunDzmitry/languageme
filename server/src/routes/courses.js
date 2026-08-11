@@ -189,7 +189,7 @@ async function bundleFor(lang, nativeLang, userId = null) {
       ? []
       : Array.from(themeIdsByVocab.entries())
           .filter(([, ids]) => ids.includes(t.id))
-          .map(([, vid]) => vid)),
+          .map(([vid]) => vid)),
   }))
 
   const { rows: conjRows } = await pool.query(
