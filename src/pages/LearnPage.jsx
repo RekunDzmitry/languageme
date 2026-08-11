@@ -4,7 +4,7 @@ import { useSettings } from '../stores/SettingsContext'
 import { useProgress } from '../stores/UserProgressContext'
 import ConjugationSession from '../components/study/ConjugationSession'
 import StudySession from '../components/study/StudySession'
-import { getThemes, getVocab } from '../data/courses'
+import { useCourseData } from '../lib/courseData'
 import { filterThemesByPack, getPackForThemeId } from '../data/lessonPacks'
 
 // Theme IDs that use negative forms (French)
@@ -14,9 +14,10 @@ export default function LearnPage() {
   const { themeId } = useParams()
   const { settings } = useSettings()
   const { userVocab } = useProgress()
+  const course = useCourseData()
   const inferredPack = themeId ? getPackForThemeId(themeId) : null
   const targetLang = inferredPack?.langPrefix || settings.targetLang
-  const VOCAB = getVocab(targetLang)
+  const VOCAB = course.vocab
   // Polish: fast vocab flashcard session (all vocab, SM-2). The
   // pool is the active pack's static vocab PLUS any user-authored
   // cards whose themeIds match the scope. Without the user-vocab
@@ -40,7 +41,7 @@ export default function LearnPage() {
       scopeThemeIds = new Set([themeId])
     } else {
       const activeThemes = filterThemesByPack(
-        getThemes(targetLang),
+        course.themes,
         settings.activePackId,
         targetLang
       )

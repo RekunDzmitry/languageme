@@ -3,13 +3,14 @@ import { useT } from '../i18n'
 import { useProgress } from '../stores/UserProgressContext'
 import { useAuth } from '../stores/AuthContext'
 import { useSettings } from '../stores/SettingsContext'
-import { getThemes, getThemeTitle } from '../data/courses'
+import { useCourseData, getThemeTitle } from '../lib/courseData'
 import { filterThemesByPack } from '../data/lessonPacks'
 import { isThemeUnlocked } from '../utils/progress'
 
 export default function ThemesListPage() {
   const { t } = useT()
   const { settings } = useSettings()
+  const course = useCourseData()
   const targetLang = settings.targetLang
   // Compute the displayed order from the position within the pack-filtered
   // list. The theme's own `order` field is a stable global sort key (the
@@ -17,7 +18,9 @@ export default function ThemesListPage() {
   // user-visible number should be 1-based within the active pack so that
   // a theme in pl-a1-a2 displays as 1 or 2, not as its old global order
   // (11, 12) from the pre-pack layout.
-  const allThemes = filterThemesByPack(getThemes(targetLang), settings.activePackId, targetLang)
+  const allThemes = filterThemesByPack(course.themes, settings.activePackId, targetLang)
+  // Per-pack 1-based display order: position in the active pack, not the
+  // theme's own global `order` field which can collide across packs.
   const numberedThemes = allThemes.map((theme, idx) => ({ ...theme, displayOrder: idx + 1 }))
   const { isAuthenticated } = useAuth()
   const { themeProgress, themeUnlockStatus } = useProgress()

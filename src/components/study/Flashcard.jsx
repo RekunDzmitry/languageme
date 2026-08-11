@@ -1,21 +1,26 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useT } from '../../i18n'
-import { getHintsByLang } from '../../data/courses'
 import { useSettings } from '../../stores/SettingsContext'
+import { useCourseData } from '../../lib/courseData'
+import { resolveHint, resolveTranslation } from '../../lib/displayHint'
 import { useSpeechLang } from '../../hooks/useSpeechLang'
 import SpeakerButton from '../common/SpeakerButton'
 import { speak } from '../../utils/audio'
 
-export default function Flashcard({ word, flipped, onFlip, userMnemonic, vocabNote, onNoteClick, onRate }) {
+export default function Flashcard({ word, flipped, onFlip, userMnemonic, vocabNote, onNoteClick, onRate, userTranslation, onSaveTranslation, onClearTranslation }) {
   const { t } = useT()
   const { settings } = useSettings()
+  const course = useCourseData()
   const speechLang = useSpeechLang()
   const nativeLang = settings.nativeLang
   const targetLang = settings.targetLang
-  const hints = getHintsByLang(nativeLang)
-  const hint = userMnemonic || word.hint || hints[word.id] || ''
-  const translation =
-    word.translations?.[nativeLang] || word.translations?.ru || word.translations?.en || ''
+  const builtinHint = word.hint || course.hintsByVocab[word.id] || ''
+  const hint = resolveHint({ userMnemonic, builtinHint })
+  const translation = resolveTranslation({
+    translations: word.translations,
+    nativeLang,
+    fallback: userTranslation,
+  })
 
   useEffect(() => {
     if (flipped) speak(word.target, speechLang)
@@ -38,6 +43,19 @@ export default function Flashcard({ word, flipped, onFlip, userMnemonic, vocabNo
       <div className="text-center">
         <div className="text-3xl font-extrabold text-white mb-2">{translation}</div>
       </div>
+
+      {/* Translation override control — let the user pin a custom
+          translation for this vocab so the seed value can be wrong
+          in their language and still be corrected without editing
+          000_bootstrap.sql. */}
+      <TranslationEditor
+        wordId={word.id}
+        nativeLang={nativeLang}
+        userTranslation={userTranslation}
+        currentTranslation={translation}
+        onSave={onSaveTranslation}
+        onClear={onClearTranslation}
+      />
 
       {!flipped ? (
         <button
@@ -116,5 +134,54 @@ export default function Flashcard({ word, flipped, onFlip, userMnemonic, vocabNo
         </div>
       )}
     </div>
+  )
+}
+
+function TranslationEditor({ wordId, nativeLang, userTranslation, currentTranslation, onSave }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const { t } = useT()
+
+  if (!onSave) return null
+
+  const start = () => { setDraft(userTranslation || currentTranslation || ''); setEditing(true) }
+  const save = () => { onSave(wordId, nativeLang, draft.trim()); setEditing(false) }
+
+  if (editing) {
+    return (
+      <div className="w-full max-w-sm flex flex-col gap-2 bg-black/30 border border-blue-400/30 rounded-lg p-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-blue-300 font-bold uppercase tracking-wide">{t('edit_translation', 'Изменить перевод')}</span>
+          <span className="text-[10px] text-white/40 font-mono">{wordId}</span>
+        </div>
+        <textarea
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          autoFocus
+          rows={2}
+          className="w-full bg-black/40 border border-white/20 rounded px-2 py-1 text-sm text-white outline-none focus:border-blue-400 resize-none"
+        />
+        <div className="flex gap-1.5">
+          <button
+            onClick={save}
+            className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-1 rounded hover:bg-blue-500/30"
+          >{t('save', 'Сохранить')}</button>
+          <button
+            onClick={() => setEditing(false)}
+            className="text-[10px] text-white/40 px-2 py-1 rounded hover:text-white/60"
+          >✕</button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <button
+      onClick={start}
+      className="text-[10px] text-blue-300/60 hover:text-blue-300 transition-colors flex items-center gap-1"
+      title={t('edit_translation', 'Изменить перевод')}
+    >
+      {userTranslation ? '✎ custom' : `+ ${t('edit_translation', 'Изменить перевод')}`}
+    </button>
   )
 }

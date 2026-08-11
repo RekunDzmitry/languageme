@@ -83,7 +83,20 @@ const getDisplayAnswer = (exercise) => {
     : exercise.answer
 }
 
-export default function WriteAnswer({ exercise, onAnswer, priorAttempts = 0, exerciseKey, themeId, note, onNoteSave, onNoteDelete }) {
+// Compose the exercise as the UI sees it: user override beats the seed
+// for both the accepted-answers set and the display value. Returning a
+// fresh object keeps the rest of the file (which treats `exercise` as
+// the source of truth) unchanged.
+function withAnswerOverride(exercise, override) {
+  if (!Array.isArray(override) || override.length === 0) return exercise
+  const ex = exercise || {}
+  // Keep the original answer/answers key shape so getAcceptedAnswers /
+  // getDisplayAnswer work without further changes.
+  if (Array.isArray(ex.answers)) return { ...ex, answers: [...override] }
+  return { ...ex, answer: override[0], answers: [...override] }
+}
+
+export default function WriteAnswer({ exercise, onAnswer, priorAttempts = 0, exerciseKey, themeId, note, onNoteSave, onNoteDelete, userAnswerOverride, onSaveAnswerOverride, onClearAnswerOverride }) {
   const { t } = useT()
   const [value, setValue] = useState('')
   const [submitted, setSubmitted] = useState(false)
@@ -91,6 +104,28 @@ export default function WriteAnswer({ exercise, onAnswer, priorAttempts = 0, exe
   const [attempts, setAttempts] = useState(0)
   const [hasErrored, setHasErrored] = useState(false)
   const [showNotePanel, setShowNotePanel] = useState(false)
+  const [editingAnswers, setEditingAnswers] = useState(false)
+  const [answersDraft, setAnswersDraft] = useState('')
+
+  // Apply the user's override on top of the seed exercise object so
+  // the rest of the component (checkAnswer, getDisplayAnswer, etc.)
+  // reads from the override transparently.
+  const effectiveExercise = withAnswerOverride(exercise, userAnswerOverride)
+
+  const startEditAnswers = () => {
+    setAnswersDraft(getDisplayAnswer(effectiveExercise))
+    setEditingAnswers(true)
+  }
+  const saveEditAnswers = () => {
+    const list = answersDraft
+      .split(/[/\n]+/)
+      .map(p => p.trim())
+      .filter(Boolean)
+    if (list.length > 0 && onSaveAnswerOverride) {
+      onSaveAnswerOverride(exerciseKey, list)
+    }
+    setEditingAnswers(false)
+  }
 
   // Close note panel when exercise changes (new key)
   useEffect(() => {
@@ -106,7 +141,7 @@ export default function WriteAnswer({ exercise, onAnswer, priorAttempts = 0, exe
   const checkAnswer = (userAnswer) => {
     const normalized = normalizeAnswer(userAnswer)
 
-    return getAcceptedAnswers(exercise).some(a => normalizeAnswer(a) === normalized)
+    return getAcceptedAnswers(effectiveExercise).some(a => normalizeAnswer(a) === normalized)
   }
 
   const handleSubmit = (e) => {
@@ -195,7 +230,7 @@ export default function WriteAnswer({ exercise, onAnswer, priorAttempts = 0, exe
       
       {/* Prompt */}
       <p className="text-lg text-white mb-4 font-semibold">
-        {exercise.prompt}
+        {effectiveExercise.prompt || exercise.prompt}
         {exercise.audio && (
           <SpeakerButton text={exercise.audio} size="sm" className="ml-2" />
         )}
@@ -301,7 +336,7 @@ export default function WriteAnswer({ exercise, onAnswer, priorAttempts = 0, exe
                     <div className="text-text-muted text-sm">
                       {t('correct_answer_is', 'Правильный ответ:')}
                       <span className="text-green-400 font-semibold ml-2">
-                        {getDisplayAnswer(exercise)}
+                        {getDisplayAnswer(effectiveExercise)}
                       </span>
                     </div>
                   </div>
@@ -330,6 +365,55 @@ export default function WriteAnswer({ exercise, onAnswer, priorAttempts = 0, exe
             </div>
           )}
         </div>
+      )}
+
+      {/* Edit expected answers panel */}
+      {editingAnswers && (
+        <div className="bg-yellow-500/5 border border-yellow-500/30 rounded-lg p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-yellow-300 font-bold uppercase tracking-wide">
+              {t('edit_expected_answer', 'Изменить ожидаемый ответ')}
+            </span>
+            <span className="text-[10px] text-white/40 font-mono">{exerciseKey}</span>
+          </div>
+          <div className="text-[10px] text-white/30">
+            {t('edit_expected_answer_hint', 'Через «/» для нескольких вариантов.')}
+          </div>
+          <textarea
+            value={answersDraft}
+            onChange={e => setAnswersDraft(e.target.value)}
+            autoFocus
+            rows={3}
+            className="w-full bg-black/40 border border-yellow-500/30 rounded px-2 py-1 text-sm text-white outline-none focus:border-yellow-400 resize-none"
+          />
+          <div className="flex gap-1.5">
+            <button
+              onClick={saveEditAnswers}
+              className="text-[10px] bg-yellow-500/20 text-yellow-300 px-2 py-1 rounded hover:bg-yellow-500/30"
+            >{t('save', 'Сохранить')}</button>
+            {userAnswerOverride && onClearAnswerOverride && (
+              <button
+                onClick={() => { onClearAnswerOverride(exerciseKey); setEditingAnswers(false) }}
+                className="text-[10px] text-red-300 px-2 py-1 rounded hover:bg-red-500/10"
+              >{t('reset', 'Сбросить')}</button>
+            )}
+            <button
+              onClick={() => setEditingAnswers(false)}
+              className="text-[10px] text-white/40 px-2 py-1 rounded hover:text-white/60"
+            >✕</button>
+          </div>
+        </div>
+      )}
+
+      {/* Toggle button (always present, opens the editor) */}
+      {exerciseKey && onSaveAnswerOverride && !editingAnswers && (
+        <button
+          onClick={startEditAnswers}
+          className="text-[10px] text-yellow-300/60 hover:text-yellow-300 self-start"
+          title={t('edit_expected_answer', 'Изменить ожидаемый ответ')}
+        >
+          {userAnswerOverride ? '✎ custom' : `+ ${t('edit_expected_answer', 'Изменить ожидаемый ответ')}`}
+        </button>
       )}
 
       {/* Exercise note panel */}

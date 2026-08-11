@@ -3,16 +3,17 @@ import { useParams } from 'react-router-dom'
 import StudySession from '../components/study/StudySession'
 import { useSettings } from '../stores/SettingsContext'
 import { useProgress } from '../stores/UserProgressContext'
-import { getVocab, getThemes } from '../data/courses'
+import { useCourseData } from '../lib/courseData'
 import { filterThemesByPack, getPackForThemeId } from '../data/lessonPacks'
 
 export default function StudyPage() {
   const { themeId } = useParams()
   const { settings } = useSettings()
   const { userVocab } = useProgress()
+  const course = useCourseData()
   const inferredPack = themeId ? getPackForThemeId(themeId) : null
   const targetLang = inferredPack?.langPrefix || settings.targetLang
-  const VOCAB = getVocab(targetLang)
+  const VOCAB = course.vocab
 
   // Build the static half first (unchanged from before), then append
   // any user-authored cards whose themeIds match the active study scope.
@@ -24,7 +25,7 @@ export default function StudyPage() {
     let staticVocab
     let scopeThemeIds
     if (themeId) {
-      const theme = getThemes(targetLang).find(th => th.id === themeId)
+      const theme = course.themes.find(th => th.id === themeId)
       const ids = theme?.vocabIds
       staticVocab = ids?.length
         ? ids.map(id => VOCAB.find(w => w.id === id)).filter(Boolean)

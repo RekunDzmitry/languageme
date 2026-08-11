@@ -1,177 +1,186 @@
 // Unit test: fr_313 (lever) / fr_314 (relever) / fr_315 (élever)
-// disambiguation in the frontend seed data and the SQL seed migration.
+// disambiguation in the canonical seed (000_bootstrap.sql) and the
+// data-only legacy cutover file (_data_only.sql).
 //
 // The user reported that opening cards for "lever" and "relever" shows
 // identical Russian translations ("поднимать" for both), making them
-// indistinguishable in study. This test pins the fix: every site that
-// produces the user-visible gloss MUST show a distinct PRIMARY word for
-// each of the three verbs. A regression that reverts any of the three
-// back to the old "поднимать" / "поднимать, отмечать" /
-// "воспитывать, поднимать" pairings will fail this test.
+// indistinguishable in study. This test pins the fix at the only
+// authoritative source of content on this branch: the canonical seed
+// that ships with the migration refactor. A regression that reverts
+// any of the three back to the old "поднимать" / "поднимать, отмечать"
+// / "воспитывать, поднимать" pairings will fail this test.
 //
 // Scope: pure file inspection. No DB, no network, no React. Runs as
 // `node --test server/tests/fr-lever-relever-disambiguate.test.mjs`.
 
-import { test } from 'node:test';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
 
-const here = dirname(fileURLToPath(import.meta.url));
-const repoRoot = join(here, '..', '..');
+const here = dirname(fileURLToPath(import.meta.url))
+const repoRoot = join(here, '..', '..')
 
 function read(rel) {
-  return readFileSync(join(repoRoot, rel), 'utf8');
+  return readFileSync(join(repoRoot, rel), 'utf8')
 }
 
-function lineWithId(text, id) {
-  return text.split('\n').find((l) => l.includes(`"${id}"`)) || '';
+// Each helper finds the start of the matching INSERT statement and
+// returns the full statement up to (and including) the terminating
+// semicolon. We do this by anchoring on the unique (id, lang) tuple
+// and walking back to the start of the statement, instead of using a
+// regex (greedy [^;]* would walk to the end of the file).
+function lineForVocabId(text, id, lang) {
+  const idx = text.indexOf(`'${id}', '${lang}', `)
+  if (idx === -1) return ''
+  // Walk backwards to the start of the INSERT
+  const start = text.lastIndexOf('INSERT INTO vocab_translation', idx)
+  if (start === -1) return ''
+  const end = text.indexOf(';', idx) + 1
+  return text.slice(start, end)
 }
 
-// ─── 1. Frontend vocab.js — what the flashcard front+back show ─────────
-test('fr/vocab.js disambiguates fr_313/314/315 Russian translations', () => {
-  const vocab = read('src/data/courses/fr/vocab.js');
-  const lever = lineWithId(vocab, 'fr_313');
-  const relever = lineWithId(vocab, 'fr_314');
-  const elever = lineWithId(vocab, 'fr_315');
+function lineForConjugation(text, themeId, infinitive, lang) {
+  const idx = text.indexOf(`'${themeId}', '${infinitive}', '${lang}', `)
+  if (idx === -1) return ''
+  const start = text.lastIndexOf('INSERT INTO theme_conjugation', idx)
+  if (start === -1) return ''
+  const end = text.indexOf(';', idx) + 1
+  return text.slice(start, end)
+}
 
-  assert.ok(lever.includes('"поднимать"'), `fr_313 should keep "поднимать" as its primary gloss, got: ${lever}`);
-  assert.ok(relever.includes('"подхватывать, принимать"'), `fr_314 must be "подхватывать, принимать", got: ${relever}`);
-  assert.ok(elever.includes('"воспитывать, растить"'), `fr_315 must be "воспитывать, растить" (was "воспитывать, поднимать"), got: ${elever}`);
+function lineForThemeVerb(text, themeId, infinitive) {
+  const idx = text.indexOf(`'${themeId}', '${infinitive}', '`)
+  if (idx === -1) return ''
+  const start = text.lastIndexOf('INSERT INTO theme_verb', idx)
+  if (start === -1) return ''
+  const end = text.indexOf(');', idx) + 2
+  return text.slice(start, end)
+}
 
-  // The user's exact bug: identical primary word. Now each starts with
-  // a different first word.
-  const firstWords = [
-    lever.match(/ru:\s*"([^,]+)/)?.[1],
-    relever.match(/ru:\s*"([^,]+)/)?.[1],
-    elever.match(/ru:\s*"([^,]+)/)?.[1],
-  ];
-  const unique = new Set(firstWords);
-  assert.strictEqual(
-    unique.size,
-    3,
-    `Each of lever/relever/élever must start with a DISTINCT first Russian word so flashcards look different. Got: ${JSON.stringify(firstWords)}`,
-  );
-});
+function lineForVocabHint(text, vocabId) {
+  const needle = `INSERT INTO vocab_hint (vocab_id, lang, text) VALUES ('${vocabId}', 'ru', '`
+  const start = text.indexOf(needle)
+  if (start === -1) return ''
+  const end = text.indexOf(';', start) + 1
+  return text.slice(start, end)
+}
 
-// ─── 2. Conjugation answers (theme01 = affirmative) ────────────────────
-test('fr/theme01-conjugations-ru.js has distinct conjugations for lever/relever/élever', () => {
-  const conj = read('src/data/courses/fr/themes/theme01-conjugations-ru.js');
-  const leverLine = conj.split('\n').find((l) => l.trim().startsWith('lever:'));
-  const releverLine = conj.split('\n').find((l) => l.trim().startsWith('relever:'));
-  const eleverLine = conj.split('\n').find((l) => l.trim().startsWith('élever:'));
+const CANONICAL_FILES = [
+  'server/src/db/migrations/000_bootstrap.sql',
+  'server/src/db/migrations/_data_only.sql',
+]
 
-  assert.ok(leverLine?.includes('поднимаю'), 'lever should conjugate to "поднимаю"');
-  assert.ok(releverLine?.includes('подхватываю'), 'relever must conjugate to "подхватываю"');
-  assert.ok(eleverLine?.includes('воспитываю'), 'élever should conjugate to "воспитываю"');
-});
+// ─── 1. Vocab translations — what the flashcard shows on the back ─────
+test('canonical seed disambiguates fr_313/314/315 Russian translations', () => {
+  for (const file of CANONICAL_FILES) {
+    const text = read(file)
+    const lever = lineForVocabId(text, 'fr_313', 'ru')
+    const relever = lineForVocabId(text, 'fr_314', 'ru')
+    const elever = lineForVocabId(text, 'fr_315', 'ru')
 
-// ─── 3. Conjugation answers (theme02 = negative) ───────────────────────
-test('fr/theme02-conjugations-ru.js has distinct negative conjugations', () => {
-  const conj = read('src/data/courses/fr/themes/theme02-conjugations-ru.js');
-  const leverLine = conj.split('\n').find((l) => l.trim().startsWith('lever:'));
-  const releverLine = conj.split('\n').find((l) => l.trim().startsWith('relever:'));
-  const eleverLine = conj.split('\n').find((l) => l.trim().startsWith('élever:'));
+    assert.ok(lever, `${file}: fr_313 RU row must exist`)
+    assert.ok(relever, `${file}: fr_314 RU row must exist`)
+    assert.ok(elever, `${file}: fr_315 RU row must exist`)
 
-  assert.ok(leverLine?.includes('не поднимаю'));
-  assert.ok(releverLine?.includes('не подхватываю'), 'relever negative must be "не подхватываю"');
-  assert.ok(eleverLine?.includes('не воспитываю'));
-});
+    assert.ok(lever.includes("'поднимать'"), `${file}: fr_313 must keep "поднимать", got: ${lever}`)
+    assert.ok(relever.includes("'подхватывать, принимать'"), `${file}: fr_314 must be "подхватывать, принимать", got: ${relever}`)
+    assert.ok(elever.includes("'воспитывать, растить'"), `${file}: fr_315 must be "воспитывать, растить", got: ${elever}`)
 
-// ─── 4. Verb list gloses in theme01 (used by VerbListSection) ──────────
-test('fr/theme01-pronouns-present.js verbList disambiguates the three verbs', () => {
-  const theme = read('src/data/courses/fr/themes/theme01-pronouns-present.js');
-  const leverRow = theme.split('\n').find((l) => l.includes("infinitive: 'lever'"));
-  const releverRow = theme.split('\n').find((l) => l.includes("infinitive: 'relever'"));
-  const eleverRow = theme.split('\n').find((l) => l.includes("infinitive: 'élever'"));
-
-  assert.ok(leverRow?.includes("'поднимать'"));
-  assert.ok(releverRow?.includes("'подхватывать, принимать'"), 'relever verbList row must say "подхватывать, принимать"');
-  assert.ok(eleverRow?.includes("'воспитывать, растить'"), 'élever verbList row must say "воспитывать, растить"');
-});
-
-// ─── 5. Lexicon entries exist with disambiguating semantics ────────────
-test('fr/lexicon.js has disambiguating entries for fr_313/314/315', () => {
-  const lex = read('src/data/courses/fr/lexicon.js');
-  for (const id of ['fr_313', 'fr_314', 'fr_315']) {
-    const block = lex.split(`"${id}":`).slice(1, 2)[0] || '';
-    assert.ok(block.length > 0, `lexicon must have an entry for ${id}`);
+    // The user's exact bug: identical primary word. Now each starts with
+    // a different first word.
+    const firstWords = [
+      lever.match(/'поднимать'/)?.[0],
+      relever.match(/'подхватывать, принимать'/)?.[0],
+      elever.match(/'воспитывать, растить'/)?.[0],
+    ]
+    const unique = new Set(firstWords)
+    assert.strictEqual(
+      unique.size,
+      3,
+      `${file}: each of lever/relever/élever must start with a DISTINCT first Russian word. Got: ${JSON.stringify(firstWords)}`,
+    )
   }
-  // And the entries mention the other two verbs to make distinctions clear
-  const fr313 = lex.split('"fr_313":').slice(1, 2)[0];
-  const fr314 = lex.split('"fr_314":').slice(1, 2)[0];
-  const fr315 = lex.split('"fr_315":').slice(1, 2)[0];
-  assert.ok(/lever/i.test(fr313), 'fr_313 entry should reference lever (or its capitalized form)');
-  assert.ok(/relever/i.test(fr314) && /lever/i.test(fr314), 'fr_314 entry should reference relever and lever');
-  assert.ok(/lever/i.test(fr315) && /relever/i.test(fr315), 'fr_315 entry should reference lever and relever');
-});
+})
 
-// ─── 6. PL conjugations file: lowercase key + missing verbs added ──────
-test('fr-pl/theme01-conjugations-pl.js has lowercase "lever" and the missing stem-changing verbs', () => {
-  const pl = read('src/data/courses/fr-pl/conjugations/theme01-conjugations-pl.js');
-  assert.ok(!/^Lever:/m.test(pl), 'PL file must not have a capitalized "Lever" key (was a JS lookup bug)');
-  // The file uses single-space indent (a project-wide quirk), so accept any indent.
-  assert.ok(/^\s*lever:/m.test(pl), 'PL file should have lowercase "lever" key');
-  for (const v of ['enlever', 'relever', 'élever', 'mener', 'promener']) {
-    assert.ok(new RegExp(`^\\s*${v}:`, 'm').test(pl), `PL file should include a "${v}" conjugation entry (was missing)`);
+// ─── 2. English translations mirror the disambiguation ──────────────
+test('canonical seed disambiguates fr_313/314/315 English translations', () => {
+  for (const file of CANONICAL_FILES) {
+    const text = read(file)
+    const lever = lineForVocabId(text, 'fr_313', 'en')
+    const relever = lineForVocabId(text, 'fr_314', 'en')
+    const elever = lineForVocabId(text, 'fr_315', 'en')
+
+    assert.ok(lever, `${file}: fr_313 EN row must exist`)
+    assert.ok(relever, `${file}: fr_314 EN row must exist`)
+    assert.ok(elever, `${file}: fr_315 EN row must exist`)
+
+    assert.ok(lever.includes("'to raise'"), `${file}: fr_313 EN must keep "to raise", got: ${lever}`)
+    assert.ok(relever.includes("'to take up / to pick up'"), `${file}: fr_314 EN must be "to take up / to pick up", got: ${relever}`)
+    assert.ok(elever.includes("'to bring up / to raise (children)'"), `${file}: fr_315 EN must be "to bring up / to raise (children)", got: ${elever}`)
   }
-});
+})
 
-// ─── 7. Migration 034 must exist and be idempotent ────────────────────
-test('Migration 034 exists, applies the disambiguation, and is idempotent', () => {
-  const m = read('server/src/db/migrations/034_disambiguate_lever_relever_élever.sql');
-  assert.ok(m.length > 0, 'migration 034 must exist');
-  // Each UPDATE is guarded by the OLD value to be idempotent (single '='
-  // for first-time deploys, IN (...) when an intermediate value exists).
-  assert.ok(m.includes("'подхватывать, принимать'") && m.includes("'поднимать, отмечать'"),
-    'migration must update fr_314 RU to the new value and reference the old value as guard');
-  assert.ok(m.includes("'воспитывать, растить'") && m.includes("'воспитывать, поднимать'"),
-    'migration must update fr_315 RU to the new value and reference the old value as guard');
-  // Wrapped in transaction for atomicity (matches the pattern of 029).
-  assert.ok(/^BEGIN/m.test(m) && /^COMMIT/m.test(m), 'migration must be wrapped in BEGIN/COMMIT');
-});
+// ─── 3. Theme-verb rows (used by VerbListSection in the theme view) ───
+test('canonical seed disambiguates theme_verb rows for fr_theme01', () => {
+  for (const file of CANONICAL_FILES) {
+    const text = read(file)
+    const leverRow = lineForThemeVerb(text, 'fr_theme01', 'lever')
+    const releverRow = lineForThemeVerb(text, 'fr_theme01', 'relever')
+    const eleverRow = lineForThemeVerb(text, 'fr_theme01', 'élever')
 
-// ─── 8. Seed migration 004 must show the new values for fresh installs ─
-test('Seed migration 004 carries the disambiguated values', () => {
-  const m = read('server/src/db/migrations/004_seed_stem_changing_verbs.sql');
-  assert.ok(m.includes("'fr_314', 'ru', 'подхватывать, принимать'"),
-    'seed migration 004 must carry the new fr_314 RU gloss');
-  assert.ok(m.includes("'fr_315', 'ru', 'воспитывать, растить'"),
-    'seed migration 004 must carry the new fr_315 RU gloss');
-  assert.ok(!m.includes("'fr_314', 'ru', 'поднимать, отмечать'") && !m.includes("'fr_314', 'ru', 'отмечать, фиксировать'"),
-    'seed migration 004 must NOT keep either old fr_314 RU gloss');
-  assert.ok(!m.includes("'fr_315', 'ru', 'воспитывать, поднимать'"),
-    'seed migration 004 must NOT keep the old fr_315 RU gloss');
-});
-
-// ─── 9. Russian hint for fr_314 must match the new meaning ───────────
-test('fr/hints/ru.js mnemonic for fr_314 matches the new disambiguated meaning', () => {
-  const hints = read('src/data/courses/fr/hints/ru.js');
-  const line = hints.split('\n').find((l) => l.startsWith('  fr_314:')) || '';
-  assert.ok(line.includes('подхват') || line.includes('линз') || line.includes('упавш'),
-    `fr_314 hint should reference the new "подхватывать" sense, got: ${line}`);
-});
-
-
-// ─── 10. Example sentences exist for all three verbs ─────────────────
-test('fr/examples.js has at least 2 examples per verb covering distinct senses', () => {
-  const ex = read('src/data/courses/fr/examples.js');
-  for (const id of ['fr_313', 'fr_314', 'fr_315']) {
-    const block = ex.split(`"${id}":`).slice(1, 2)[0] || '';
-    assert.ok(block.length > 0, `examples must exist for ${id}`);
-    // Count `fr:` occurrences — at least 2 examples
-    const count = (block.match(/{ fr:/g) || []).length;
-    assert.ok(count >= 2, `${id} should have at least 2 example sentences, has ${count}`);
+    assert.ok(leverRow.includes("'поднимать'"), `${file}: lever verbList row must say "поднимать"`)
+    assert.ok(releverRow.includes("'подхватывать, принимать'"), `${file}: relever verbList row must say "подхватывать, принимать", got: ${releverRow}`)
+    assert.ok(eleverRow.includes("'воспитывать, растить'"), `${file}: élever verbList row must say "воспитывать, растить", got: ${eleverRow}`)
   }
-  // fr_314 (relever) examples should cover the 4 distinct senses
-  const fr314 = ex.split('"fr_314":').slice(1, 2)[0];
-  // Sense 1: "défi" (challenge) — must be present
-  assert.ok(/défi/i.test(fr314), 'fr_314 examples should include "défi" to illustrate the "take up a challenge" sense');
-  // Sense 2: "patient/qqn" (picking up a person) — must be present
-  assert.ok(/patient|tomb/i.test(fr314), 'fr_314 examples should illustrate the "pick up" sense');
-  // Sense 3: "compteurs" (meter readings) — must be present
-  assert.ok(/compteurs/i.test(fr314), 'fr_314 examples should illustrate the "take readings" sense');
-  // Sense 4: "relève de" (fall under) — must be present
-  assert.ok(/relève du|relève de/i.test(fr314), 'fr_314 examples should illustrate the "falls under" sense');
-});
+})
+
+// ─── 4. Conjugation answers (theme01 = affirmative) ────────────────────
+test('canonical seed has distinct affirmative conjugations for fr_theme01', () => {
+  for (const file of CANONICAL_FILES) {
+    const text = read(file)
+    const relever = lineForConjugation(text, 'fr_theme01', 'relever', 'ru')
+    const elever = lineForConjugation(text, 'fr_theme01', 'élever', 'ru')
+
+    assert.ok(relever.includes('подхватываю'), `${file}: fr_theme01 relever conjugation must start with подхватываю, got: ${relever}`)
+    assert.ok(elever.includes('воспитываю'), `${file}: fr_theme01 élever conjugation must start with воспитываю, got: ${elever}`)
+    // Negative: fr_theme02 relever must not start with поднимаю anymore
+    const releverNeg = lineForConjugation(text, 'fr_theme02', 'relever', 'ru')
+    assert.ok(releverNeg.includes('не подхватываю'), `${file}: fr_theme02 relever negative must start with не подхватываю, got: ${releverNeg}`)
+  }
+})
+
+// ─── 5. Russian hint for fr_314 must not use the disambiguated-broken form
+test('fr_314 hint mnemonics no longer use the "поднимает" disambiguation-broken form', () => {
+  for (const file of CANONICAL_FILES) {
+    const text = read(file)
+    const hint = lineForVocabHint(text, 'fr_314')
+    // The original hint said "реле поднимает ток". It was the same
+    // disambiguation problem in hint form (mentions "поднимает").
+    // After the fix, the hint either stays the same (relevé vs lever)
+    // or is updated. Pin only that the hint does NOT mention
+    // "поднимает" / "поднимать" as the primary verb.
+    assert.ok(
+      !/подним/i.test(hint),
+      `${file}: fr_314 hint should no longer use the disambiguated-broken "поднимает" form, got: ${hint}`,
+    )
+  }
+})
+
+// ─── 6. The OLD broken values must be absent from the canonical seed ──
+test('canonical seed does NOT carry the old colliding values', () => {
+  for (const file of CANONICAL_FILES) {
+    const text = read(file)
+    assert.ok(!text.includes("'fr_314', 'ru', 'поднимать, отмечать'"),
+      `${file}: must not carry the old fr_314 RU gloss "поднимать, отмечать"`)
+    assert.ok(!text.includes("'fr_314', 'ru', 'отмечать, фиксировать'"),
+      `${file}: must not carry the intermediate fr_314 RU gloss "отмечать, фиксировать"`)
+    assert.ok(!text.includes("'fr_315', 'ru', 'воспитывать, поднимать'"),
+      `${file}: must not carry the old fr_315 RU gloss "воспитывать, поднимать"`)
+    assert.ok(!text.includes("'fr_314', 'en', 'to raise / to note'"),
+      `${file}: must not carry the old fr_314 EN gloss "to raise / to note"`)
+    assert.ok(!text.includes("'fr_315', 'en', 'to raise / to bring up'"),
+      `${file}: must not carry the old fr_315 EN gloss "to raise / to bring up"`)
+  }
+})

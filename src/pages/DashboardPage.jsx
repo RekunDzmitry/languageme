@@ -3,21 +3,23 @@ import { useNavigate } from 'react-router-dom'
 import { useT } from '../i18n'
 import { useProgress } from '../stores/UserProgressContext'
 import { useSettings } from '../stores/SettingsContext'
-import { getThemes, getVocab } from '../data/courses'
+import { useCourseData } from '../lib/courseData'
 import { LESSON_PACKS, filterThemesByPack, openPack } from '../data/lessonPacks'
 import { getConjugationDueCount, getExerciseDueCountByTheme, getVocabDueCount } from '../utils/progress'
 
 // Pack ids use hyphens; i18n keys use underscores. Centralise the mapping.
 const packKey = (packId, slot) => `pack_${packId.replace(/-/g, '_')}_${slot}`
 
-function getPackStats(pack, progress) {
-  const themes = filterThemesByPack(getThemes(pack.langPrefix), pack.id, pack.langPrefix)
-  const vocab = getVocab(pack.langPrefix)
-  const themeIds = new Set(themes.map((theme) => theme.id))
+function getPackStats(pack, progress, course) {
+  const langBundle = course.allByLang[pack.langPrefix] || { vocab: [], themes: [] }
+  const themes = filterThemesByPack(langBundle.themes, pack.id, pack.langPrefix)
+  const vocab = langBundle.vocab
+  // Build the pack's theme set once so the vocab filter below can test
+  // membership without re-iterating the themes array per word.
+  const themeIds = new Set(themes.map((t) => t.id))
   const vocabIds = vocab
     .filter((word) => word.themeIds?.some((themeId) => themeIds.has(themeId)))
     .map((word) => word.id)
-
   const verbs = themes.flatMap((theme) => theme.verbList || [])
   const exercises = themes.reduce((total, theme) => {
     const exerciseSection = theme.sections?.find((section) => section.type === 'exercises')
@@ -45,6 +47,7 @@ function getPackStats(pack, progress) {
 export default function DashboardPage() {
   const progress = useProgress()
   const { settings, updateSettings } = useSettings()
+  const course = useCourseData()
   const navigate = useNavigate()
   const { t } = useT()
 
@@ -60,10 +63,10 @@ export default function DashboardPage() {
   const packStats = useMemo(() => {
     const stats = {}
     for (const pack of LESSON_PACKS) {
-      stats[pack.id] = getPackStats(pack, progressSlice)
+      stats[pack.id] = getPackStats(pack, progressSlice, course)
     }
     return stats
-  }, [progressSlice])
+  }, [progressSlice, course])
 
   function handleOpenPack(pack) {
     openPack(pack, { navigate, updateSettings })

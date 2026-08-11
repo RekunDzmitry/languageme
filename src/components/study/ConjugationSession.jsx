@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useT } from '../../i18n'
 import { useProgress } from '../../stores/UserProgressContext'
 import { buildSessionQueue, conjugateEr, conjCardKey } from '../../utils/conjugation'
-import { themes } from '../../data/courses/fr/themes/theme01-pronouns-present'
+import { useCourseData } from '../../lib/courseData'
 import { getThemeConjugationMastery, getConjugationDueCount } from '../../utils/progress'
 import ConjugationExercise from './ConjugationExercise'
 
@@ -20,18 +20,19 @@ export default function ConjugationSession({ themeId = null, formType = 'aff' })
   const { conjugationCards, rateConjugation, userMnemonics, saveMnemonic } = useProgress()
   const { t } = useT()
   const navigate = useNavigate()
+  const course = useCourseData()
 
   const [started, setStarted] = useState(false)
 
   // Collect verbs: from a specific theme or all themes with content
   const verbList = useMemo(() => {
     if (themeId) {
-      const theme = themes.find(th => th.id === themeId)
+      const theme = course.themes.find(th => th.id === themeId)
       return theme?.verbList || []
     }
     const seen = new Set()
     const verbs = []
-    for (const theme of themes) {
+    for (const theme of course.themes) {
       if (theme.verbList?.length > 0) {
         for (const verb of theme.verbList) {
           const dedup = `${verb.infinitive}:${verb.participePasse ? 'pc' : 'pr'}`
@@ -43,13 +44,13 @@ export default function ConjugationSession({ themeId = null, formType = 'aff' })
       }
     }
     return verbs
-  }, [themeId])
+  }, [themeId, course.themes])
 
   const themeName = useMemo(() => {
     if (!themeId) return null
-    const theme = themes.find(th => th.id === themeId)
+    const theme = course.themes.find(th => th.id === themeId)
     return theme?.titleRu || themeId
-  }, [themeId])
+  }, [themeId, course.themes])
 
   const dueCount = useMemo(
     () => getConjugationDueCount(conjugationCards, verbList, formType),
