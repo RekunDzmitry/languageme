@@ -293,5 +293,12 @@
   "add_exercise_note": "Ajouter une note",
   "notes_pill": "Notes",
   "edit_prompt_label": "Modifier l'invite",
-  "prompt_overridden": "Invite personnalisée"
+  "prompt_overridden": "Invite personnalisée",
+  "verb_notes_column": "Notes",
+  "verb_notes_subtitle": "Notes de conjugaison",
+  "verb_notes_open": "Ouvrir les notes",
+  "verb_notes_count": "{n} cellules sur 6 avec note",
+  "verb_notes_hint": "Choisissez une cellule pour ouvrir ou créer une note",
+  "has_note": "Avec note",
+  "close": "Fermer"
 }

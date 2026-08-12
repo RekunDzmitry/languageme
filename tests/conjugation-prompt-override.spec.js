@@ -131,3 +131,52 @@ test('ConjugationExercise UI shows a Notes pill and an editable prompt', async (
   const editablePrompt = page.getByTitle(/изменить подсказку|edit conjugation prompt|modifier l'invite/i).first()
   await expect(editablePrompt).toBeVisible({ timeout: 5000 })
 })
+
+test('VerbGrid Notes column shows count and opens per-verb picker', async ({ page, request }) => {
+  const { accessToken } = await registerAndPinPack(request, page)
+
+  // Save a note for one of fr_theme01/achever's 6 cells so the
+  // "Заметки" column surfaces a non-zero count. The wire key is the
+  // composite `${themeId}:${conjCardKey}` pair, matching the
+  // in-memory exerciseNotes indexing.
+  const noteContent = 'Запомни: achever = finish, не achieve'
+  const put = await request.put(
+    'http://localhost:3000/api/exercise-notes/fr_theme01%3Aconj%3Aachever%3Apr%3Aaff%3A0',
+    {
+      headers: { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' },
+      data: { themeId: 'fr_theme01', content: noteContent },
+    }
+  )
+  expect(put.ok()).toBe(true)
+
+  // /training with the theme expanded shows the VerbGrid.
+  await page.goto('/training')
+  await page.waitForLoadState('networkidle')
+  // Expand the fr_theme01 card.
+  const themeRow = page.locator('text=Pronouns & 1st Group Verbs (-er)').first()
+  await themeRow.scrollIntoViewIfNeeded()
+  await themeRow.click({ force: true })
+  await page.waitForLoadState('networkidle')
+
+  // The VerbGrid exposes a per-verb Notes button. For achever it
+  // should read "1/6" (one cell has a note, five don't).
+  const acheverNotes = page.getByTestId('verb-notes-achever')
+  await expect(acheverNotes).toBeVisible({ timeout: 5000 })
+  await expect(acheverNotes).toContainText('1/6')
+
+  // Click opens the per-verb picker.
+  await acheverNotes.click()
+  const picker = page.getByRole('dialog')
+  await expect(picker).toBeVisible({ timeout: 5000 })
+  // The picker shows the 6 conjugation cells with their prompt.
+  await expect(picker.getByText('Я')).toBeVisible()
+  await expect(picker.getByText('завершаю').first()).toBeVisible()
+  // The cell with a note is marked with the 📝 emoji.
+  await expect(picker.locator('[aria-label="Есть заметка"]').first()).toBeVisible()
+
+  // Cleanup so the test is idempotent.
+  await request.delete(
+    'http://localhost:3000/api/exercise-notes/fr_theme01%3Aconj%3Aachever%3Apr%3Aaff%3A0',
+    { headers: { authorization: `Bearer ${accessToken}` } }
+  )
+})

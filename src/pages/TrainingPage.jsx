@@ -11,6 +11,7 @@ import { conjCardKey, PRONOUNS, themeFormType } from '../utils/conjugation'
 import ExerciseSection from '../components/themes/ExerciseSection'
 import ExerciseNoteModal from '../components/themes/exercises/ExerciseNoteModal'
 import VocabNoteModal from '../components/themes/exercises/VocabNoteModal'
+import ConjugationNotesPicker from '../components/themes/exercises/ConjugationNotesPicker'
 // Polish pronouns for targetLang 'pl'
 const PL_PRONOUNS = [
   { pl: 'ja', translation: 'я' },
@@ -157,14 +158,41 @@ function VocabGrid({ vocabIds, vocab, cards, vocabNotes, t, nativeLang, onNoteCl
   )
 }
 
-function VerbGrid({ theme, conjugationCards, t, formType, pronounLabels }) {
+function VerbGrid({
+  theme,
+  conjugationCards,
+  t,
+  formType,
+  pronounLabels,
+  exerciseNotes,
+  onVerbNotesClick,
+}) {
   const verbs = theme.verbList || []
+  const themeIdForKeys = theme.id
 
   // Group verbs by their group field
   const sortedVerbs = useMemo(() =>
     [...verbs].sort((a, b) => a.infinitive.localeCompare(b.infinitive, 'fr')),
     [verbs]
   )
+
+  // For each verb, count how many of its 6 cells have a user note.
+  // The note key is `${themeId}:${conjCardKey(verb, pi, formType)}`
+  // — the same composite ConjugationExercise.jsx uses when saving.
+  // Recomputing per render is fine: this is a max-6 lookup per row.
+  const notesCountByVerb = useMemo(() => {
+    const map = new Map()
+    if (!exerciseNotes) return map
+    for (const verb of sortedVerbs) {
+      let count = 0
+      for (let pi = 0; pi < 6; pi++) {
+        const key = `${themeIdForKeys}:${conjCardKey(verb, pi, formType)}`
+        if (exerciseNotes[key]) count++
+      }
+      if (count > 0) map.set(verb.infinitive, count)
+    }
+    return map
+  }, [sortedVerbs, exerciseNotes, themeIdForKeys, formType])
 
   return (
     <div className="mt-3 overflow-x-auto">
@@ -175,10 +203,15 @@ function VerbGrid({ theme, conjugationCards, t, formType, pronounLabels }) {
             {pronounLabels.map(p => (
               <th key={p} className="text-center text-text-muted font-medium py-1 px-1.5 min-w-[36px]">{p}</th>
             ))}
+            <th className="text-center text-text-muted font-medium py-1 px-2 min-w-[60px]">
+              {t('verb_notes_column', 'Заметки')}
+            </th>
           </tr>
         </thead>
         <tbody>
-          {sortedVerbs.map((verb) => (
+          {sortedVerbs.map((verb) => {
+            const noteCount = notesCountByVerb.get(verb.infinitive) || 0
+            return (
               <tr key={verb.infinitive} className="border-t border-white/[0.05]">
                 <td className="py-1.5 px-2 text-white font-medium">{verb.infinitive}</td>
                 {pronounLabels.map((_, pi) => {
@@ -220,8 +253,28 @@ function VerbGrid({ theme, conjugationCards, t, formType, pronounLabels }) {
                     </td>
                   )
                 })}
+                <td className="py-1.5 px-2 text-center">
+                  <button
+                    type="button"
+                    onClick={() => onVerbNotesClick && onVerbNotesClick(verb)}
+                    title={noteCount > 0
+                      ? t('verb_notes_count', '{n} из 6 ячеек с заметкой').replace('{n}', String(noteCount))
+                      : t('verb_notes_open', 'Открыть заметки')}
+                    aria-label={t('verb_notes_open', 'Открыть заметки')}
+                    data-testid={`verb-notes-${verb.infinitive}`}
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors ${
+                      noteCount > 0
+                        ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25'
+                        : 'bg-white/[0.04] text-text-muted/60 border border-transparent hover:bg-white/[0.08] hover:text-text-muted'
+                    }`}
+                  >
+                    <span aria-hidden="true">📝</span>
+                    <span className="tabular-nums">{noteCount}/6</span>
+                  </button>
+                </td>
               </tr>
-          ))}
+            )
+          })}
         </tbody>
       </table>
 
@@ -307,6 +360,10 @@ export default function TrainingPage() {
   const [expandedThemeId, setExpandedThemeId] = useState(null)
   const [noteModal, setNoteModal] = useState(null)
   const [vocabNoteModal, setVocabNoteModal] = useState(null)
+  // { verb, themeId } — verb object + the theme it belongs to, so the
+  // picker can resolve theme-scoped data (the conjugation forms table,
+  // the note-key namespace) without an external context lookup.
+  const [verbNotesVerb, setVerbNotesVerb] = useState(null)
   const [activeTab, setActiveTab] = useState('exercises')
 
   const isPolish = targetLang === 'pl'
@@ -596,7 +653,16 @@ export default function TrainingPage() {
 
         {isExpanded && hasVerbs && (
           <div className="mt-3 border-t border-white/[0.08] pt-3">
-            <VerbGrid theme={theme} conjugationCards={conjugationCards} t={t} formType={formType} pronounLabels={pronounLabels} />
+            <VerbGrid
+              theme={theme}
+              conjugationCards={conjugationCards}
+              t={t}
+              formType={formType}
+              pronounLabels={pronounLabels}
+              exerciseNotes={exerciseNotes}
+              conjugationForms={course.conjugationsByTheme?.[theme.id] || null}
+              onVerbNotesClick={(verb) => setVerbNotesVerb({ verb, themeId: theme.id })}
+            />
             <div className="mt-4 flex justify-center">
               <button
                 onClick={() => navigate(`/learn/${theme.id}`)}
@@ -721,6 +787,37 @@ export default function TrainingPage() {
             {themes.map(theme => renderThemeCard(theme))}
           </div>
         </>
+      )}
+
+      {/* Per-verb conjugation notes picker — opened from the Notes
+          column in the VerbGrid. Lists the 6 cells (je / tu / il /
+          nous / vous / ils) with their prompt and a marker for
+          whether the user has a note; clicking a cell hands off to
+          ExerciseNoteModal so the editor is the same as in the
+          in-session exercise. */}
+      {verbNotesVerb && (
+        <ConjugationNotesPicker
+          verb={verbNotesVerb.verb}
+          themeId={verbNotesVerb.themeId}
+          formType={themeFormType(verbNotesVerb.themeId)}
+          exerciseNotes={exerciseNotes}
+          conjugationForms={course.conjugationsByTheme?.[verbNotesVerb.themeId] || null}
+          onSelectCell={(cardKey, prompt) => {
+            // Reuse the existing ExerciseNoteModal. The exercise key
+            // on the wire is the themeId + ':' + cardKey pair, so we
+            // pre-build that here. The modal looks up the note under
+            // that same composite key (the UserProgressContext
+            // namespacing already handles this — see
+            // ConjugationExercise.jsx noteKey computation).
+            setNoteModal({
+              exerciseKey: `${verbNotesVerb.themeId}:${cardKey}`,
+              exercise: { prompt },
+              themeId: verbNotesVerb.themeId,
+            })
+            setVerbNotesVerb(null)
+          }}
+          onClose={() => setVerbNotesVerb(null)}
+        />
       )}
 
       {/* Exercise note modal */}

@@ -350,5 +350,12 @@
   "add_exercise_note": "Добавить заметку",
   "notes_pill": "Notes",
   "edit_prompt_label": "Изменить подсказку",
-  "prompt_overridden": "Кастомная подсказка"
+  "prompt_overridden": "Кастомная подсказка",
+  "verb_notes_column": "Заметки",
+  "verb_notes_subtitle": "Заметки по спряжению",
+  "verb_notes_open": "Открыть заметки",
+  "verb_notes_count": "{n} из 6 ячеек с заметкой",
+  "verb_notes_hint": "Выберите ячейку, чтобы открыть или создать заметку",
+  "has_note": "Есть заметка",
+  "close": "Закрыть"
 }

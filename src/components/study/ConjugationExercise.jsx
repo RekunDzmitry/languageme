@@ -156,10 +156,11 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
   return (
     <div className="flex flex-col items-center gap-5">
       {/* Top bar: RU → FR pill on the left, Notes pill on the right.
-          The Notes pill opens the per-card ExerciseNotePanel — the same
-          component that the existing "📝 Добавить заметку" button below
-          opens, but the top-bar pill is the primary entry point now
-          (the lower button stays as a discoverability affordance). */}
+          The Notes pill is the single entry point to the per-card
+          ExerciseNotePanel — the panel is rendered below the prompt
+          when open, regardless of whether the card is face-down or
+          face-up, so the user can jot a note before answering, after
+          answering, or after a break. */}
       <div className="flex items-center justify-between w-full max-w-sm">
         <div className="bg-surface border border-border rounded-lg px-3 py-1 text-xs font-semibold text-accent">
           {t('ru_to_fr')}
@@ -248,6 +249,23 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
         )}
       </div>
 
+      {/* Notes panel (opened from the top-right Notes pill). Rendered
+          outside the reveal branch so the user can jot a note before
+          answering, after answering, or even after a long session
+          break — the pill is the single entry point. */}
+      {noteOpen && (
+        <div className="w-full max-w-sm">
+          <ExerciseNotePanel
+            existingNote={note}
+            exerciseKey={noteKey}
+            themeId={noteThemeId}
+            onSave={saveExerciseNote}
+            onDelete={clearExerciseNote}
+            onClose={() => setNoteOpen(false)}
+          />
+        </div>
+      )}
+
       {!revealed ? (
         <button
           onClick={handleReveal}
@@ -313,22 +331,6 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
                   </div>
                 </div>
               )}
-            </div>
-          )}
-
-          {/* Notes panel (opened from the top-right Notes pill or this
-              button). Kept as the long-form editor; the pill is the
-              trigger. */}
-          {noteOpen && (
-            <div className="w-full max-w-sm">
-              <ExerciseNotePanel
-                existingNote={note}
-                exerciseKey={noteKey}
-                themeId={noteThemeId}
-                onSave={saveExerciseNote}
-                onDelete={clearExerciseNote}
-                onClose={() => setNoteOpen(false)}
-              />
             </div>
           )}
 
