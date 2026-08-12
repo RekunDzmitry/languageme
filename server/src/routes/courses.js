@@ -103,8 +103,18 @@ function applyConjugationPromptOverrides(conjugationsByTheme, overrides) {
  * Load a user's translation + exercise-answer + conjugation-prompt
  * overrides in one round-trip per table. Returns Maps keyed by
  * vocab_id / exercise_key / composite (themeId, infinitive, pronounIdx).
+ *
+ * `nativeLang` scopes the conjugation-prompt fetch: the override
+ * table is keyed by (user, theme, verb, pronoun, lang) and the UI
+ * saves under settings.nativeLang, so a user with overrides in
+ * multiple native languages would otherwise see a wrong-language
+ * row overwrite the right one when the loop builds the in-memory
+ * map. Translation overrides already self-key on native_lang
+ * inside the loop and don't need the same filter at the SQL
+ * level — keep the translation query unfiltered and let the map
+ * carry every lang, since other call sites may want them.
  */
-async function loadUserOverrides(userId) {
+async function loadUserOverrides(userId, nativeLang) {
   if (!userId) return {
     translations: new Map(),
     answers: new Map(),
@@ -125,11 +135,15 @@ async function loadUserOverrides(userId) {
     ),
     // Pronoun_idx is SMALLINT in the schema but node-postgres returns
     // it as a number. We index by composite keys built from the row.
+    // The lang filter is the bug fix from the PR-37 review: without
+    // it, a user with overrides in multiple native languages could
+    // see the wrong-language cell land on top of the right one when
+    // the loop builds the Map (the latter write wins).
     pool.query(
       `SELECT theme_id, infinitive, pronoun_idx, text
          FROM user_conjugation_prompt_override
-        WHERE user_id = $1`,
-      [userId]
+        WHERE user_id = $1 AND lang = $2`,
+      [userId, nativeLang]
     ),
   ])
   const translations = new Map()
@@ -142,7 +156,11 @@ async function loadUserOverrides(userId) {
   // Two-level Map<themeId, Map<infinitive, Map<pronounIdx, text>>>
   // mirrors the shape the UI receives from conjugationsByTheme so
   // applyConjugationPromptOverrides can walk it without
-  // re-flattening the data.
+  // re-flattening the data. The lang scoping is enforced by the
+  // WHERE lang = $2 clause in the SELECT above; we don't SELECT
+  // lang here, so a second-pass guard in this loop would be
+  // checking against an undefined column. If the WHERE ever
+  // relaxes, add `lang` back to the SELECT AND keep this guard.
   const conjugationPrompts = new Map()
   for (const r of cRes.rows) {
     if (!conjugationPrompts.has(r.theme_id)) conjugationPrompts.set(r.theme_id, new Map())
@@ -281,7 +299,7 @@ async function bundleFor(lang, nativeLang, userId = null) {
   for (const v of vocab) if (v.hint) hintsByVocab[v.id] = v.hint
 
   if (userId) {
-    const overrides = await loadUserOverrides(userId)
+    const overrides = await loadUserOverrides(userId, nativeLang)
     applyTranslationOverrides(vocab, overrides.translations)
     applyExerciseAnswerOverrides(themes, overrides.answers)
     applyConjugationPromptOverrides(conjugationsByTheme, overrides.conjugationPrompts)

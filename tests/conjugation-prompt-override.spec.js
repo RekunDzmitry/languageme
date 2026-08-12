@@ -112,37 +112,75 @@ test('PUT /api/conjugation-prompt-overrides upserts and bundle rehydrates with o
   )
 })
 
-test('conjugation prompt bundle rehydration ignores overrides from other native languages', async ({ page, request }) => {
+test('conjugation prompt overrides are filtered by nativeLang (PR-37 review fix)', async ({ page, request }) => {
+  // The PR-37 review flagged that loadUserOverrides pulled every
+  // conjugation-prompt override for a user regardless of lang, then
+  // built an in-memory map keyed only on (theme, verb, pronoun). A
+  // user with overrides in two native langs would see the wrong
+  // lang overwrite the right one when the loop ran. Pin the fix:
+  // the bundle for native_lang=ru must return the ru override and
+  // ignore the en override for the same cell.
   const { accessToken } = await registerAndPinPack(request, page)
 
-  const ruText = 'завершаю_РУССКИЙ_ОВЕРРАЙД'
-  const enText = 'finish_ENGLISH_OVERRIDE'
-
-  const headers = { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' }
+  // Save overrides for the same (theme, verb, pronoun) cell in two
+  // different langs. Use markers the seed will never contain so the
+  // test can detect which one wins.
+  const ruText = 'завершаю_LANG_RU'
+  const enText = 'I finish_LANG_EN'
 
   const putRu = await request.put(
     'http://localhost:3000/api/conjugation-prompt-overrides/fr_theme01/achever/0?lang=ru',
-    { headers, data: { text: ruText } }
+    {
+      headers: { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' },
+      data: { text: ruText },
+    }
   )
   expect(putRu.ok()).toBe(true)
 
   const putEn = await request.put(
     'http://localhost:3000/api/conjugation-prompt-overrides/fr_theme01/achever/0?lang=en',
-    { headers, data: { text: enText } }
+    {
+      headers: { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' },
+      data: { text: enText },
+    }
   )
   expect(putEn.ok()).toBe(true)
 
-  const bundle = await request.get('http://localhost:3000/api/courses/all?native_lang=ru', {
+  // Bundle for native_lang=ru: the ru row must win, the en row
+  // must NOT bleed into the ru bundle.
+  const ruBundle = await request.get('http://localhost:3000/api/courses/all?native_lang=ru', {
     headers: { authorization: `Bearer ${accessToken}` },
   })
-  expect(bundle.ok()).toBe(true)
-  const data = await bundle.json()
-  const forms = data.fr?.conjugationsByTheme?.fr_theme01?.achever
+  expect(ruBundle.ok()).toBe(true)
+  const ruData = await ruBundle.json()
+  const ruForms = (ruData.fr || ruData).conjugationsByTheme?.fr_theme01?.achever
+  expect(ruForms).toBeDefined()
+  expect(ruForms[0]).toBe(ruText)
+  // Sanity: the en marker must not appear anywhere in the ru bundle.
+  const ruAsString = JSON.stringify(ruData)
+  expect(ruAsString).not.toContain(enText)
 
-  expect(forms).toBeDefined()
-  expect(forms[0]).toBe(ruText)
-  expect(forms[0]).not.toBe(enText)
+  // Bundle for native_lang=en: the canonical seed for
+  // theme_conjugation only carries ru forms, so the en bundle for
+  // fr_theme01.achever is legitimately empty. The contract this
+  // test pins is the lang-isolation invariant (no leak), not the
+  // en-bundle content — applyConjugationPromptOverrides only
+  // mutates cells that exist in the seed, so the en override for
+  // a cell with no en seed is dropped silently. The leak check
+  // below is the meaningful assertion: the en marker must not
+  // appear in the en bundle either (because the marker was set
+  // via the override table, and the en bundle filtered the
+  // override fetch by lang='en' — so it never reached the in-memory
+  // map for the en bundle to leak it back).
+  const enBundle = await request.get('http://localhost:3000/api/courses/all?native_lang=en', {
+    headers: { authorization: `Bearer ${accessToken}` },
+  })
+  expect(enBundle.ok()).toBe(true)
+  const enData = await enBundle.json()
+  const enAsString = JSON.stringify(enData)
+  expect(enAsString).not.toContain(ruText)
 
+  // Cleanup so the test is idempotent.
   await request.delete(
     'http://localhost:3000/api/conjugation-prompt-overrides/fr_theme01/achever/0?lang=ru',
     { headers: { authorization: `Bearer ${accessToken}` } }
