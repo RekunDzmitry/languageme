@@ -16,7 +16,8 @@
 //      user override for the (theme, verb, pronoun_idx) tuple, so
 //      the UI doesn't need to know the data came from the override
 //      table rather than the seed.
-//   4. The UI surfaces both the Notes pill (replacing the old AI
+//   4. Bundle rehydration scopes prompt overrides by native language.
+//   5. The UI surfaces both the Notes pill (replacing the old AI
 //      badge) and a click-to-edit prompt under it.
 
 import { test, expect } from '@playwright/test'
@@ -107,6 +108,47 @@ test('PUT /api/conjugation-prompt-overrides upserts and bundle rehydrates with o
   // Cleanup so the test is idempotent.
   await request.delete(
     'http://localhost:3000/api/conjugation-prompt-overrides/fr_theme01/achever/0?lang=ru',
+    { headers: { authorization: `Bearer ${accessToken}` } }
+  )
+})
+
+test('conjugation prompt bundle rehydration ignores overrides from other native languages', async ({ page, request }) => {
+  const { accessToken } = await registerAndPinPack(request, page)
+
+  const ruText = 'завершаю_РУССКИЙ_ОВЕРРАЙД'
+  const enText = 'finish_ENGLISH_OVERRIDE'
+
+  const headers = { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' }
+
+  const putRu = await request.put(
+    'http://localhost:3000/api/conjugation-prompt-overrides/fr_theme01/achever/0?lang=ru',
+    { headers, data: { text: ruText } }
+  )
+  expect(putRu.ok()).toBe(true)
+
+  const putEn = await request.put(
+    'http://localhost:3000/api/conjugation-prompt-overrides/fr_theme01/achever/0?lang=en',
+    { headers, data: { text: enText } }
+  )
+  expect(putEn.ok()).toBe(true)
+
+  const bundle = await request.get('http://localhost:3000/api/courses/all?native_lang=ru', {
+    headers: { authorization: `Bearer ${accessToken}` },
+  })
+  expect(bundle.ok()).toBe(true)
+  const data = await bundle.json()
+  const forms = data.fr?.conjugationsByTheme?.fr_theme01?.achever
+
+  expect(forms).toBeDefined()
+  expect(forms[0]).toBe(ruText)
+  expect(forms[0]).not.toBe(enText)
+
+  await request.delete(
+    'http://localhost:3000/api/conjugation-prompt-overrides/fr_theme01/achever/0?lang=ru',
+    { headers: { authorization: `Bearer ${accessToken}` } }
+  )
+  await request.delete(
+    'http://localhost:3000/api/conjugation-prompt-overrides/fr_theme01/achever/0?lang=en',
     { headers: { authorization: `Bearer ${accessToken}` } }
   )
 })
