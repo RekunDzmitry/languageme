@@ -55,7 +55,7 @@ export default function ThemesListPage() {
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="font-bold text-white text-sm truncate">{getThemeTitle(theme, targetLang)}</span>
                 </div>
-                <div className="text-xs text-text-muted truncate">{theme.descriptionRu || theme.description}</div>
+                <div className="text-xs text-text-muted truncate">{theme.description_ru || theme.description}</div>
               </div>
               <div className="text-sm font-semibold shrink-0">
                 {!unlocked && <span className="text-text-muted">🔒 {t('theme_locked')}</span>}

@@ -9,6 +9,7 @@ import StudyPage from './pages/StudyPage'
 import LearnPage from './pages/LearnPage'
 import CardsPage from './pages/CardsPage'
 import TrainingPage from './pages/TrainingPage'
+import TrainingSessionPage from './pages/TrainingSessionPage'
 import AuthPage from './pages/AuthPage'
 import EmailPage from './pages/EmailPage'
 import { I18nProvider } from './i18n'
@@ -37,6 +38,7 @@ createRoot(document.getElementById('root')).render(
                     <Route path="learn/:themeId" element={<RequireAuth><LearnPage /></RequireAuth>} />
                     <Route path="study/:themeId" element={<RequireAuth><StudyPage /></RequireAuth>} />
                     <Route path="training" element={<RequireAuth><TrainingPage /></RequireAuth>} />
+                    <Route path="training/:themeId" element={<RequireAuth><TrainingSessionPage /></RequireAuth>} />
                     <Route path="cards" element={<RequireAuth><CardsPage /></RequireAuth>} />
                     <Route path="email" element={<EmailPage />} />
                     <Route path="email/:themeId" element={<EmailPage />} />

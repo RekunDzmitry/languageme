@@ -51,7 +51,7 @@ export default function ThemePage() {
         <button onClick={() => navigate('/themes')} className="text-text-muted hover:text-text-primary bg-transparent border-none cursor-pointer text-lg">←</button>
         <div>
           <h2 className="text-xl font-extrabold text-white">{getThemeTitle(theme, resolvedTargetLang)}</h2>
-          <p className="text-sm text-text-muted">{theme.descriptionRu || theme.description}</p>
+          <p className="text-sm text-text-muted">{theme.description_ru || theme.description}</p>
         </div>
       </div>
       <ThemeView theme={theme} />

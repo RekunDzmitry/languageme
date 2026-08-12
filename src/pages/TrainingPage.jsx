@@ -599,7 +599,7 @@ export default function TrainingPage() {
             <VerbGrid theme={theme} conjugationCards={conjugationCards} t={t} formType={formType} pronounLabels={pronounLabels} />
             <div className="mt-4 flex justify-center">
               <button
-                onClick={() => navigate(`/learn/${theme.id}`)}
+                onClick={() => navigate(`/training/${theme.id}`)}
                 className="px-6 py-2.5 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 transition-colors text-sm"
               >
                 {t('train_start')}
@@ -613,7 +613,7 @@ export default function TrainingPage() {
             <VocabGrid vocabIds={theme.vocabIds} vocab={vocab} cards={cards} vocabNotes={vocabNotes} t={t} nativeLang={settings.nativeLang} onNoteClick={(id, word) => setVocabNoteModal({ vocabId: id, word })} />
             <div className="mt-4 flex justify-center">
               <button
-                onClick={() => navigate(`/study/${theme.id}`)}
+                onClick={() => navigate(`/training/${theme.id}`)}
                 className="px-6 py-2.5 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 transition-colors text-sm"
               >
                 {t('train_start')}

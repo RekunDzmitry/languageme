@@ -147,5 +147,5 @@ export function getConjugations(ctx, themeId) {
   return ctx.conjugationsByTheme[themeId] || {}
 }
 export function getThemeTitle(theme) {
-  return theme.titleRu || theme.title
+  return theme.title_ru || theme.title
 }
