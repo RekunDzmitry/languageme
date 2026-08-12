@@ -190,10 +190,6 @@
   "import_error": "Ошибка импорта: {message}",
   "export_error": "Ошибка экспорта: {message}",
   "import_file_error": "Не удалось прочитать файл",
-  "ai_save_as_note": "Сохранить разговор как заметку",
-  "ai_saving": "Сохраняю...",
-  "ai_error": "Ошибка ИИ. Попробуйте снова.",
-  "ai_save_error": "Не удалось сохранить заметку",
   "note_for": "Заметка для",
   "about_word": "О слове",
   "lang_native_hint": "Язык подсказок",
@@ -351,5 +347,8 @@
   "saving": "Сохранение...",
   "save": "Сохранить",
   "edit_exercise_note": "Редактировать заметку",
-  "add_exercise_note": "Добавить заметку"
+  "add_exercise_note": "Добавить заметку",
+  "notes_pill": "Notes",
+  "edit_prompt_label": "Изменить подсказку",
+  "prompt_overridden": "Кастомная подсказка"
 }

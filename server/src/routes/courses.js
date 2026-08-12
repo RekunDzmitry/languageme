@@ -75,12 +75,42 @@ function applyExerciseAnswerOverrides(themes, overrides) {
 }
 
 /**
- * Load a user's translation + exercise-answer overrides in one round-trip
- * per table. Returns Maps keyed by vocab_id / exercise_key.
+ * Apply a (theme_id -> infinitive -> pronoun_idx -> text) override map
+ * on top of the conjugationsByTheme table the bundle just built. The
+ * override is a single string for one (theme, verb, pronoun) cell —
+ * the seed value at that position in the TEXT[] gets replaced. Cells
+ * outside the seed (e.g. a user override on a verb that was removed
+ * from the seed) are dropped silently; a missing entry just means
+ * "no override for this cell, fall back to the seed".
+ */
+function applyConjugationPromptOverrides(conjugationsByTheme, overrides) {
+  if (!overrides || overrides.size === 0) return
+  for (const [themeId, byVerb] of overrides) {
+    const themeTable = conjugationsByTheme[themeId]
+    if (!themeTable) continue
+    for (const [infinitive, byPronoun] of byVerb) {
+      const forms = themeTable[infinitive]
+      if (!Array.isArray(forms)) continue
+      for (const [pronounIdx, text] of byPronoun) {
+        if (pronounIdx < 0 || pronounIdx >= forms.length) continue
+        forms[pronounIdx] = text
+      }
+    }
+  }
+}
+
+/**
+ * Load a user's translation + exercise-answer + conjugation-prompt
+ * overrides in one round-trip per table. Returns Maps keyed by
+ * vocab_id / exercise_key / composite (themeId, infinitive, pronounIdx).
  */
 async function loadUserOverrides(userId) {
-  if (!userId) return { translations: new Map(), answers: new Map() }
-  const [tRes, aRes] = await Promise.all([
+  if (!userId) return {
+    translations: new Map(),
+    answers: new Map(),
+    conjugationPrompts: new Map(),
+  }
+  const [tRes, aRes, cRes] = await Promise.all([
     pool.query(
       `SELECT vocab_id, native_lang, text
          FROM user_translation_override
@@ -93,6 +123,14 @@ async function loadUserOverrides(userId) {
         WHERE user_id = $1`,
       [userId]
     ),
+    // Pronoun_idx is SMALLINT in the schema but node-postgres returns
+    // it as a number. We index by composite keys built from the row.
+    pool.query(
+      `SELECT theme_id, infinitive, pronoun_idx, text
+         FROM user_conjugation_prompt_override
+        WHERE user_id = $1`,
+      [userId]
+    ),
   ])
   const translations = new Map()
   for (const r of tRes.rows) {
@@ -101,7 +139,18 @@ async function loadUserOverrides(userId) {
   }
   const answers = new Map()
   for (const r of aRes.rows) answers.set(r.exercise_key, r.answers)
-  return { translations, answers }
+  // Two-level Map<themeId, Map<infinitive, Map<pronounIdx, text>>>
+  // mirrors the shape the UI receives from conjugationsByTheme so
+  // applyConjugationPromptOverrides can walk it without
+  // re-flattening the data.
+  const conjugationPrompts = new Map()
+  for (const r of cRes.rows) {
+    if (!conjugationPrompts.has(r.theme_id)) conjugationPrompts.set(r.theme_id, new Map())
+    const byVerb = conjugationPrompts.get(r.theme_id)
+    if (!byVerb.has(r.infinitive)) byVerb.set(r.infinitive, new Map())
+    byVerb.get(r.infinitive).set(r.pronoun_idx, r.text)
+  }
+  return { translations, answers, conjugationPrompts }
 }
 
 async function bundleFor(lang, nativeLang, userId = null) {
@@ -235,6 +284,7 @@ async function bundleFor(lang, nativeLang, userId = null) {
     const overrides = await loadUserOverrides(userId)
     applyTranslationOverrides(vocab, overrides.translations)
     applyExerciseAnswerOverrides(themes, overrides.answers)
+    applyConjugationPromptOverrides(conjugationsByTheme, overrides.conjugationPrompts)
   }
 
   return {

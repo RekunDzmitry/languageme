@@ -181,10 +181,6 @@
   "import_error": "Erreur d'import : {message}",
   "export_error": "Erreur d'export : {message}",
   "import_file_error": "Impossible de lire le fichier",
-  "ai_save_as_note": "Enregistrer la conversation comme note",
-  "ai_saving": "Enregistrement...",
-  "ai_error": "Erreur IA. Veuillez réessayer.",
-  "ai_save_error": "Impossible d'enregistrer la note",
   "note_for": "Note pour",
   "about_word": "À propos du mot",
   "vocab_note": "Note sur le mot",
@@ -294,5 +290,8 @@
   "saving": "Enregistrement...",
   "save": "Enregistrer",
   "edit_exercise_note": "Modifier la note",
-  "add_exercise_note": "Ajouter une note"
+  "add_exercise_note": "Ajouter une note",
+  "notes_pill": "Notes",
+  "edit_prompt_label": "Modifier l'invite",
+  "prompt_overridden": "Invite personnalisée"
 }
