@@ -33,7 +33,7 @@ test('clicking Start on Polish vocab theme opens flashcard study session', async
   await expect(startBtn).toBeVisible()
   await startBtn.click()
 
-  await page.waitForURL(/\/study\/pl_theme10/)
+  await page.waitForURL(/\/training\/pl_theme10/)
   await expect(page.locator('text=нажмите, чтобы открыть')).toBeVisible({ timeout: 5000 })
 
   // Front should show Russian translation, not the Polish target word

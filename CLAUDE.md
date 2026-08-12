@@ -158,7 +158,7 @@ Exercise types registered in `src/components/themes/ExerciseSection.jsx:EXERCISE
 
 ### Training page unlock rules
 
-`src/pages/TrainingPage.jsx` treats a theme as trainable if it has verbs OR has any `exercises` section with exercises. Verb-less exercise-only themes (like the Polish orthography ones) navigate directly to `/themes/:id` on click instead of expanding a verb grid.
+`src/pages/TrainingPage.jsx` treats a theme as trainable if it has verbs OR has any `exercises` section with exercises. Verb-less exercise-only themes (like the Polish orthography ones) navigate directly to `/themes/:id` on click instead of expanding a verb grid. The expanded verb grid's "Start training" button navigates to `/training/:themeId` (the dedicated theme-scoped training session) — distinct from `/learn` (random across active pack) and `/study` (random SRS).
 
 ### Vocabulary Data
 
@@ -176,6 +176,7 @@ Exercise types registered in `src/components/themes/ExerciseSection.jsx:EXERCISE
 /themes              ThemesListPage (themes for current targetLang, with lock states)
 /themes/:id          ThemePage (tabbed: grammar | vocab | exercises | flashcards)
 /training            TrainingPage (verb drill grid + entry to exercise-only themes)
+/training/:themeId   TrainingSessionPage (theme-scoped drill: verb conjugation or vocab flashcards, depending on theme content)
 /study               StudyPage (global SRS)
 /study/:themeId      StudyPage (theme-scoped SRS)
 /vocab               VocabPage
