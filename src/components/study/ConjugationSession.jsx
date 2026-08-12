@@ -49,7 +49,7 @@ export default function ConjugationSession({ themeId = null, formType = 'aff' })
   const themeName = useMemo(() => {
     if (!themeId) return null
     const theme = course.themes.find(th => th.id === themeId)
-    return theme?.titleRu || themeId
+    return theme?.title_ru || theme?.title || themeId
   }, [themeId, course.themes])
 
   const dueCount = useMemo(
