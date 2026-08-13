@@ -119,8 +119,8 @@ after(async () => {
 
 test('000_bootstrap.sql applies cleanly (no error) and is repeatable', async () => {
   // The before() hook already ran the first apply against a fresh DB.
-  // The first re-run is a no-op (bootstrap.sql records itself in _migrations
-  // so the runner skips it on the second invocation). What we care about:
+  // The first re-run refreshes the canonical reference data while preserving
+  // user tables with IF NOT EXISTS. What we care about:
   //   (a) the apply that already happened didn't throw — proven by reaching this line
   //   (b) a subsequent re-run also doesn't throw, and reports completion
   const { out, err } = await runMigrate(dbUrl)

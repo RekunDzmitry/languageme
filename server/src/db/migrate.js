@@ -2,6 +2,7 @@ import { pool } from './pool.js'
 import { readFileSync, readdirSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import process from 'node:process'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const migrationsDir = join(__dirname, 'migrations')
@@ -56,8 +57,9 @@ const DATA_ONLY_NAME = '_data_only.sql'
 //
 // Two phases:
 //   1. Bootstrap (000_bootstrap.sql) — single canonical seed for schema + reference
-//      data. Re-runs idempotently because reference tables are DROP+recreate.
-//      User tables use IF NOT EXISTS so re-runs are no-ops.
+//      data. It is refreshed on every run: reference tables are DROP+recreate,
+//      while user tables use IF NOT EXISTS so user-created data/progress is
+//      preserved and newly-added user tables become available on existing DBs.
 //   2. Additive migrations (NNN_*.sql where NNN > 0) — schema-only deltas that
 //      cannot be expressed in the bootstrap (e.g. a new column on a user
 //      table, a new index).
@@ -82,73 +84,71 @@ async function migrate() {
   )
   const appliedSet = new Set(applied.map(r => r.name))
 
-  // ---- Phase 1: bootstrap ----
-  if (!appliedSet.has(BOOTSTRAP_NAME)) {
-    const hasLegacy = applied.some(r => LEGACY_MIGRATION_NAMES.includes(r.name))
-    if (hasLegacy) {
-      console.log('[migrate] legacy DB detected; squashing historical migrations into 000_bootstrap.sql')
-      console.log('[migrate]   user tables are preserved as-is; reference data is the new canonical seed')
-      // Apply new schema additions from the bootstrap (new tables like
-      // vocab_example, vocab_lexicon, theme_conjugation; srs_card.archived_at).
-      // The DROP TABLE IF EXISTS CASCADE statements at the top of the schema
-      // section are no-ops for tables that don't exist yet on a legacy DB.
-      // The CREATE TABLE statements add the missing reference tables and any
-      // new user-table columns.
-      const schemaSql = readFileSync(join(migrationsDir, SCHEMA_ONLY_NAME), 'utf8')
-      const client = await pool.connect()
-      try {
-        await client.query('BEGIN')
-        await client.query(schemaSql)
-        await client.query('COMMIT')
-        console.log('  applied: schema additions (new tables, columns)')
-      } catch (err) {
-        await client.query('ROLLBACK')
-        console.error('Failed to apply schema additions:', err.message)
-        process.exit(1)
-      } finally {
-        client.release()
-      }
-      // Rebuild reference data from the canonical seed.
-      const dataSql = readFileSync(join(migrationsDir, DATA_ONLY_NAME), 'utf8')
-      const client2 = await pool.connect()
-      try {
-        await client2.query('BEGIN')
-        await client2.query(dataSql)
-        await client2.query('COMMIT')
-        console.log('  applied: reference data rebuild')
-      } catch (err) {
-        await client2.query('ROLLBACK')
-        console.error('Failed to rebuild reference data:', err.message)
-        process.exit(1)
-      } finally {
-        client2.release()
-      }
-      await pool.query(
+  // ---- Phase 1: bootstrap/reference refresh ----
+  const hasLegacy = applied.some(r => LEGACY_MIGRATION_NAMES.includes(r.name))
+  if (!appliedSet.has(BOOTSTRAP_NAME) && hasLegacy) {
+    console.log('[migrate] legacy DB detected; squashing historical migrations into 000_bootstrap.sql')
+    console.log('[migrate]   user tables are preserved as-is; reference data is the new canonical seed')
+    // Apply new schema additions from the bootstrap (new tables like
+    // vocab_example, vocab_lexicon, theme_conjugation; srs_card.archived_at).
+    // The DROP TABLE IF EXISTS CASCADE statements at the top of the schema
+    // section are no-ops for tables that don't exist yet on a legacy DB.
+    // The CREATE TABLE statements add the missing reference tables and any
+    // new user-table columns.
+    const schemaSql = readFileSync(join(migrationsDir, SCHEMA_ONLY_NAME), 'utf8')
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
+      await client.query(schemaSql)
+      await client.query('COMMIT')
+      console.log('  applied: schema additions (new tables, columns)')
+    } catch (err) {
+      await client.query('ROLLBACK')
+      console.error('Failed to apply schema additions:', err.message)
+      process.exit(1)
+    } finally {
+      client.release()
+    }
+    // Rebuild reference data from the canonical seed.
+    const dataSql = readFileSync(join(migrationsDir, DATA_ONLY_NAME), 'utf8')
+    const client2 = await pool.connect()
+    try {
+      await client2.query('BEGIN')
+      await client2.query(dataSql)
+      await client2.query('COMMIT')
+      console.log('  applied: reference data rebuild')
+    } catch (err) {
+      await client2.query('ROLLBACK')
+      console.error('Failed to rebuild reference data:', err.message)
+      process.exit(1)
+    } finally {
+      client2.release()
+    }
+    await pool.query(
+      `INSERT INTO _migrations (name) VALUES ($1) ON CONFLICT DO NOTHING`,
+      [BOOTSTRAP_NAME]
+    )
+  } else {
+    console.log(appliedSet.has(BOOTSTRAP_NAME)
+      ? `  refresh: ${BOOTSTRAP_NAME}`
+      : `  apply: ${BOOTSTRAP_NAME}`)
+    const sql = readFileSync(join(migrationsDir, BOOTSTRAP_NAME), 'utf8')
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
+      await client.query(sql)
+      await client.query(
         `INSERT INTO _migrations (name) VALUES ($1) ON CONFLICT DO NOTHING`,
         [BOOTSTRAP_NAME]
       )
-    } else {
-      console.log(`  apply: ${BOOTSTRAP_NAME}`)
-      const sql = readFileSync(join(migrationsDir, BOOTSTRAP_NAME), 'utf8')
-      const client = await pool.connect()
-      try {
-        await client.query('BEGIN')
-        await client.query(sql)
-        await client.query(
-          `INSERT INTO _migrations (name) VALUES ($1) ON CONFLICT DO NOTHING`,
-          [BOOTSTRAP_NAME]
-        )
-        await client.query('COMMIT')
-      } catch (err) {
-        await client.query('ROLLBACK')
-        console.error(`Migration ${BOOTSTRAP_NAME} failed:`, err.message)
-        process.exit(1)
-      } finally {
-        client.release()
-      }
+      await client.query('COMMIT')
+    } catch (err) {
+      await client.query('ROLLBACK')
+      console.error(`Migration ${BOOTSTRAP_NAME} failed:`, err.message)
+      process.exit(1)
+    } finally {
+      client.release()
     }
-  } else {
-    console.log(`  skip: ${BOOTSTRAP_NAME}`)
   }
 
   // ---- Phase 2: additive migrations ----

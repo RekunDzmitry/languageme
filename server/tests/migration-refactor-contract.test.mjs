@@ -45,7 +45,11 @@ test('canonical bootstrap keeps every column used by conjugation_card routes', (
 test('legacy cutover schema creates user override tables before marking bootstrap applied', () => {
   const schemaOnly = read('../src/db/migrations/_schema_only.sql')
 
-  for (const table of ['user_translation_override', 'user_exercise_answer_override']) {
+  for (const table of [
+    'user_translation_override',
+    'user_exercise_answer_override',
+    'user_conjugation_prompt_override',
+  ]) {
     assert.match(
       schemaOnly,
       new RegExp(`CREATE TABLE IF NOT EXISTS ${table}\\b`, 'i'),
