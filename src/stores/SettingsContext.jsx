@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useCallback, useMemo } from 'react'
 import { getDefaultPackId } from '../data/lessonPacks'
 
@@ -37,20 +38,43 @@ export const UI_LANGUAGES = {
   fr: { name: 'Français', flag: '🇫🇷' },
 }
 
+const DEFAULT_SETTINGS = {
+  nativeLang: 'ru',
+  targetLang: 'fr',
+  uiLang: 'ru',
+  targetLevel: 'B1',
+  autoPlayAudio: true,
+}
+
+function loadSettings() {
+  const saved = localStorage.getItem('lm_settings')
+  if (!saved) return DEFAULT_SETTINGS
+
+  try {
+    const parsed = JSON.parse(saved)
+    return parsed && typeof parsed === 'object' ? parsed : DEFAULT_SETTINGS
+  } catch {
+    localStorage.removeItem('lm_settings')
+    return DEFAULT_SETTINGS
+  }
+}
+
+function normalizeSettings(settings) {
+  const targetLang = TARGET_LANGUAGES[settings.targetLang] ? settings.targetLang : DEFAULT_SETTINGS.targetLang
+  const uiLang = UI_LANGUAGES[settings.uiLang] ? settings.uiLang : DEFAULT_SETTINGS.uiLang
+  return {
+    ...DEFAULT_SETTINGS,
+    ...settings,
+    nativeLang: 'ru',
+    targetLang,
+    uiLang,
+    activePackId: settings.activePackId || getDefaultPackId(targetLang),
+  }
+}
+
 export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState(() => {
-    const saved = localStorage.getItem('lm_settings')
-    const parsed = saved ? JSON.parse(saved) : {
-      nativeLang: 'ru',
-      targetLang: 'fr',
-      uiLang: 'ru',
-      targetLevel: 'B1',
-      autoPlayAudio: true,
-    }
-    return {
-      ...parsed,
-      activePackId: parsed.activePackId || getDefaultPackId(parsed.targetLang),
-    }
+    return normalizeSettings(loadSettings())
   })
 
   const updateSettings = useCallback((updates) => {
