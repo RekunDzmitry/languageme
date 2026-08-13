@@ -197,18 +197,31 @@ test('ConjugationExercise UI shows a Notes pill and an editable prompt', async (
   await page.goto('/learn/fr_theme01')
   await page.waitForLoadState('networkidle')
 
+  // The ConjugationSession page mounts behind a pre-session screen
+  // with a "GO" button (hardcoded text in all locales). Click it
+  // to enter the actual session — otherwise the Notes pill never
+  // mounts.
+  const goButton = page.getByRole('button', { name: /^\s*GO\s*$/i })
+  await goButton.click({ timeout: 5000 })
+  await page.waitForLoadState('networkidle')
+
   // The Notes pill on the top-right (replaces the old AI badge).
-  const notesPill = page.getByRole('button', { name: /notes/i }).first()
+  // The pill's accessible name comes from its `title` attribute,
+  // which is localized ("Добавить заметку" / "Modifier l'invite" /
+  // "Edytuj podpowiedź") — matching by visible text or name is
+  // brittle across locales. The component contract is the
+  // `aria-pressed` toggle affordance, which is locale-independent.
+  const notesPill = page.locator('button[aria-pressed]').first()
   await expect(notesPill).toBeVisible({ timeout: 5000 })
 
   // Reveal the first card so the prompt form part is rendered.
-  const reveal = page.getByRole('button', { name: /показать|reveal|révéler/i }).first()
+  const reveal = page.getByRole('button', { name: /показать|reveal|révéler|pokaż|odkryj/i }).first()
   if (await reveal.isVisible().catch(() => false)) {
     await reveal.click()
   }
   // Either way, the prompt must be a clickable affordance (not a
   // plain text node). The dotted underline is the visual cue.
-  const editablePrompt = page.getByTitle(/изменить подсказку|edit conjugation prompt|modifier l'invite/i).first()
+  const editablePrompt = page.getByTitle(/изменить подсказку|edit conjugation prompt|modifier l'invite|edytuj podpowiedź/i).first()
   await expect(editablePrompt).toBeVisible({ timeout: 5000 })
 })
 
@@ -249,7 +262,11 @@ test('VerbGrid Notes column shows count and opens per-verb picker', async ({ pag
   const picker = page.getByRole('dialog')
   await expect(picker).toBeVisible({ timeout: 5000 })
   // The picker shows the 6 conjugation cells with their prompt.
-  await expect(picker.getByText('Я')).toBeVisible()
+  // Each cell is a button whose accessible name is "Я завершаю" /
+  // "Ты завершаешь" / etc. Match by role+name so we don't get
+  // multiple matches from substrings containing "Я" (Заметки,
+  // Выберите, etc.) — strict mode would otherwise reject those.
+  await expect(picker.getByRole('button', { name: /^Я / })).toBeVisible()
   await expect(picker.getByText('завершаю').first()).toBeVisible()
   // The cell with a note is marked with the 📝 emoji.
   await expect(picker.locator('[aria-label="Есть заметка"]').first()).toBeVisible()
