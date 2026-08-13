@@ -271,11 +271,12 @@ export function UserProgressProvider({ children }) {
     if (isAuthenticated) {
       // Optimistic local update
       setProgress(prev => {
-        const card = prev.srsCards[wordId] || createCard()
+        const srsCards = prev.srsCards || {}
+        const card = srsCards[wordId] || createCard()
         const updated = sm2(card, quality)
         return {
           ...prev,
-          srsCards: { ...prev.srsCards, [wordId]: updated },
+          srsCards: { ...srsCards, [wordId]: updated },
           stats: {
             ...prev.stats,
             totalReviewed: prev.stats.totalReviewed + 1,
@@ -290,11 +291,12 @@ export function UserProgressProvider({ children }) {
     }
 
     setProgress(prev => {
-      const card = prev.srsCards[wordId] || createCard()
+      const srsCards = prev.srsCards || {}
+      const card = srsCards[wordId] || createCard()
       const updated = sm2(card, quality)
       return {
         ...prev,
-        srsCards: { ...prev.srsCards, [wordId]: updated },
+        srsCards: { ...srsCards, [wordId]: updated },
         stats: {
           ...prev.stats,
           totalReviewed: prev.stats.totalReviewed + 1,
@@ -310,11 +312,12 @@ export function UserProgressProvider({ children }) {
 
   const rateExercise = useCallback((exerciseKey, themeId, quality) => {
     setProgress(prev => {
-      const card = prev.exerciseCards[exerciseKey] || createCard()
+      const exerciseCards = prev.exerciseCards || {}
+      const card = exerciseCards[exerciseKey] || createCard()
       const updated = sm2(card, quality)
       return {
         ...prev,
-        exerciseCards: { ...prev.exerciseCards, [exerciseKey]: updated },
+        exerciseCards: { ...exerciseCards, [exerciseKey]: updated },
         stats: {
           ...prev.stats,
           totalReviewed: prev.stats.totalReviewed + 1,
@@ -332,11 +335,12 @@ export function UserProgressProvider({ children }) {
 
   const rateConjugation = useCallback((cardKey, quality) => {
     setProgress(prev => {
-      const card = prev.conjugationCards[cardKey] || createCard()
+      const conjugationCards = prev.conjugationCards || {}
+      const card = conjugationCards[cardKey] || createCard()
       const updated = sm2(card, quality)
       return {
         ...prev,
-        conjugationCards: { ...prev.conjugationCards, [cardKey]: updated },
+        conjugationCards: { ...conjugationCards, [cardKey]: updated },
         stats: {
           ...prev.stats,
           totalReviewed: prev.stats.totalReviewed + 1,
@@ -424,13 +428,16 @@ export function UserProgressProvider({ children }) {
   }, [isAuthenticated])
 
   const saveExerciseAnswerOverride = useCallback((exerciseKey, answers) => {
-    setProgress(prev => ({
-      ...prev,
-      exerciseAnswerOverrides: {
-        ...prev.exerciseAnswerOverrides,
-        [exerciseKey]: [...answers],
-      },
-    }))
+    setProgress(prev => {
+      const exerciseAnswerOverrides = prev.exerciseAnswerOverrides || {}
+      return {
+        ...prev,
+        exerciseAnswerOverrides: {
+          ...exerciseAnswerOverrides,
+          [exerciseKey]: [...answers],
+        },
+      }
+    })
 
     if (isAuthenticated) {
       api.put(`/api/exercise-answer-overrides/${encodeURIComponent(exerciseKey)}`, { answers })
@@ -440,7 +447,7 @@ export function UserProgressProvider({ children }) {
 
   const clearExerciseAnswerOverride = useCallback((exerciseKey) => {
     setProgress(prev => {
-      const next = { ...prev.exerciseAnswerOverrides }
+      const next = { ...(prev.exerciseAnswerOverrides || {}) }
       delete next[exerciseKey]
       return { ...prev, exerciseAnswerOverrides: next }
     })
@@ -452,11 +459,12 @@ export function UserProgressProvider({ children }) {
   }, [isAuthenticated])
 
   const resetCard = useCallback((wordId) => {
+    const card = { ease: 2.5, interval: 1, reps: 0, due: Date.now(), lastReviewed: null }
     setProgress(prev => ({
       ...prev,
       srsCards: {
-        ...prev.srsCards,
-        [wordId]: { ease: 2.5, interval: 1, reps: 0, due: Date.now(), lastReviewed: null },
+        ...(prev.srsCards || {}),
+        [wordId]: card,
       },
     }))
   }, [])
@@ -465,20 +473,23 @@ export function UserProgressProvider({ children }) {
     setProgress(prev => ({
       ...prev,
       srsCards: {
-        ...prev.srsCards,
-        [wordId]: { ...prev.srsCards[wordId], ...changes },
+        ...(prev.srsCards || {}),
+        [wordId]: { ...(prev.srsCards?.[wordId] || {}), ...changes },
       },
     }))
   }, [])
 
   const saveExerciseNote = useCallback((exerciseKey, themeId, content) => {
-    setProgress(prev => ({
-      ...prev,
-      exerciseNotes: {
-        ...prev.exerciseNotes,
-        [exerciseKey]: { content, themeId, createdAt: prev.exerciseNotes[exerciseKey]?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() },
-      },
-    }))
+    setProgress(prev => {
+      const exerciseNotes = prev.exerciseNotes || {}
+      return {
+        ...prev,
+        exerciseNotes: {
+          ...exerciseNotes,
+          [exerciseKey]: { content, themeId, createdAt: exerciseNotes[exerciseKey]?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() },
+        },
+      }
+    })
 
     if (isAuthenticated) {
       exerciseNoteApi.save(exerciseKey, themeId, content).catch(err => {
@@ -489,7 +500,7 @@ export function UserProgressProvider({ children }) {
 
   const clearExerciseNote = useCallback((exerciseKey) => {
     setProgress(prev => {
-      const next = { ...prev.exerciseNotes }
+      const next = { ...(prev.exerciseNotes || {}) }
       delete next[exerciseKey]
       return { ...prev, exerciseNotes: next }
     })

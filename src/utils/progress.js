@@ -1,14 +1,16 @@
 import { conjCardKey } from './conjugation'
 
 export function getDueCards(cards, vocab) {
+  const cardMap = cards || {}
   return vocab
-    .filter(w => cards[w.id]?.due <= Date.now())
-    .sort((a, b) => cards[a.id].due - cards[b.id].due)
+    .filter(w => cardMap[w.id]?.due <= Date.now())
+    .sort((a, b) => cardMap[a.id].due - cardMap[b.id].due)
 }
 
 export function getNewCards(cards, vocab, limit = 5) {
+  const cardMap = cards || {}
   return vocab
-    .filter(w => !cards[w.id] || cards[w.id].reps === 0)
+    .filter(w => !cardMap[w.id] || cardMap[w.id].reps === 0)
     .sort((a, b) => a.freq - b.freq)
     .slice(0, limit)
 }
@@ -31,18 +33,20 @@ export function isThemeUnlocked(theme, themeProgress) {
 
 export function getThemeMastery(theme, cards) {
   if (!theme.vocabIds || theme.vocabIds.length === 0) return 0
-  const mastered = theme.vocabIds.filter(id => cards[id]?.reps >= 3).length
+  const cardMap = cards || {}
+  const mastered = theme.vocabIds.filter(id => cardMap[id]?.reps >= 3).length
   return Math.round((mastered / theme.vocabIds.length) * 100)
 }
 
 export function getThemeConjugationMastery(conjugationCards, verbList, formType = 'aff') {
   if (!verbList || verbList.length === 0) return { learned: 0, mastered: 0, total: 0, percent: 0 }
+  const cardMap = conjugationCards || {}
   const total = verbList.length * 6
   let learned = 0
   let mastered = 0
   for (const verb of verbList) {
     for (let pi = 0; pi < 6; pi++) {
-      const card = conjugationCards[conjCardKey(verb, pi, formType)]
+      const card = cardMap[conjCardKey(verb, pi, formType)]
       if (card && card.reps > 0) learned++
       if (card && card.reps >= 3) mastered++
     }
@@ -52,10 +56,11 @@ export function getThemeConjugationMastery(conjugationCards, verbList, formType 
 
 export function getConjugationDueCount(conjugationCards, verbList, formType = 'aff') {
   if (!verbList) return 0
+  const cardMap = conjugationCards || {}
   let count = 0
   for (const verb of verbList) {
     for (let pi = 0; pi < 6; pi++) {
-      const card = conjugationCards[conjCardKey(verb, pi, formType)]
+      const card = cardMap[conjCardKey(verb, pi, formType)]
       if (card && card.reps > 0 && card.due <= Date.now()) count++
     }
   }
@@ -65,10 +70,11 @@ export function getConjugationDueCount(conjugationCards, verbList, formType = 'a
 // Exercise card mastery for Polish spelling themes
 export function getExerciseMastery(exerciseCards, themeId, exerciseCount) {
   if (!exerciseCount || exerciseCount === 0) return { learned: 0, mastered: 0, total: 0, percent: 0 }
+  const cardMap = exerciseCards || {}
   let learned = 0
   let mastered = 0
   for (let i = 0; i < exerciseCount; i++) {
-    const card = exerciseCards[`${themeId}:${i}`]
+    const card = cardMap[`${themeId}:${i}`]
     if (card && card.reps > 0) learned++
     if (card && card.reps >= 3) mastered++
   }
@@ -78,9 +84,10 @@ export function getExerciseMastery(exerciseCards, themeId, exerciseCount) {
 // Count of due exercise cards
 export function getExerciseDueCountByTheme(exerciseCards, themeId, exerciseCount) {
   if (!exerciseCount) return 0
+  const cardMap = exerciseCards || {}
   let count = 0
   for (let i = 0; i < exerciseCount; i++) {
-    const card = exerciseCards[`${themeId}:${i}`]
+    const card = cardMap[`${themeId}:${i}`]
     if (card && card.reps > 0 && card.due <= Date.now()) count++
   }
   return count
@@ -89,10 +96,11 @@ export function getExerciseDueCountByTheme(exerciseCards, themeId, exerciseCount
 // Vocab SRS mastery for vocabIds-based themes (Polish work/edu)
 export function getVocabMastery(cards, vocabIds) {
   if (!vocabIds || vocabIds.length === 0) return { learned: 0, mastered: 0, total: 0, percent: 0 }
+  const cardMap = cards || {}
   let learned = 0
   let mastered = 0
   for (const id of vocabIds) {
-    const card = cards[id]
+    const card = cardMap[id]
     if (card && card.reps > 0) learned++
     if (card && card.reps >= 3) mastered++
   }
@@ -101,9 +109,10 @@ export function getVocabMastery(cards, vocabIds) {
 
 export function getVocabDueCount(cards, vocabIds) {
   if (!vocabIds) return 0
+  const cardMap = cards || {}
   let count = 0
   for (const id of vocabIds) {
-    const card = cards[id]
+    const card = cardMap[id]
     if (card && card.reps > 0 && card.due <= Date.now()) count++
   }
   return count

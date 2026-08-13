@@ -93,13 +93,14 @@ export function conjugateEr(infinitive) {
 }
 
 export function buildSessionQueue(conjugationCards, verbList, formType = 'aff') {
+  const cardMap = conjugationCards || {}
   const due = []
   const unseen = []
 
   for (const verb of verbList) {
     for (let pi = 0; pi < 6; pi++) {
       const key = conjCardKey(verb, pi, formType)
-      const card = conjugationCards[key]
+      const card = cardMap[key]
       if (!card || (card.reps === 0 && !card.lastReviewed)) {
         unseen.push({ verb, pronounIdx: pi, key })
       } else if (card.due <= Date.now()) {

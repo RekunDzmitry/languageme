@@ -133,9 +133,10 @@ function ConjugationDialog({ verb, onClose }) {
 }
 
 function getVerbSrsStatus(conjugationCards, verb) {
+  const cardMap = conjugationCards || {}
   let due = 0, learned = 0, nextDue = null
   for (let pi = 0; pi < 6; pi++) {
-    const card = conjugationCards[conjCardKey(verb, pi)]
+    const card = cardMap[conjCardKey(verb, pi)]
     if (!card || card.reps === 0) continue
     learned++
     if (card.due <= Date.now()) {

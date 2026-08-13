@@ -97,7 +97,7 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
   // `exerciseNotes[${noteThemeId}:${item.key}]` — the dict lookup misses
   // and the saved note appears empty on the next reveal.
   const noteKey = `${noteThemeId}:${item.key}`
-  const note = exerciseNotes[noteKey] || null
+  const note = exerciseNotes?.[noteKey] || null
 
   function handleReveal() {
     setRevealed(true)

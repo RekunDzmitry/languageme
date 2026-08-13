@@ -135,6 +135,58 @@ test('training grids tolerate progress maps that are still missing', () => {
   }
 })
 
+test('training progress helpers tolerate progress maps that are still missing', () => {
+  const progress = read('../../src/utils/progress.js')
+  const conjugation = read('../../src/utils/conjugation.js')
+  const userProgress = read('../../src/stores/UserProgressContext.jsx')
+  const verbList = read('../../src/components/themes/VerbListSection.jsx')
+  const exerciseSection = read('../../src/components/themes/ExerciseSection.jsx')
+
+  for (const mapName of ['cards', 'conjugationCards', 'exerciseCards']) {
+    assert.match(
+      progress,
+      new RegExp(`const\\s+cardMap\\s*=\\s*${mapName}\\s*\\|\\|\\s*\\{\\}`),
+      `progress helpers must default missing ${mapName} to an empty map`
+    )
+  }
+
+  assert.match(
+    conjugation,
+    /const\s+cardMap\s*=\s*conjugationCards\s*\|\|\s*\{\}/,
+    'buildSessionQueue must default missing conjugationCards to an empty map'
+  )
+
+  for (const mapName of ['srsCards', 'exerciseCards', 'conjugationCards']) {
+    assert.match(
+      userProgress,
+      new RegExp(`const\\s+${mapName}\\s*=\\s*prev\\.${mapName}\\s*\\|\\|\\s*\\{\\}`),
+      `UserProgressContext must default missing ${mapName} before optimistic updates`
+    )
+  }
+
+  assert.match(
+    verbList,
+    /const\s+cardMap\s*=\s*conjugationCards\s*\|\|\s*\{\}/,
+    'VerbListSection must default missing conjugationCards to an empty map'
+  )
+
+  assert.match(
+    exerciseSection,
+    /const\s+cardMap\s*=\s*cards\s*\|\|\s*\{\}/,
+    'ExerciseSection must default missing exercise cards to an empty map when building the queue'
+  )
+  assert.match(
+    exerciseSection,
+    /note=\{exerciseNotes\?\.\[exerciseKey\]\s*\|\|\s*null\}/,
+    'ExerciseSection must tolerate missing exerciseNotes when a theme opens'
+  )
+  assert.match(
+    exerciseSection,
+    /userAnswerOverride=\{exerciseAnswerOverrides\?\.\[exerciseKey\]\}/,
+    'ExerciseSection must tolerate missing exerciseAnswerOverrides when a theme opens'
+  )
+})
+
 test('course bundle exposes theme verbs as verbList for conjugation consumers', () => {
   const courses = read('../src/routes/courses.js')
 

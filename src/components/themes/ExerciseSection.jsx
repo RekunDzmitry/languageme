@@ -19,12 +19,13 @@ const EXERCISE_COMPONENTS = {
 }
 
 function buildInitialQueue(exercises, themeId, cards) {
+  const cardMap = cards || {}
   const now = Date.now()
   return exercises
     .map((_, idx) => idx)
     .filter(idx => {
       const key = `${themeId}:${idx}`
-      const card = cards[key]
+      const card = cardMap[key]
       // Include if: no card exists, never reviewed (reps=0), or past due date
       return !card || card.reps === 0 || (card.due && card.due <= now)
     })
@@ -210,6 +211,7 @@ export default function ExerciseSection({ section, themeId, onExerciseAnswer }) 
 
   // Get current exercise prompt (word in native language) for display
   const currentPrompt = exercise?.prompt || `${queuePos + 1}`
+  const exerciseKey = `${themeId}:${currentIdx}`
 
   return (
     <div>
@@ -270,12 +272,12 @@ export default function ExerciseSection({ section, themeId, onExerciseAnswer }) 
         exercise={exercise}
         onAnswer={handleAnswer}
         priorAttempts={attemptCounts[currentIdx] || 0}
-        exerciseKey={`${themeId}:${currentIdx}`}
+        exerciseKey={exerciseKey}
         themeId={themeId}
-        note={exerciseNotes[`${themeId}:${currentIdx}`] || null}
+        note={exerciseNotes?.[exerciseKey] || null}
         onNoteSave={saveExerciseNote}
         onNoteDelete={clearExerciseNote}
-        userAnswerOverride={exerciseAnswerOverrides[`${themeId}:${currentIdx}`]}
+        userAnswerOverride={exerciseAnswerOverrides?.[exerciseKey]}
         onSaveAnswerOverride={saveExerciseAnswerOverride}
         onClearAnswerOverride={clearExerciseAnswerOverride}
       />
