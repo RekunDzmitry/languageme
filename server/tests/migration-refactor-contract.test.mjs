@@ -119,6 +119,22 @@ test('dashboard and themes list define derived variables before rendering', () =
   )
 })
 
+test('training grids tolerate progress maps that are still missing', () => {
+  const trainingPage = read('../../src/pages/TrainingPage.jsx')
+
+  for (const [mapName, keyName] of [
+    ['exerciseCards', 'key'],
+    ['cards', 'id'],
+    ['conjugationCards', 'key'],
+  ]) {
+    assert.match(
+      trainingPage,
+      new RegExp(`const\\s+card\\s*=\\s*${mapName}\\?\\.\\[${keyName}\\]`),
+      `TrainingPage must not crash when ${mapName} is undefined while a theme is expanded`
+    )
+  }
+})
+
 test('course bundle exposes theme verbs as verbList for conjugation consumers', () => {
   const courses = read('../src/routes/courses.js')
 

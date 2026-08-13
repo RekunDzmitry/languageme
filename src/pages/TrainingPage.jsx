@@ -38,7 +38,7 @@ function ExerciseGrid({ themeId, exercises, exerciseCards, exerciseNotes, t, now
       <div className="grid grid-cols-4 sm:grid-cols-8 md:grid-cols-10 gap-2">
         {exercises.map((ex, idx) => {
           const key = `${themeId}:${idx}`
-          const card = exerciseCards[key]
+          const card = exerciseCards?.[key]
           const note = exerciseNotes?.[key]
           let color = 'bg-white/[0.06]'
           let title = t('status_new')
@@ -104,7 +104,7 @@ function VocabGrid({ vocabIds, vocab, cards, vocabNotes, t, nativeLang, now, onN
       <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
         {vocabIds.map((id) => {
           const word = wordsById[id]
-          const card = cards[id]
+          const card = cards?.[id]
           let color = 'bg-white/[0.06]'
           let title = t('status_new')
           let dueLabel = null
@@ -217,7 +217,7 @@ function VerbGrid({
                 <td className="py-1.5 px-2 text-white font-medium">{verb.infinitive}</td>
                 {pronounLabels.map((_, pi) => {
                   const key = conjCardKey(verb, pi, formType)
-                  const card = conjugationCards[key]
+                  const card = conjugationCards?.[key]
                   let color = 'bg-white/[0.06]' // gray — not started
                   let title = t('status_new')
                   let dueLabel = null
