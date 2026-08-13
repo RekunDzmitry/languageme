@@ -226,6 +226,30 @@ CREATE TABLE IF NOT EXISTS user_exercise_answer_override (
 CREATE INDEX IF NOT EXISTS idx_user_exercise_answer_override_user
   ON user_exercise_answer_override (user_id);
 
+-- Per-user conjugation prompt override. See 000_bootstrap.sql for the
+-- full rationale. Schema mirror kept here so fresh installs from the
+-- schema-only file have the table available.
+CREATE TABLE IF NOT EXISTS user_conjugation_prompt_override (
+  user_id UUID NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+  theme_id VARCHAR(50) NOT NULL,
+  infinitive VARCHAR(50) NOT NULL,
+  pronoun_idx SMALLINT NOT NULL CHECK (pronoun_idx >= 0 AND pronoun_idx <= 5),
+  lang VARCHAR(5) NOT NULL,
+  text TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, theme_id, infinitive, pronoun_idx, lang),
+  CONSTRAINT user_conjugation_prompt_override_theme_id_prefix_check CHECK (
+    theme_id LIKE 'fr\_%'  ESCAPE '\'
+    OR theme_id LIKE 'pl\_%'  ESCAPE '\'
+  ),
+  CONSTRAINT user_conjugation_prompt_override_lang_check CHECK (
+    lang IN ('en', 'ru', 'pl', 'de', 'fr')
+  )
+);
+CREATE INDEX IF NOT EXISTS idx_user_conjugation_prompt_override_user
+  ON user_conjugation_prompt_override (user_id);
+
 CREATE TABLE IF NOT EXISTS review (
   id BIGSERIAL PRIMARY KEY,
   user_id UUID REFERENCES "user"(id) ON DELETE CASCADE,

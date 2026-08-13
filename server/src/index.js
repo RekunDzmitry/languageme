@@ -27,6 +27,7 @@ import emailRoutes from './routes/email.js';
 import coursesRoutes from './routes/courses.js';
 import translationOverridesRoutes from './routes/translationOverrides.js';
 import exerciseAnswerOverridesRoutes from './routes/exerciseAnswerOverrides.js';
+import conjugationPromptOverridesRoutes from './routes/conjugationPromptOverrides.js';
 
 const app = express();
 
@@ -63,6 +64,7 @@ app.use('/api/email', emailRoutes);
 app.use('/api/courses', coursesRoutes);
 app.use('/api/translation-overrides', translationOverridesRoutes);
 app.use('/api/exercise-answer-overrides', exerciseAnswerOverridesRoutes);
+app.use('/api/conjugation-prompt-overrides', conjugationPromptOverridesRoutes);
 
 // Health check
 app.get('/api/health', async (req, res) => {

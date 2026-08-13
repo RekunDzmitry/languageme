@@ -319,3 +319,28 @@ export const userCardsApi = {
   update: (id, data) => api.patch(`/api/user-cards/${encodeURIComponent(id)}`, data),
   remove: (id) => api.delete(`/api/user-cards/${encodeURIComponent(id)}`),
 }
+
+
+// Per-user conjugation prompt overrides. Mirrors the shape of the
+// other override APIs: composite key (themeId, infinitive, pronounIdx,
+// lang) hits one cell of theme_conjugation.forms[] on the server side.
+// The server also injects the result into the /api/courses/all
+// bundle, so the UI rarely has to GET this list — the save() call
+// below is what the user triggers from the prompt edit field.
+export const conjugationPromptOverridesApi = {
+  list: () => api.get('/api/conjugation-prompt-overrides'),
+
+  // themeId / infinitive are strings; pronounIdx is 0-5; lang is a
+  // BCP-47-ish native code (ru, fr, en, ...). The server's SQL is
+  // stringly-keyed, so encoding is just URL escape.
+  save: ({ themeId, infinitive, pronounIdx, lang, text }) =>
+    api.put(
+      `/api/conjugation-prompt-overrides/${encodeURIComponent(themeId)}/${encodeURIComponent(infinitive)}/${pronounIdx}?lang=${encodeURIComponent(lang)}`,
+      { text }
+    ),
+
+  remove: ({ themeId, infinitive, pronounIdx, lang }) =>
+    api.delete(
+      `/api/conjugation-prompt-overrides/${encodeURIComponent(themeId)}/${encodeURIComponent(infinitive)}/${pronounIdx}?lang=${encodeURIComponent(lang)}`
+    ),
+}

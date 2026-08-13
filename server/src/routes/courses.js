@@ -75,12 +75,52 @@ function applyExerciseAnswerOverrides(themes, overrides) {
 }
 
 /**
- * Load a user's translation + exercise-answer overrides in one round-trip
- * per table. Returns Maps keyed by vocab_id / exercise_key.
+ * Apply a (theme_id -> infinitive -> pronoun_idx -> text) override map
+ * on top of the conjugationsByTheme table the bundle just built. The
+ * override is a single string for one (theme, verb, pronoun) cell —
+ * the seed value at that position in the TEXT[] gets replaced. Cells
+ * outside the seed (e.g. a user override on a verb that was removed
+ * from the seed) are dropped silently; a missing entry just means
+ * "no override for this cell, fall back to the seed".
  */
-async function loadUserOverrides(userId) {
-  if (!userId) return { translations: new Map(), answers: new Map() }
-  const [tRes, aRes] = await Promise.all([
+function applyConjugationPromptOverrides(conjugationsByTheme, overrides) {
+  if (!overrides || overrides.size === 0) return
+  for (const [themeId, byVerb] of overrides) {
+    const themeTable = conjugationsByTheme[themeId]
+    if (!themeTable) continue
+    for (const [infinitive, byPronoun] of byVerb) {
+      const forms = themeTable[infinitive]
+      if (!Array.isArray(forms)) continue
+      for (const [pronounIdx, text] of byPronoun) {
+        if (pronounIdx < 0 || pronounIdx >= forms.length) continue
+        forms[pronounIdx] = text
+      }
+    }
+  }
+}
+
+/**
+ * Load a user's translation + exercise-answer + conjugation-prompt
+ * overrides in one round-trip per table. Returns Maps keyed by
+ * vocab_id / exercise_key / composite (themeId, infinitive, pronounIdx).
+ *
+ * `nativeLang` scopes the conjugation-prompt fetch: the override
+ * table is keyed by (user, theme, verb, pronoun, lang) and the UI
+ * saves under settings.nativeLang, so a user with overrides in
+ * multiple native languages would otherwise see a wrong-language
+ * row overwrite the right one when the loop builds the in-memory
+ * map. Translation overrides already self-key on native_lang
+ * inside the loop and don't need the same filter at the SQL
+ * level — keep the translation query unfiltered and let the map
+ * carry every lang, since other call sites may want them.
+ */
+async function loadUserOverrides(userId, nativeLang) {
+  if (!userId) return {
+    translations: new Map(),
+    answers: new Map(),
+    conjugationPrompts: new Map(),
+  }
+  const [tRes, aRes, cRes] = await Promise.all([
     pool.query(
       `SELECT vocab_id, native_lang, text
          FROM user_translation_override
@@ -93,6 +133,18 @@ async function loadUserOverrides(userId) {
         WHERE user_id = $1`,
       [userId]
     ),
+    // Pronoun_idx is SMALLINT in the schema but node-postgres returns
+    // it as a number. We index by composite keys built from the row.
+    // The lang filter is the bug fix from the PR-37 review: without
+    // it, a user with overrides in multiple native languages could
+    // see the wrong-language cell land on top of the right one when
+    // the loop builds the Map (the latter write wins).
+    pool.query(
+      `SELECT theme_id, infinitive, pronoun_idx, text
+         FROM user_conjugation_prompt_override
+        WHERE user_id = $1 AND lang = $2`,
+      [userId, nativeLang]
+    ),
   ])
   const translations = new Map()
   for (const r of tRes.rows) {
@@ -101,7 +153,22 @@ async function loadUserOverrides(userId) {
   }
   const answers = new Map()
   for (const r of aRes.rows) answers.set(r.exercise_key, r.answers)
-  return { translations, answers }
+  // Two-level Map<themeId, Map<infinitive, Map<pronounIdx, text>>>
+  // mirrors the shape the UI receives from conjugationsByTheme so
+  // applyConjugationPromptOverrides can walk it without
+  // re-flattening the data. The lang scoping is enforced by the
+  // WHERE lang = $2 clause in the SELECT above; we don't SELECT
+  // lang here, so a second-pass guard in this loop would be
+  // checking against an undefined column. If the WHERE ever
+  // relaxes, add `lang` back to the SELECT AND keep this guard.
+  const conjugationPrompts = new Map()
+  for (const r of cRes.rows) {
+    if (!conjugationPrompts.has(r.theme_id)) conjugationPrompts.set(r.theme_id, new Map())
+    const byVerb = conjugationPrompts.get(r.theme_id)
+    if (!byVerb.has(r.infinitive)) byVerb.set(r.infinitive, new Map())
+    byVerb.get(r.infinitive).set(r.pronoun_idx, r.text)
+  }
+  return { translations, answers, conjugationPrompts }
 }
 
 async function bundleFor(lang, nativeLang, userId = null) {
@@ -232,9 +299,10 @@ async function bundleFor(lang, nativeLang, userId = null) {
   for (const v of vocab) if (v.hint) hintsByVocab[v.id] = v.hint
 
   if (userId) {
-    const overrides = await loadUserOverrides(userId)
+    const overrides = await loadUserOverrides(userId, nativeLang)
     applyTranslationOverrides(vocab, overrides.translations)
     applyExerciseAnswerOverrides(themes, overrides.answers)
+    applyConjugationPromptOverrides(conjugationsByTheme, overrides.conjugationPrompts)
   }
 
   return {

@@ -190,10 +190,6 @@
   "import_error": "Błąd importu: {message}",
   "export_error": "Błąd eksportu: {message}",
   "import_file_error": "Nie udało się odczytać pliku",
-  "ai_save_as_note": "Zapisz rozmowę jako notatkę",
-  "ai_saving": "Zapisywanie...",
-  "ai_error": "Błąd AI. Spróbuj ponownie.",
-  "ai_save_error": "Nie udało się zapisać notatki",
   "note_for": "Notatka dla",
   "about_word": "O słowie",
   "vocab_note": "Notatka do słowa",
@@ -351,5 +347,15 @@
   "saving": "Zapisywanie...",
   "save": "Zapisz",
   "edit_exercise_note": "Edytuj notatkę",
-  "add_exercise_note": "Dodaj notatkę"
+  "add_exercise_note": "Dodaj notatkę",
+  "notes_pill": "Notatki",
+  "edit_prompt_label": "Edytuj podpowiedź",
+  "prompt_overridden": "Własna podpowiedź",
+  "verb_notes_column": "Notatki",
+  "verb_notes_subtitle": "Notatki do odmiany",
+  "verb_notes_open": "Otwórz notatki",
+  "verb_notes_count": "{n} z 6 komórek z notatką",
+  "verb_notes_hint": "Wybierz komórkę, aby otworzyć lub utworzyć notatkę",
+  "has_note": "Ma notatkę",
+  "close": "Zamknij"
 }

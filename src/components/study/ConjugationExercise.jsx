@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useT } from '../../i18n'
 import { speak } from '../../utils/audio'
 import { useSpeechLang } from '../../hooks/useSpeechLang'
@@ -7,6 +7,8 @@ import { useCourseData } from '../../lib/courseData'
 import { resolveHint } from '../../lib/displayHint'
 import { useSettings } from '../../stores/SettingsContext'
 import { useProgress } from '../../stores/UserProgressContext'
+import { useAuth } from '../../stores/AuthContext'
+import { conjugationPromptOverridesApi } from '../../api/client'
 import SpeakerButton from '../common/SpeakerButton'
 import ExerciseNotePanel from '../themes/exercises/ExerciseNotePanel'
 
@@ -17,6 +19,7 @@ const GENERAL_NOTE_THEME = 'fr_conjugation_general'
 export default function ConjugationExercise({ item, formType = 'aff', themeId = null, onResult, userMnemonics = {}, onSaveMnemonic }) {
   const { t } = useT()
   const { settings } = useSettings()
+  const { isAuthenticated } = useAuth()
   const speechLang = useSpeechLang()
   const { exerciseNotes, saveExerciseNote, clearExerciseNote } = useProgress()
   const course = useCourseData()
@@ -54,9 +57,6 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
   // introduced later (themes 07/08) have no per-person Russian form. Fall
   // back to the infinitive's translation from theme_verb.ru — still a
   // answerable prompt, instead of a bare pronoun with a blank after it.
-  const prompt = ruConjugated
-    ? `${subject} ${ruConjugated}`
-    : `${subject} (${item.verb.ru || infinitive})`
   const fullAnswer = item.answer
 
   const vocabEntry = vocabByTarget[item.verb.infinitive]
@@ -67,6 +67,27 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
   const [editing, setEditing] = useState(false)
   const [editText, setEditText] = useState('')
   const [noteOpen, setNoteOpen] = useState(false)
+  // Local prompt override. Hydrated from the bundle (the server already
+  // injects user rows into conjugationsByTheme), but also settable from
+  // the inline edit field so the UI can react instantly. A real save
+  // hits /api/conjugation-prompt-overrides and refetches the bundle
+  // so other clients / page reloads see the same value.
+  const [promptOverride, setPromptOverride] = useState(null)
+  const [promptEditing, setPromptEditing] = useState(false)
+  const [promptDraft, setPromptDraft] = useState('')
+  const [promptSaving, setPromptSaving] = useState(false)
+
+  // Reset all per-card local state when the card changes so a leftover
+  // override from the previous card doesn't bleed into the next one.
+  useEffect(() => {
+    setRevealed(false)
+    setEditing(false)
+    setNoteOpen(false)
+    setPromptOverride(null)
+    setPromptEditing(false)
+    setPromptDraft('')
+    setPromptSaving(false)
+  }, [item.key])
 
   const noteThemeId = themeId || GENERAL_NOTE_THEME
   // Notes are namespaced by theme to match the write-exercise flow in
@@ -83,19 +104,167 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
     speak(fullAnswer, speechLang)
   }
 
+  function startPromptEdit() {
+    setPromptDraft(ruConjugated)
+    setPromptEditing(true)
+  }
+
+  function cancelPromptEdit() {
+    setPromptEditing(false)
+    setPromptDraft('')
+  }
+
+  async function savePromptEdit() {
+    const trimmed = promptDraft.trim()
+    if (!trimmed || trimmed === ruConjugated) {
+      // Empty / unchanged: treat as cancel.
+      cancelPromptEdit()
+      return
+    }
+    setPromptOverride(trimmed) // optimistic
+    setPromptEditing(false)
+    if (!isAuthenticated) {
+      // Anonymous users get the local-only override; it lives for the
+      // session and disappears on the next bundle refetch. That's the
+      // honest contract — login to persist.
+      setPromptDraft('')
+      return
+    }
+    setPromptSaving(true)
+    try {
+      await conjugationPromptOverridesApi.save({
+        themeId: themeId || GENERAL_NOTE_THEME,
+        infinitive,
+        pronounIdx: item.pronounIdx,
+        lang: settings.nativeLang,
+        text: trimmed,
+      })
+    } catch (err) {
+      console.error('Failed to save prompt override:', err)
+      // Roll back the optimistic update so the user sees their input
+      // didn't actually land.
+      setPromptOverride(null)
+    } finally {
+      setPromptSaving(false)
+      setPromptDraft('')
+    }
+  }
+
+  const effectiveRuConjugated = promptOverride || ruConjugated
+  const isPromptOverridden = !!promptOverride && promptOverride !== ruConjugated
+
   return (
     <div className="flex flex-col items-center gap-5">
-      {/* Badge */}
-      <div className="flex items-center justify-end w-full max-w-sm">
+      {/* Top bar: RU → FR pill on the left, Notes pill on the right.
+          The Notes pill is the single entry point to the per-card
+          ExerciseNotePanel — the panel is rendered below the prompt
+          when open, regardless of whether the card is face-down or
+          face-up, so the user can jot a note before answering, after
+          answering, or after a break. */}
+      <div className="flex items-center justify-between w-full max-w-sm">
         <div className="bg-surface border border-border rounded-lg px-3 py-1 text-xs font-semibold text-accent">
           {t('ru_to_fr')}
         </div>
+        <button
+          type="button"
+          onClick={() => setNoteOpen(open => !open)}
+          aria-pressed={noteOpen}
+          title={note
+            ? t('edit_exercise_note', 'Редактировать заметку')
+            : t('add_exercise_note', 'Добавить заметку')}
+          className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold border transition-colors ${
+            note
+              ? 'bg-amber-500/15 text-amber-400 border-amber-500/40 hover:bg-amber-500/25'
+              : 'bg-surface text-accent border-border hover:border-accent/40'
+          }`}
+        >
+          <span aria-hidden="true">📝</span>
+          <span>{t('notes_pill', 'Notes')}</span>
+        </button>
       </div>
 
-      {/* Prompt */}
+      {/* Prompt — the conjugated form after the pronoun is editable on
+          click. The pronoun prefix ("Я", "Ты", ...) stays as a static
+          marker because it's structural, not a translation choice. */}
       <div className="text-center">
-        <div className="text-3xl font-extrabold text-white mb-2">{prompt}</div>
+        <div className="text-3xl font-extrabold text-white mb-2">
+          <span>{subject} </span>
+          {ruConjugated ? (
+            promptEditing ? (
+              <span className="inline-flex flex-col items-center gap-2 align-middle">
+                <input
+                  autoFocus
+                  value={promptDraft}
+                  onChange={e => setPromptDraft(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      savePromptEdit()
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault()
+                      cancelPromptEdit()
+                    }
+                  }}
+                  aria-label={t('edit_prompt_label', 'Edit conjugation prompt')}
+                  className="bg-white/10 border border-accent/40 rounded-lg px-3 py-1 text-2xl font-extrabold text-white focus:outline-none focus:border-accent"
+                />
+                <span className="flex gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={cancelPromptEdit}
+                    className="px-2 py-1 rounded text-text-muted hover:text-white transition-colors"
+                  >
+                    {t('cancel', 'Отмена')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={savePromptEdit}
+                    disabled={promptSaving}
+                    className="px-2 py-1 rounded font-bold text-accent bg-accent/10 border border-accent/30 hover:bg-accent/20 transition-colors disabled:opacity-50"
+                  >
+                    {t('save', 'Сохранить')}
+                  </button>
+                </span>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={startPromptEdit}
+                title={t('edit_prompt_label', 'Edit conjugation prompt')}
+                className={`underline decoration-dotted decoration-2 underline-offset-4 hover:decoration-solid transition-colors ${
+                  isPromptOverridden ? 'text-amber-400' : 'text-white hover:text-accent'
+                }`}
+              >
+                {effectiveRuConjugated}
+              </button>
+            )
+          ) : (
+            <span className="text-text-muted">({item.verb.ru || infinitive})</span>
+          )}
+        </div>
+        {isPromptOverridden && (
+          <div className="text-[10px] text-amber-400/80 uppercase tracking-wide">
+            {t('prompt_overridden', 'Кастомная подсказка')}
+          </div>
+        )}
       </div>
+
+      {/* Notes panel (opened from the top-right Notes pill). Rendered
+          outside the reveal branch so the user can jot a note before
+          answering, after answering, or even after a long session
+          break — the pill is the single entry point. */}
+      {noteOpen && (
+        <div className="w-full max-w-sm">
+          <ExerciseNotePanel
+            existingNote={note}
+            exerciseKey={noteKey}
+            themeId={noteThemeId}
+            onSave={saveExerciseNote}
+            onDelete={clearExerciseNote}
+            onClose={() => setNoteOpen(false)}
+          />
+        </div>
+      )}
 
       {!revealed ? (
         <button
@@ -164,27 +333,6 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
               )}
             </div>
           )}
-
-          {/* Notes toggle */}
-          <div className="w-full max-w-sm">
-            {!noteOpen ? (
-              <button
-                onClick={() => setNoteOpen(true)}
-                className="w-full px-3 py-2 rounded-xl text-sm font-semibold text-text-muted bg-surface border border-border hover:border-accent/40 hover:text-white transition-colors"
-              >
-                {note ? '✏️ ' + t('edit_exercise_note', 'Редактировать заметку') : '📝 ' + t('add_exercise_note', 'Добавить заметку')}
-              </button>
-            ) : (
-              <ExerciseNotePanel
-                existingNote={note}
-                exerciseKey={noteKey}
-                themeId={noteThemeId}
-                onSave={saveExerciseNote}
-                onDelete={clearExerciseNote}
-                onClose={() => setNoteOpen(false)}
-              />
-            )}
-          </div>
 
           <div className="text-sm text-text-muted mt-2">{t('study_how_well')}</div>
           <div className="flex gap-3">
