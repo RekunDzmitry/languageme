@@ -215,14 +215,21 @@ test('ConjugationExercise UI shows a Notes pill and an editable prompt', async (
   await expect(notesPill).toBeVisible({ timeout: 5000 })
 
   // Reveal the first card so the prompt form part is rendered.
-  const reveal = page.getByRole('button', { name: /показать|reveal|révéler|pokaż|odkryj/i }).first()
+  const reveal = page.getByRole('button', { name: /нажмите, чтобы открыть|показать|reveal|révéler|pokaż|odkryj/i }).first()
   if (await reveal.isVisible().catch(() => false)) {
     await reveal.click()
   }
-  // Either way, the prompt must be a clickable affordance (not a
-  // plain text node). The dotted underline is the visual cue.
-  const editablePrompt = page.getByTitle(/изменить подсказку|edit conjugation prompt|modifier l'invite|edytuj podpowiedź/i).first()
-  await expect(editablePrompt).toBeVisible({ timeout: 5000 })
+  // Either way, the prompt must expose a visible edit affordance; a
+  // title-only / dotted-underline cue is too easy to miss in the study UI.
+  const editPromptButton = page.getByRole('button', {
+    name: /изменить подсказку|edit conjugation prompt|modifier l'invite|edytuj podpowiedź/i,
+  }).first()
+  await expect(editPromptButton).toBeVisible({ timeout: 5000 })
+
+  await editPromptButton.click()
+  await expect(page.getByRole('textbox', {
+    name: /изменить подсказку|edit conjugation prompt|modifier l'invite|edytuj podpowiedź/i,
+  })).toBeVisible()
 })
 
 test('VerbGrid Notes column shows count and opens per-verb picker', async ({ page, request }) => {
@@ -245,8 +252,9 @@ test('VerbGrid Notes column shows count and opens per-verb picker', async ({ pag
   // /training with the theme expanded shows the VerbGrid.
   await page.goto('/training')
   await page.waitForLoadState('networkidle')
-  // Expand the fr_theme01 card.
-  const themeRow = page.locator('text=Pronouns & 1st Group Verbs (-er)').first()
+  // Expand the fr_theme01 card. Use a stable test id because the
+  // visible title is localized by the current UI language.
+  const themeRow = page.getByTestId('theme-card-fr_theme01')
   await themeRow.scrollIntoViewIfNeeded()
   await themeRow.click({ force: true })
   await page.waitForLoadState('networkidle')

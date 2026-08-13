@@ -105,7 +105,7 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
   }
 
   function startPromptEdit() {
-    setPromptDraft(ruConjugated)
+    setPromptDraft(promptOverride || ruConjugated)
     setPromptEditing(true)
   }
 
@@ -116,7 +116,7 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
 
   async function savePromptEdit() {
     const trimmed = promptDraft.trim()
-    if (!trimmed || trimmed === ruConjugated) {
+    if (!trimmed || trimmed === (promptOverride || ruConjugated)) {
       // Empty / unchanged: treat as cancel.
       cancelPromptEdit()
       return
@@ -227,16 +227,26 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
                 </span>
               </span>
             ) : (
-              <button
-                type="button"
-                onClick={startPromptEdit}
-                title={t('edit_prompt_label', 'Edit conjugation prompt')}
-                className={`underline decoration-dotted decoration-2 underline-offset-4 hover:decoration-solid transition-colors ${
-                  isPromptOverridden ? 'text-amber-400' : 'text-white hover:text-accent'
-                }`}
-              >
-                {effectiveRuConjugated}
-              </button>
+              <span className="inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-2 align-middle">
+                <button
+                  type="button"
+                  onClick={startPromptEdit}
+                  title={t('edit_prompt_label', 'Edit conjugation prompt')}
+                  className={`underline decoration-dotted decoration-2 underline-offset-4 hover:decoration-solid transition-colors ${
+                    isPromptOverridden ? 'text-amber-400' : 'text-white hover:text-accent'
+                  }`}
+                >
+                  {effectiveRuConjugated}
+                </button>
+                <button
+                  type="button"
+                  onClick={startPromptEdit}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/10 px-2.5 py-1 text-xs font-bold text-accent hover:bg-accent/20 transition-colors"
+                >
+                  <span aria-hidden="true">&#9998;</span>
+                  <span>{t('edit_prompt_label', 'Edit conjugation prompt')}</span>
+                </button>
+              </span>
             )
           ) : (
             <span className="text-text-muted">({item.verb.ru || infinitive})</span>

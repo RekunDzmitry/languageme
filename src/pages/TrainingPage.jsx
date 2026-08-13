@@ -32,7 +32,7 @@ function formatDueShort(ts) {
   return `${days}д`
 }
 
-function ExerciseGrid({ themeId, exercises, exerciseCards, exerciseNotes, t, onNoteClick }) {
+function ExerciseGrid({ themeId, exercises, exerciseCards, exerciseNotes, t, now, onNoteClick }) {
   return (
     <div className="mt-3">
       <div className="grid grid-cols-4 sm:grid-cols-8 md:grid-cols-10 gap-2">
@@ -52,7 +52,7 @@ function ExerciseGrid({ themeId, exercises, exerciseCards, exerciseNotes, t, onN
               color = 'bg-amber-500/60'
               title = t('status_learning')
             }
-            if (card.due <= Date.now()) {
+            if (card.due <= now) {
               isDue = true
               dueLabel = t('cards_now')
             } else {
@@ -92,7 +92,7 @@ function ExerciseGrid({ themeId, exercises, exerciseCards, exerciseNotes, t, onN
   )
 }
 
-function VocabGrid({ vocabIds, vocab, cards, vocabNotes, t, nativeLang, onNoteClick }) {
+function VocabGrid({ vocabIds, vocab, cards, vocabNotes, t, nativeLang, now, onNoteClick }) {
   const wordsById = useMemo(() => {
     const map = {}
     for (const w of vocab) map[w.id] = w
@@ -117,7 +117,7 @@ function VocabGrid({ vocabIds, vocab, cards, vocabNotes, t, nativeLang, onNoteCl
               color = 'bg-amber-500/60'
               title = t('status_learning')
             }
-            if (card.due <= Date.now()) {
+            if (card.due <= now) {
               isDue = true
               dueLabel = t('cards_now')
             } else {
@@ -162,6 +162,7 @@ function VerbGrid({
   theme,
   conjugationCards,
   t,
+  now,
   formType,
   pronounLabels,
   exerciseNotes,
@@ -230,7 +231,7 @@ function VerbGrid({
                       title = t('status_learning')
                     }
                     // Show due info for any started card
-                    if (card.due <= Date.now()) {
+                    if (card.due <= now) {
                       isDue = true
                       dueLabel = t('cards_now')
                     } else {
@@ -360,11 +361,16 @@ export default function TrainingPage() {
   const [expandedThemeId, setExpandedThemeId] = useState(null)
   const [noteModal, setNoteModal] = useState(null)
   const [vocabNoteModal, setVocabNoteModal] = useState(null)
+  const [now, setNow] = useState(0)
   // { verb, themeId } — verb object + the theme it belongs to, so the
   // picker can resolve theme-scoped data (the conjugation forms table,
   // the note-key namespace) without an external context lookup.
   const [verbNotesVerb, setVerbNotesVerb] = useState(null)
   const [activeTab, setActiveTab] = useState('exercises')
+
+  useEffect(() => {
+    setNow(Date.now())
+  }, [])
 
   const isPolish = targetLang === 'pl'
 
@@ -602,6 +608,7 @@ export default function TrainingPage() {
     return (
       <div
         key={theme.id}
+        data-testid={`theme-card-${theme.id}`}
         className={`w-full text-left bg-surface border border-border rounded-xl p-4 transition-colors ${
           isInteractive ? '' : 'opacity-50'
         }`}
@@ -657,6 +664,7 @@ export default function TrainingPage() {
               theme={theme}
               conjugationCards={conjugationCards}
               t={t}
+              now={now}
               formType={formType}
               pronounLabels={pronounLabels}
               exerciseNotes={exerciseNotes}
@@ -676,7 +684,7 @@ export default function TrainingPage() {
 
         {isExpanded && !hasVerbs && useVocabMode && (
           <div className="mt-3 border-t border-white/[0.08] pt-3">
-            <VocabGrid vocabIds={theme.vocabIds} vocab={vocab} cards={cards} vocabNotes={vocabNotes} t={t} nativeLang={settings.nativeLang} onNoteClick={(id, word) => setVocabNoteModal({ vocabId: id, word })} />
+            <VocabGrid vocabIds={theme.vocabIds} vocab={vocab} cards={cards} vocabNotes={vocabNotes} t={t} nativeLang={settings.nativeLang} now={now} onNoteClick={(id, word) => setVocabNoteModal({ vocabId: id, word })} />
             <div className="mt-4 flex justify-center">
               <button
                 onClick={() => navigate(`/training/${theme.id}`)}
@@ -696,6 +704,7 @@ export default function TrainingPage() {
               exerciseCards={exerciseCards}
               exerciseNotes={exerciseNotes}
               t={t}
+              now={now}
               onNoteClick={(key, ex) => setNoteModal({ exerciseKey: key, exercise: ex, themeId: theme.id })}
             />
             <div className="mt-4 border-t border-white/[0.08] pt-3">
