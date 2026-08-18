@@ -280,6 +280,45 @@ CREATE TABLE IF NOT EXISTS user_conjugation_prompt_override (
 CREATE INDEX IF NOT EXISTS idx_user_conjugation_prompt_override_user
   ON user_conjugation_prompt_override (user_id);
 
+-- Per-user conjugation mnemonic override (memory hook per exercise cell).
+-- A theme that drills pronoun × verb (e.g. fr_theme01) needs a distinct
+-- mnemonic per cell — "je parle" and "tu parles" deserve separate memory
+-- hooks, not one shared across the whole verb. The seed has no per-cell
+-- mnemonic (theme_conjugation.forms is gloss-only), so this table is the
+-- only place a per-cell hint can live.
+--
+-- Composite key shape (matches user_conjugation_prompt_override):
+--   { theme_id, infinitive, pronoun_idx, lang }
+--
+-- The application reads this and injects overrides into
+-- conjugationMnemonicsByTheme[theme_id][infinitive][pronoun_idx]
+-- before the bundle is sent to the frontend, so ConjugationExercise
+-- can resolve the cell-level hint without a second round-trip.
+-- ConjugationExercise falls back to the verb-wide user_mnemonic /
+-- vocab_hint when no per-cell row exists, so the existing single-verb
+-- mnemonic keeps working for non-conjugation contexts (cards page,
+-- /learn without theme).
+CREATE TABLE IF NOT EXISTS user_conjugation_mnemonic (
+  user_id UUID NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+  theme_id VARCHAR(50) NOT NULL,
+  infinitive VARCHAR(50) NOT NULL,
+  pronoun_idx SMALLINT NOT NULL CHECK (pronoun_idx >= 0 AND pronoun_idx <= 5),
+  lang VARCHAR(5) NOT NULL,
+  text TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, theme_id, infinitive, pronoun_idx, lang),
+  CONSTRAINT user_conjugation_mnemonic_theme_id_prefix_check CHECK (
+    theme_id LIKE 'fr\_%'  ESCAPE '\'
+    OR theme_id LIKE 'pl\_%'  ESCAPE '\'
+  ),
+  CONSTRAINT user_conjugation_mnemonic_lang_check CHECK (
+    lang IN ('en', 'ru', 'pl', 'de', 'fr')
+  )
+);
+CREATE INDEX IF NOT EXISTS idx_user_conjugation_mnemonic_user
+  ON user_conjugation_mnemonic (user_id);
+
 CREATE TABLE IF NOT EXISTS review (
   id BIGSERIAL PRIMARY KEY,
   user_id UUID REFERENCES "user"(id) ON DELETE CASCADE,

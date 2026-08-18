@@ -344,3 +344,25 @@ export const conjugationPromptOverridesApi = {
       `/api/conjugation-prompt-overrides/${encodeURIComponent(themeId)}/${encodeURIComponent(infinitive)}/${pronounIdx}?lang=${encodeURIComponent(lang)}`
     ),
 }
+
+// Per-user conjugation mnemonic overrides (memory hook per exercise
+// cell). Same wire shape as conjugationPromptOverridesApi — composite
+// key (themeId, infinitive, pronounIdx, lang) maps to one cell of
+// user_conjugation_mnemonic on the server. The server joins the result
+// into /api/courses/all under conjugationMnemonicsByTheme, so the UI
+// doesn't have to GET this list during the session — save() is the
+// path the user triggers from the inline mnemonic editor.
+export const conjugationMnemonicsApi = {
+  list: () => api.get('/api/conjugation-mnemonics'),
+
+  save: ({ themeId, infinitive, pronounIdx, lang, text }) =>
+    api.put(
+      `/api/conjugation-mnemonics/${encodeURIComponent(themeId)}/${encodeURIComponent(infinitive)}/${pronounIdx}?lang=${encodeURIComponent(lang)}`,
+      { text }
+    ),
+
+  remove: ({ themeId, infinitive, pronounIdx, lang }) =>
+    api.delete(
+      `/api/conjugation-mnemonics/${encodeURIComponent(themeId)}/${encodeURIComponent(infinitive)}/${pronounIdx}?lang=${encodeURIComponent(lang)}`
+    ),
+}

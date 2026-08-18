@@ -102,6 +102,12 @@ export function CourseDataProvider({ children, targetLang, nativeLang }) {
       examplesByVocab: {},
       lexiconByVocab: {},
       conjugationsByTheme: {},
+      // Per-cell mnemonic overrides joined in by /api/courses. Shape:
+      // { [themeId]: { [infinitive]: { [pronounIdx]: text } } }. Empty
+      // until the bundle resolves; ConjugationExercise falls back to
+      // the verb-wide user_mnemonic / vocab_hint when a cell has no
+      // override, so a missing entry is the expected default.
+      conjugationMnemonicsByTheme: {},
       // Must be present even before the fetch resolves: pages that render
       // packs across langs (DashboardPage) index into this on first paint.
       allByLang: all || {},
@@ -117,6 +123,7 @@ export function CourseDataProvider({ children, targetLang, nativeLang }) {
       examplesByVocab: activeBundle.examplesByVocab || {},
       lexiconByVocab: activeBundle.lexiconByVocab || {},
       conjugationsByTheme: activeBundle.conjugationsByTheme || {},
+      conjugationMnemonicsByTheme: activeBundle.conjugationMnemonicsByTheme || {},
       // Cross-lang access for pages like Dashboard that render all packs
       allByLang: all || {},
     }

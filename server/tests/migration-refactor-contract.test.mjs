@@ -49,6 +49,7 @@ test('legacy cutover schema creates user override tables before marking bootstra
     'user_translation_override',
     'user_exercise_answer_override',
     'user_conjugation_prompt_override',
+    'user_conjugation_mnemonic',
   ]) {
     assert.match(
       schemaOnly,

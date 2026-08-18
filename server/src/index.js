@@ -28,6 +28,7 @@ import coursesRoutes from './routes/courses.js';
 import translationOverridesRoutes from './routes/translationOverrides.js';
 import exerciseAnswerOverridesRoutes from './routes/exerciseAnswerOverrides.js';
 import conjugationPromptOverridesRoutes from './routes/conjugationPromptOverrides.js';
+import conjugationMnemonicsRoutes from './routes/conjugationMnemonics.js';
 
 const app = express();
 
@@ -63,8 +64,8 @@ app.use('/api/user-cards', userCardsRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/courses', coursesRoutes);
 app.use('/api/translation-overrides', translationOverridesRoutes);
-app.use('/api/exercise-answer-overrides', exerciseAnswerOverridesRoutes);
 app.use('/api/conjugation-prompt-overrides', conjugationPromptOverridesRoutes);
+app.use('/api/conjugation-mnemonics', conjugationMnemonicsRoutes);
 
 // Health check
 app.get('/api/health', async (req, res) => {

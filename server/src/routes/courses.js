@@ -100,6 +100,33 @@ function applyConjugationPromptOverrides(conjugationsByTheme, overrides) {
 }
 
 /**
+ * Apply a (theme_id -> infinitive -> pronoun_idx -> text) mnemonic
+ * override map. Mirrors applyConjugationPromptOverrides but writes
+ * into a separate bundle key (conjugationMnemonicsByTheme) instead of
+ * mutating conjugationsByTheme. The mnemonic is a hint, not a prompt,
+ * so the two surfaces stay independent — a cell can carry a custom
+ * prompt WITHOUT a custom mnemonic (verb-wide hint still applies), or
+ * vice versa. ConjugationExercise consults this map first and falls
+ * back to the verb-wide user_mnemonic / vocab_hint when no per-cell
+ * row exists.
+ */
+function applyConjugationMnemonicOverrides(conjugationMnemonicsByTheme, overrides) {
+  if (!overrides || overrides.size === 0) return
+  for (const [themeId, byVerb] of overrides) {
+    if (!conjugationMnemonicsByTheme[themeId]) conjugationMnemonicsByTheme[themeId] = {}
+    const themeTable = conjugationMnemonicsByTheme[themeId]
+    for (const [infinitive, byPronoun] of byVerb) {
+      if (!themeTable[infinitive]) themeTable[infinitive] = {}
+      const cell = themeTable[infinitive]
+      for (const [pronounIdx, text] of byPronoun) {
+        if (pronounIdx < 0 || pronounIdx > 5) continue
+        cell[pronounIdx] = text
+      }
+    }
+  }
+}
+
+/**
  * Load a user's translation + exercise-answer + conjugation-prompt
  * overrides in one round-trip per table. Returns Maps keyed by
  * vocab_id / exercise_key / composite (themeId, infinitive, pronounIdx).
@@ -119,8 +146,9 @@ async function loadUserOverrides(userId, nativeLang) {
     translations: new Map(),
     answers: new Map(),
     conjugationPrompts: new Map(),
+    conjugationMnemonics: new Map(),
   }
-  const [tRes, aRes, cRes] = await Promise.all([
+  const [tRes, aRes, cRes, mRes] = await Promise.all([
     pool.query(
       `SELECT vocab_id, native_lang, text
          FROM user_translation_override
@@ -142,6 +170,15 @@ async function loadUserOverrides(userId, nativeLang) {
     pool.query(
       `SELECT theme_id, infinitive, pronoun_idx, text
          FROM user_conjugation_prompt_override
+        WHERE user_id = $1 AND lang = $2`,
+      [userId, nativeLang]
+    ),
+    // Same lang scoping as the prompt override above: a user with
+    // mnemonic rows in two native langs would otherwise see the wrong-
+    // language cell overwrite the right one in the in-memory map.
+    pool.query(
+      `SELECT theme_id, infinitive, pronoun_idx, text
+         FROM user_conjugation_mnemonic
         WHERE user_id = $1 AND lang = $2`,
       [userId, nativeLang]
     ),
@@ -168,7 +205,20 @@ async function loadUserOverrides(userId, nativeLang) {
     if (!byVerb.has(r.infinitive)) byVerb.set(r.infinitive, new Map())
     byVerb.get(r.infinitive).set(r.pronoun_idx, r.text)
   }
-  return { translations, answers, conjugationPrompts }
+  // Same shape as conjugationPrompts — a two-level Map<themeId,
+  // Map<infinitive, Map<pronounIdx, text>>> so applyConjugation
+  // MnemonicOverrides can walk it the same way. Kept in a separate
+  // Map so the prompt and mnemonic override layers never collide
+  // (one cell can have a custom prompt without a custom mnemonic
+  // and vice versa).
+  const conjugationMnemonics = new Map()
+  for (const r of mRes.rows) {
+    if (!conjugationMnemonics.has(r.theme_id)) conjugationMnemonics.set(r.theme_id, new Map())
+    const byVerb = conjugationMnemonics.get(r.theme_id)
+    if (!byVerb.has(r.infinitive)) byVerb.set(r.infinitive, new Map())
+    byVerb.get(r.infinitive).set(r.pronoun_idx, r.text)
+  }
+  return { translations, answers, conjugationPrompts, conjugationMnemonics }
 }
 
 async function bundleFor(lang, nativeLang, userId = null) {
@@ -271,6 +321,13 @@ async function bundleFor(lang, nativeLang, userId = null) {
     conjugationsByTheme[r.theme_id][r.infinitive] = r.forms
   }
 
+  // Per-cell mnemonic overrides joined in below. Seed is empty —
+  // there are no built-in per-cell mnemonics, so the bundle only
+  // carries rows the user wrote. ConjugationExercise falls back to
+  // the verb-wide user_mnemonic / vocab_hint when no per-cell row
+  // is present, so a missing entry is the expected default.
+  const conjugationMnemonicsByTheme = {}
+
   const { rows: exampleRows } = await pool.query(
     `SELECT v.id AS vocab_id, ve.sort_order, ve.source_text, ve.target_text
      FROM vocab_example ve
@@ -303,6 +360,7 @@ async function bundleFor(lang, nativeLang, userId = null) {
     applyTranslationOverrides(vocab, overrides.translations)
     applyExerciseAnswerOverrides(themes, overrides.answers)
     applyConjugationPromptOverrides(conjugationsByTheme, overrides.conjugationPrompts)
+    applyConjugationMnemonicOverrides(conjugationMnemonicsByTheme, overrides.conjugationMnemonics)
   }
 
   return {
@@ -314,6 +372,7 @@ async function bundleFor(lang, nativeLang, userId = null) {
     examplesByVocab,
     lexiconByVocab,
     conjugationsByTheme,
+    conjugationMnemonicsByTheme,
   }
 }
 import { optionallyAuthenticate as optionalAuth } from '../middleware/auth.js'

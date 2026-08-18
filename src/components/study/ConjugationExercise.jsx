@@ -4,11 +4,10 @@ import { speak } from '../../utils/audio'
 import { useSpeechLang } from '../../hooks/useSpeechLang'
 import { PRONOUNS, themeFormType } from '../../utils/conjugation'
 import { useCourseData } from '../../lib/courseData'
-import { resolveHint } from '../../lib/displayHint'
 import { useSettings } from '../../stores/SettingsContext'
 import { useProgress } from '../../stores/UserProgressContext'
 import { useAuth } from '../../stores/AuthContext'
-import { conjugationPromptOverridesApi } from '../../api/client'
+import { conjugationPromptOverridesApi, conjugationMnemonicsApi } from '../../api/client'
 import SpeakerButton from '../common/SpeakerButton'
 import ExerciseNotePanel from '../themes/exercises/ExerciseNotePanel'
 
@@ -62,7 +61,25 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
   const vocabEntry = vocabByTarget[item.verb.infinitive]
   const vocabId = vocabEntry?.id
   const builtinHint = (vocabEntry && (vocabEntry.hint || course.hintsByVocab[vocabId])) || ''
-  const hint = resolveHint({ userMnemonic: userMnemonics[vocabId], builtinHint })
+  // Per-cell mnemonic override joined into the bundle by /api/courses
+  // as conjugationMnemonicsByTheme[themeId][infinitive][pronounIdx].
+  // The resolution chain matches the server-side comment on
+  // user_conjugation_mnemonic:
+  //   1. user_conjugation_mnemonic[theme,verb,pronoun,lang]  (cell-level)
+  //   2. user_mnemonic[vocab_id]                            (verb-wide)
+  //   3. vocab_hint[vocab_id, lang]                         (seed)
+  // The local mnemonicOverride state layers on top — set by the
+  // inline editor, persists for the session, and is rehydrated by
+  // the next bundle fetch. Cell-level mnemonics are scoped to the
+  // active theme; the un-scoped /learn session (themeId === null)
+  // falls back to the verb-wide path, which is the right behaviour
+  // (an un-scoped drill has no specific cell to attach to).
+  const cellMnemonic = (themeId && course.conjugationMnemonicsByTheme?.[themeId]?.[infinitive]?.[item.pronounIdx]) || ''
+  const [mnemonicOverride, setMnemonicOverride] = useState(null)
+  const effectiveCellMnemonic = mnemonicOverride || cellMnemonic
+  const hint = effectiveCellMnemonic
+    || userMnemonics[vocabId]
+    || builtinHint
 
   const [editing, setEditing] = useState(false)
   const [editText, setEditText] = useState('')
@@ -76,6 +93,7 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
   const [promptEditing, setPromptEditing] = useState(false)
   const [promptDraft, setPromptDraft] = useState('')
   const [promptSaving, setPromptSaving] = useState(false)
+  const [mnemonicSaving, setMnemonicSaving] = useState(false)
 
   // Reset all per-card local state when the card changes so a leftover
   // override from the previous card doesn't bleed into the next one.
@@ -87,6 +105,8 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
     setPromptEditing(false)
     setPromptDraft('')
     setPromptSaving(false)
+    setMnemonicOverride(null)
+    setMnemonicSaving(false)
   }, [item.key])
 
   const noteThemeId = themeId || GENERAL_NOTE_THEME
@@ -147,6 +167,67 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
     } finally {
       setPromptSaving(false)
       setPromptDraft('')
+    }
+  }
+
+  // Save a cell-level mnemonic override. Themes that drill pronoun ×
+  // verb (fr_theme01, pl_theme*) get a per-cell mnemonic; the un-scoped
+  // /learn session (themeId === null) has no specific cell to attach
+  // to, so it falls back to the verb-wide user_mnemonic via the
+  // onSaveMnemonic prop. Anonymous users get the local-only override
+  // (lives for the session, disappears on next bundle refetch) — the
+  // same honest contract the prompt editor uses.
+  async function saveCellMnemonic(text) {
+    const trimmed = (text || '').trim()
+    const baseline = mnemonicOverride || cellMnemonic
+    if (trimmed === baseline) {
+      setEditing(false)
+      return
+    }
+    if (!themeId) {
+      // No theme scope — write to the verb-wide user_mnemonic table
+      // (legacy contract; still used by /learn).
+      if (onSaveMnemonic && vocabId) onSaveMnemonic(vocabId, trimmed)
+      setEditing(false)
+      return
+    }
+    // Empty + scoped: clear the cell-level override. The save() API
+    // rejects empty text, so use remove() instead.
+    if (!trimmed) {
+      setMnemonicOverride('')
+      setEditing(false)
+      if (!isAuthenticated) return
+      try {
+        await conjugationMnemonicsApi.remove({
+          themeId,
+          infinitive,
+          pronounIdx: item.pronounIdx,
+          lang: settings.nativeLang,
+        })
+      } catch (err) {
+        console.error('Failed to clear cell mnemonic:', err)
+        setMnemonicOverride(baseline || null)
+      }
+      return
+    }
+    setMnemonicOverride(trimmed) // optimistic
+    setEditing(false)
+    if (!isAuthenticated) return
+    setMnemonicSaving(true)
+    try {
+      await conjugationMnemonicsApi.save({
+        themeId,
+        infinitive,
+        pronounIdx: item.pronounIdx,
+        lang: settings.nativeLang,
+        text: trimmed,
+      })
+    } catch (err) {
+      console.error('Failed to save cell mnemonic:', err)
+      // Roll back so the user sees their input didn't actually land.
+      setMnemonicOverride(baseline || null)
+    } finally {
+      setMnemonicSaving(false)
     }
   }
 
@@ -296,7 +377,20 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
             <div className="w-full max-w-sm mt-1">
               {!editing ? (
                 <div
-                  onClick={() => { setEditing(true); setEditText(userMnemonics[vocabId] || builtinHint || '') }}
+                  onClick={() => {
+                    // Seed the textarea with whatever's currently
+                    // displayed: cell-level if present, else verb-wide
+                    // user mnemonic, else the seed vocab_hint. The
+                    // user can edit on top of any of these layers.
+                    setEditing(true)
+                    setEditText(
+                      mnemonicOverride
+                      || cellMnemonic
+                      || userMnemonics[vocabId]
+                      || builtinHint
+                      || ''
+                    )
+                  }}
                   className="bg-gradient-to-r from-accent/10 to-purple-500/10 border border-accent/20 rounded-xl p-3 px-4 cursor-pointer hover:border-accent/40 transition-colors"
                 >
                   <div className="flex items-center justify-between mb-1">
@@ -328,13 +422,9 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
                       {t('cancel')}
                     </button>
                     <button
-                      onClick={() => {
-                        if (onSaveMnemonic && vocabId) {
-                          onSaveMnemonic(vocabId, editText.trim())
-                        }
-                        setEditing(false)
-                      }}
-                      className="px-3 py-1 text-xs font-bold text-accent bg-accent/10 border border-accent/30 rounded-lg hover:bg-accent/20 transition-colors"
+                      onClick={() => saveCellMnemonic(editText)}
+                      disabled={mnemonicSaving}
+                      className="px-3 py-1 text-xs font-bold text-accent bg-accent/10 border border-accent/30 rounded-lg hover:bg-accent/20 transition-colors disabled:opacity-50"
                     >
                       {t('save_mnemonic')}
                     </button>
