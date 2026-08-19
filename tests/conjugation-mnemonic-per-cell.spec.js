@@ -248,11 +248,12 @@ test('ConjugationExercise clearing a per-cell mnemonic immediately hides the sta
   }
 
   await expect(page.getByText(customText).first()).toBeVisible({ timeout: 5000 })
-
   await page.getByText(customText).first().click()
   const editor = page.getByRole('textbox').last()
   await editor.fill('')
+  const deleteResponsePromise = page.waitForResponse(r => r.url().includes('/api/conjugation-mnemonics/') && r.request().method() === 'DELETE')
   await page.getByRole('button', { name: /сохранить мнемонику|save mnemonic|enregistrer|zapisz/i }).click()
+  await deleteResponsePromise
 
   await expect(page.getByText(customText).first()).toBeHidden({ timeout: 5000 })
 

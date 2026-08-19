@@ -7,7 +7,7 @@ import { useCourseData } from '../../lib/courseData'
 import { useSettings } from '../../stores/SettingsContext'
 import { useProgress } from '../../stores/UserProgressContext'
 import { useAuth } from '../../stores/AuthContext'
-import { conjugationPromptOverridesApi, conjugationMnemonicsApi } from '../../api/client'
+import { conjugationPromptOverridesApi, conjugationMnemonicsApi, getAccessToken } from '../../api/client'
 import SpeakerButton from '../common/SpeakerButton'
 import ExerciseNotePanel from '../themes/exercises/ExerciseNotePanel'
 
@@ -192,11 +192,10 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
       return
     }
     // Empty + scoped: clear the cell-level override. The save() API
-    // rejects empty text, so use remove() instead.
     if (!trimmed) {
       setMnemonicOverride('')
       setEditing(false)
-      if (!isAuthenticated) return
+      if (!getAccessToken()) return
       try {
         await conjugationMnemonicsApi.remove({
           themeId,
@@ -212,7 +211,7 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
     }
     setMnemonicOverride(trimmed) // optimistic
     setEditing(false)
-    if (!isAuthenticated) return
+    if (!getAccessToken()) return
     setMnemonicSaving(true)
     try {
       await conjugationMnemonicsApi.save({
