@@ -220,3 +220,51 @@ test('ConjugationExercise editor accepts and renders a per-cell mnemonic', async
     { headers: { authorization: `Bearer ${accessToken}` } }
   )
 })
+
+test('ConjugationExercise clearing a per-cell mnemonic immediately hides the stale cell value', async ({ page, request }) => {
+  const { accessToken } = await registerAndPinPack(request, page)
+
+  const customText = 'говорю_CLEAR_ТЕСТ'
+  const put = await request.put(
+    'http://localhost:3000/api/conjugation-mnemonics/fr_theme01/parler/0?lang=ru',
+    {
+      headers: { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' },
+      data: { text: customText },
+    }
+  )
+  expect(put.ok()).toBe(true)
+
+  await page.goto('/learn/fr_theme01')
+  await page.waitForLoadState('networkidle')
+
+  await page.getByRole('button', { name: /^\s*GO\s*$/i }).click({ timeout: 5000 })
+  await page.waitForLoadState('networkidle')
+
+  const reveal = page.getByRole('button', {
+    name: /нажмите, чтобы открыть|показать|reveal|révéler|pokaż|odkryj/i,
+  }).first()
+  if (await reveal.isVisible().catch(() => false)) {
+    await reveal.click()
+  }
+
+  await expect(page.getByText(customText).first()).toBeVisible({ timeout: 5000 })
+
+  await page.getByText(customText).first().click()
+  const editor = page.getByRole('textbox').last()
+  await editor.fill('')
+  await page.getByRole('button', { name: /сохранить мнемонику|save mnemonic|enregistrer|zapisz/i }).click()
+
+  await expect(page.getByText(customText).first()).toBeHidden({ timeout: 5000 })
+
+  const get = await request.get('http://localhost:3000/api/conjugation-mnemonics', {
+    headers: { authorization: `Bearer ${accessToken}` },
+  })
+  expect(get.ok()).toBe(true)
+  const rows = await get.json()
+  expect(rows.some(row =>
+    row.theme_id === 'fr_theme01' &&
+    row.infinitive === 'parler' &&
+    row.pronoun_idx === 0 &&
+    row.lang === 'ru'
+  )).toBe(false)
+})

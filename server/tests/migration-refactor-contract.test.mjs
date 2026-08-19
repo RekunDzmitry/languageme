@@ -91,6 +91,38 @@ test('fetchProgress destructuring matches the Promise.all request order', () => 
   })
 })
 
+test('server mounts every user override API consumed by fetchProgress', () => {
+  const index = read('../src/index.js')
+
+  for (const route of [
+    '/api/translation-overrides',
+    '/api/exercise-answer-overrides',
+    '/api/conjugation-prompt-overrides',
+    '/api/conjugation-mnemonics',
+  ]) {
+    assert.match(
+      index,
+      new RegExp(`app\\.use\\('${route.replace(/\//g, '\\/')}'`),
+      `server/src/index.js must mount ${route}`
+    )
+  }
+})
+
+test('conjugation mnemonic clearing preserves an empty local override state', () => {
+  const source = read('../../src/components/study/ConjugationExercise.jsx')
+
+  assert.match(
+    source,
+    /const\s+effectiveCellMnemonic\s*=\s*mnemonicOverride\s*!==\s*null\s*\?\s*mnemonicOverride\s*:\s*cellMnemonic/,
+    'empty string must be a valid local clear state instead of falling back to the stale bundled cell mnemonic'
+  )
+  assert.match(
+    source,
+    /const\s+baseline\s*=\s*mnemonicOverride\s*!==\s*null\s*\?\s*mnemonicOverride\s*:\s*cellMnemonic/,
+    'saveCellMnemonic must compare against the same null-aware cell baseline used for display'
+  )
+})
+
 test('course APIs flatten theme_section.content into the section object consumed by React', () => {
   const courses = read('../src/routes/courses.js')
   const themes = read('../src/routes/themes.js')

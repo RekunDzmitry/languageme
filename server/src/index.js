@@ -64,6 +64,7 @@ app.use('/api/user-cards', userCardsRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/courses', coursesRoutes);
 app.use('/api/translation-overrides', translationOverridesRoutes);
+app.use('/api/exercise-answer-overrides', exerciseAnswerOverridesRoutes);
 app.use('/api/conjugation-prompt-overrides', conjugationPromptOverridesRoutes);
 app.use('/api/conjugation-mnemonics', conjugationMnemonicsRoutes);
 

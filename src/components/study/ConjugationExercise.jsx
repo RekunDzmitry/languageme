@@ -76,7 +76,7 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
   // (an un-scoped drill has no specific cell to attach to).
   const cellMnemonic = (themeId && course.conjugationMnemonicsByTheme?.[themeId]?.[infinitive]?.[item.pronounIdx]) || ''
   const [mnemonicOverride, setMnemonicOverride] = useState(null)
-  const effectiveCellMnemonic = mnemonicOverride || cellMnemonic
+  const effectiveCellMnemonic = mnemonicOverride !== null ? mnemonicOverride : cellMnemonic
   const hint = effectiveCellMnemonic
     || userMnemonics[vocabId]
     || builtinHint
@@ -179,7 +179,7 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
   // same honest contract the prompt editor uses.
   async function saveCellMnemonic(text) {
     const trimmed = (text || '').trim()
-    const baseline = mnemonicOverride || cellMnemonic
+    const baseline = mnemonicOverride !== null ? mnemonicOverride : cellMnemonic
     if (trimmed === baseline) {
       setEditing(false)
       return
@@ -384,8 +384,7 @@ export default function ConjugationExercise({ item, formType = 'aff', themeId = 
                     // user can edit on top of any of these layers.
                     setEditing(true)
                     setEditText(
-                      mnemonicOverride
-                      || cellMnemonic
+                      (mnemonicOverride !== null ? mnemonicOverride : cellMnemonic)
                       || userMnemonics[vocabId]
                       || builtinHint
                       || ''
