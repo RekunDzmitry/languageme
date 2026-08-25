@@ -109,10 +109,28 @@ function applyConjugationPromptOverrides(conjugationsByTheme, overrides) {
  * vice versa. ConjugationExercise consults this map first and falls
  * back to the verb-wide user_mnemonic / vocab_hint when no per-cell
  * row exists.
+ *
+ * `lang` (target course language, e.g. 'fr'/'pl') is required so the
+ * apply layer can skip theme_ids with a different prefix — otherwise
+ * a stale row from another target lang in the overrides map would
+ * surface in this bundle as `conjugationMnemonicsByTheme['<other>_…']`.
+ * The SELECT in loadUserOverrides already applies the same filter,
+ * this is defense in depth for future call sites.
  */
-function applyConjugationMnemonicOverrides(conjugationMnemonicsByTheme, overrides) {
+function applyConjugationMnemonicOverrides(conjugationMnemonicsByTheme, overrides, lang) {
   if (!overrides || overrides.size === 0) return
+  // Defense in depth: the SELECT in loadUserOverrides already restricts
+  // rows by theme_id LIKE '<lang>\_%', but applyConjugationMnemonic
+  // Overrides creates themeTable entries on the fly for every override
+  // theme_id it sees. Without this guard a stale row from a different
+  // target lang — left in the in-memory map by a future call site that
+  // forgets to filter — would still surface in the bundle. Prompt
+  // overrides don't need the same guard because applyConjugationPrompt
+  // Overrides only mutates themeTables that already exist in
+  // conjugationsByTheme (which is target-lang scoped upstream).
+  const prefix = lang ? `${lang}_` : null
   for (const [themeId, byVerb] of overrides) {
+    if (prefix && !themeId.startsWith(prefix)) continue
     if (!conjugationMnemonicsByTheme[themeId]) conjugationMnemonicsByTheme[themeId] = {}
     const themeTable = conjugationMnemonicsByTheme[themeId]
     for (const [infinitive, byPronoun] of byVerb) {
@@ -128,20 +146,31 @@ function applyConjugationMnemonicOverrides(conjugationMnemonicsByTheme, override
 
 /**
  * Load a user's translation + exercise-answer + conjugation-prompt
- * overrides in one round-trip per table. Returns Maps keyed by
- * vocab_id / exercise_key / composite (themeId, infinitive, pronounIdx).
+ * + conjugation-mnemonic overrides in one round-trip per table.
+ * Returns Maps keyed by vocab_id / exercise_key / composite
+ * (themeId, infinitive, pronounIdx).
  *
- * `nativeLang` scopes the conjugation-prompt fetch: the override
- * table is keyed by (user, theme, verb, pronoun, lang) and the UI
- * saves under settings.nativeLang, so a user with overrides in
- * multiple native languages would otherwise see a wrong-language
- * row overwrite the right one when the loop builds the in-memory
- * map. Translation overrides already self-key on native_lang
+ * `nativeLang` scopes the conjugation-prompt + conjugation-mnemonic
+ * fetches: both override tables are keyed by (user, theme, verb,
+ * pronoun, lang) and the UI saves under settings.nativeLang, so a
+ * user with overrides in multiple native languages would otherwise
+ * see a wrong-language row overwrite the right one when the loop
+ * builds the in-memory map.
+ *
+ * `targetLang` (when provided) scopes the conjugation-mnemonic
+ * fetch by theme_id prefix as well: the apply step creates entries
+ * on the fly for every override theme_id it sees, so without the
+ * prefix filter a mnemonic saved for fr_theme01 would surface as
+ * `conjugationMnemonicsByTheme['fr_theme01']` inside the pl
+ * bundle. Prompt overrides don't have the same hazard because
+ * applyConjugationPromptOverrides only mutates themeTables that
+ * already exist in conjugationsByTheme (which IS target-lang
+ * scoped). Translation overrides already self-key on native_lang
  * inside the loop and don't need the same filter at the SQL
  * level — keep the translation query unfiltered and let the map
  * carry every lang, since other call sites may want them.
  */
-async function loadUserOverrides(userId, nativeLang) {
+async function loadUserOverrides(userId, nativeLang, targetLang = null) {
   if (!userId) return {
     translations: new Map(),
     answers: new Map(),
@@ -176,11 +205,13 @@ async function loadUserOverrides(userId, nativeLang) {
     // Same lang scoping as the prompt override above: a user with
     // mnemonic rows in two native langs would otherwise see the wrong-
     // language cell overwrite the right one in the in-memory map.
+    //
     pool.query(
       `SELECT theme_id, infinitive, pronoun_idx, text
          FROM user_conjugation_mnemonic
-        WHERE user_id = $1 AND lang = $2`,
-      [userId, nativeLang]
+        WHERE user_id = $1 AND lang = $2
+          AND theme_id LIKE $3 || '\\_%' ESCAPE '\\'`,
+      [userId, nativeLang, targetLang]
     ),
   ])
   const translations = new Map()
@@ -356,11 +387,11 @@ async function bundleFor(lang, nativeLang, userId = null) {
   for (const v of vocab) if (v.hint) hintsByVocab[v.id] = v.hint
 
   if (userId) {
-    const overrides = await loadUserOverrides(userId, nativeLang)
+    const overrides = await loadUserOverrides(userId, nativeLang, lang)
     applyTranslationOverrides(vocab, overrides.translations)
     applyExerciseAnswerOverrides(themes, overrides.answers)
     applyConjugationPromptOverrides(conjugationsByTheme, overrides.conjugationPrompts)
-    applyConjugationMnemonicOverrides(conjugationMnemonicsByTheme, overrides.conjugationMnemonics)
+    applyConjugationMnemonicOverrides(conjugationMnemonicsByTheme, overrides.conjugationMnemonics, lang)
   }
 
   return {

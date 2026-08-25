@@ -269,3 +269,50 @@ test('ConjugationExercise clearing a per-cell mnemonic immediately hides the sta
     row.lang === 'ru'
   )).toBe(false)
 })
+
+test('per-cell mnemonics do not cross target-lang boundaries (fr row must not appear in /api/courses/pl)', async ({ request }) => {
+  const email = `mnem-cross-${Date.now()}-${Math.random().toString(36).slice(2, 6)}@test.local`
+  const password = 'testpass123'
+  const reg = await request.post(REGISTER_URL, { data: { email, password } })
+  expect(reg.ok()).toBe(true)
+  const { accessToken } = await reg.json()
+
+  // Put an fr_theme mnemonic. The PUT handler doesn't validate the
+  // theme_id prefix — the only thing stopping it from leaking into
+  // /api/courses/pl is the bundle query's target-lang filter.
+  const frText = `завершаю_CROSS_FR_${Date.now()}`
+  const putFr = await request.put(
+    'http://localhost:3000/api/conjugation-mnemonics/fr_theme01/achever/0?lang=ru',
+    {
+      headers: { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' },
+      data: { text: frText },
+    }
+  )
+  expect(putFr.ok()).toBe(true)
+
+  // /api/courses/pl must NOT carry the fr mnemonic. Without the
+  // theme_id prefix filter on the mnemonic SELECT, fr_theme01 would
+  // be created as a key in the pl bundle's conjugationMnemonicsByTheme
+  // and serialized into the response.
+  const plBundle = await request.get('http://localhost:3000/api/courses/pl?native_lang=ru', {
+    headers: { authorization: `Bearer ${accessToken}` },
+  })
+  expect(plBundle.ok()).toBe(true)
+  expect(JSON.stringify(await plBundle.json())).not.toContain(frText)
+
+  // The /api/courses/fr bundle must include the fr mnemonic, and the
+  // /all endpoint must keep fr and pl strictly separated.
+  const allBundle = await request.get('http://localhost:3000/api/courses/all?native_lang=ru', {
+    headers: { authorization: `Bearer ${accessToken}` },
+  })
+  expect(allBundle.ok()).toBe(true)
+  const allData = await allBundle.json()
+  expect(JSON.stringify(allData.fr)).toContain(frText)
+  expect(JSON.stringify(allData.pl)).not.toContain(frText)
+
+  // Cleanup.
+  await request.delete(
+    'http://localhost:3000/api/conjugation-mnemonics/fr_theme01/achever/0?lang=ru',
+    { headers: { authorization: `Bearer ${accessToken}` } }
+  )
+})
