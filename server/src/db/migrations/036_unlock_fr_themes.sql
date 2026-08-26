@@ -1,14 +1,16 @@
 -- Migration 036: unlock all French themes
 --
 -- Why: mirrors the polish-themes unlock pattern (pl_themeXX rows are seeded
--- with unlock_theme_id = NULL in 000_bootstrap.sql). The bootstrap now seeds
--- fr_theme02..31 with NULL too, but live databases whose _migrations row
--- already contains 000_bootstrap.sql are NOT re-seeded by the runner —
--- server/src/db/migrate.js:131-152 only refreshes the bootstrap on subsequent
--- runs (it does not drop+recreate on already-applied DBs in the additive
--- phase). This migration backfills those rows in place so the API gate at
--- server/src/routes/progress.js:42 (GET /themes/:themeId/unlock) returns
--- unlocked:true for every authenticated user, regardless of prior progress.
+-- fr_theme02..31 with NULL too, and migrate.js:131-152 re-runs
+-- 000_bootstrap.sql on every migrate (it DROP+recreates the theme table), so
+-- a normal `npm run migrate` on an already-bootstrapped DB reaches the
+-- unblocked state via the bootstrap alone. This 036 migration is kept as an
+-- explicit, idempotent backfill record so the unlock intent is visible in the
+-- migration history, and as a safety net for any future code path that runs
+-- additive migrations without refreshing the bootstrap (e.g. partial-rerun
+-- tooling). The API gate at server/src/routes/progress.js:42
+-- (GET /themes/:themeId/unlock) returns unlocked:true for every authenticated
+-- user once unlock_theme_id is NULL, regardless of prior progress.
 --
 -- Scope: fr_theme02..31 only. fr_theme01 already has NULL and is excluded
 -- defensively to avoid a needless row rewrite. theme_progress rows are
