@@ -18,10 +18,10 @@ export function getNewCards(cards, vocab, limit = 5) {
 export function isThemeUnlocked(theme, themeProgress) {
   // Themes with unlockCondition: null are always unlocked
   if (theme.unlockCondition === null) return true
-  // Theme 1 is always unlocked
-  if (theme.id === 'fr_theme01') return true
-  // Extract previous theme number (only for un-prefixed legacy IDs; lang-prefixed
-  // themes use the unlockCondition object instead of positional chain).
+  // The remaining code is only reached for legacy un-prefixed theme ids
+  // ("themeNN"). Every lang-prefixed id (fr_themeXX, pl_themeXX, ...) returns
+  // true below — the unlock gate is enforced server-side via the
+  // theme.unlock_theme_id column (server/src/routes/progress.js).
   const match = theme.id.match(/^theme(\d+)$/)
   if (!match) return true
   const num = parseInt(match[1], 10)
