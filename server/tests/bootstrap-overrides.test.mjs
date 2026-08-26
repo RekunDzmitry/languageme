@@ -228,7 +228,8 @@ test('Bootstrap SQL is self-contained (no external files referenced)', async () 
   // Every CREATE TABLE in the user schema must be IF NOT EXISTS
   const userTables = [...sql.matchAll(/CREATE TABLE IF NOT EXISTS ("?\w+"?)/g)].map(m => m[1])
   for (const required of ['user', 'srs_card', 'theme_progress', 'user_mnemonic',
-    'user_translation_override', 'user_exercise_answer_override']) {
+    'user_translation_override', 'user_exercise_answer_override',
+    'user_conjugation_prompt_override', 'user_conjugation_mnemonic']) {
     const found = userTables.find(t => t.replace(/"/g, '') === required)
     assert.ok(found, `${required} must be CREATE TABLE IF NOT EXISTS`)
   }
