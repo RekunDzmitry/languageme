@@ -19,12 +19,9 @@
 -- Idempotent: UPDATE ... SET unlock_theme_id = NULL is a no-op once the
 -- column is already NULL. Re-running this migration via `npm run migrate`
 -- is safe; the runner's _migrations PK prevents re-execution of the file.
-
-BEGIN;
+-- Transaction note: do NOT add BEGIN/COMMIT here. server/src/db/migrate.js:170-176
 
 UPDATE theme
    SET unlock_theme_id = NULL
  WHERE id LIKE 'fr_theme%'
    AND id <> 'fr_theme01';
-
-COMMIT;
