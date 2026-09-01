@@ -300,5 +300,7 @@
   "verb_notes_count": "{n} cellules sur 6 avec note",
   "verb_notes_hint": "Choisissez une cellule pour ouvrir ou créer une note",
   "has_note": "Avec note",
-  "close": "Fermer"
+  "close": "Fermer",
+  "edit_expected_answer": "Modifier la réponse attendue",
+  "edit_expected_answer_hint": "Utilisez « / » pour proposer plusieurs variantes."
 }
