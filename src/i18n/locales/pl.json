@@ -357,5 +357,7 @@
   "verb_notes_count": "{n} z 6 komórek z notatką",
   "verb_notes_hint": "Wybierz komórkę, aby otworzyć lub utworzyć notatkę",
   "has_note": "Ma notatkę",
-  "close": "Zamknij"
+  "close": "Zamknij",
+  "edit_expected_answer": "Zmień oczekiwaną odpowiedź",
+  "edit_expected_answer_hint": "Przez «/» dla wielu wariantów."
 }

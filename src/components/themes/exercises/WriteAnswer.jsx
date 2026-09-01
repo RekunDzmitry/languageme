@@ -372,12 +372,12 @@ export default function WriteAnswer({ exercise, onAnswer, priorAttempts = 0, exe
         <div className="bg-yellow-500/5 border border-yellow-500/30 rounded-lg p-3 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-yellow-300 font-bold uppercase tracking-wide">
-              {t('edit_expected_answer', 'Изменить ожидаемый ответ')}
+              {t('edit_expected_answer')}
             </span>
             <span className="text-[10px] text-white/40 font-mono">{exerciseKey}</span>
           </div>
           <div className="text-[10px] text-white/30">
-            {t('edit_expected_answer_hint', 'Через «/» для нескольких вариантов.')}
+            {t('edit_expected_answer_hint')}
           </div>
           <textarea
             value={answersDraft}
@@ -410,9 +410,9 @@ export default function WriteAnswer({ exercise, onAnswer, priorAttempts = 0, exe
         <button
           onClick={startEditAnswers}
           className="text-[10px] text-yellow-300/60 hover:text-yellow-300 self-start"
-          title={t('edit_expected_answer', 'Изменить ожидаемый ответ')}
+          title={t('edit_expected_answer')}
         >
-          {userAnswerOverride ? '✎ custom' : `+ ${t('edit_expected_answer', 'Изменить ожидаемый ответ')}`}
+          {userAnswerOverride ? '✎ custom' : `+ ${t('edit_expected_answer')}`}
         </button>
       )}
 
